@@ -1,0 +1,612 @@
+﻿@using MITANZ360Pro.Web.Models
+@using MITANZ360Pro.Web.Services
+
+@using Radzen
+@using Radzen.Blazor
+
+@inject SharePointService SharePointService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<EditForm Model="@Model"
+          OnValidSubmit="SaveAsync">
+
+    <DataAnnotationsValidator />
+
+    <div class="card-form-container">
+
+        <!-- =====================================================
+             GRID
+        ===================================================== -->
+
+        <div class="form-grid">
+
+            <!-- =====================================================
+                 TITLE
+            ===================================================== -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    Title
+
+                </label>
+
+                <InputText @bind-Value="Model.Title"
+                           class="form-control" />
+
+            </div>
+
+            <!-- =====================================================
+                 SUBTITLE
+            ===================================================== -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    Subtitle
+
+                </label>
+
+                <InputText @bind-Value="Model.Subtitle"
+                           class="form-control" />
+
+            </div>
+
+            <!-- =====================================================
+                 URL
+            ===================================================== -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    URL
+
+                </label>
+
+                <InputText @bind-Value="Model.Url"
+                           class="form-control" />
+
+            </div>
+
+            <!-- =====================================================
+                 ICON
+            ===================================================== -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    Bootstrap Icon
+
+                </label>
+
+                <InputText @bind-Value="Model.Icon"
+                           class="form-control"
+                           placeholder="bi-house-door-fill" />
+
+            </div>
+
+            <!-- =====================================================
+                 IMAGE URL
+            ===================================================== -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    Image URL
+
+                </label>
+
+                <InputText @bind-Value="Model.ImageUrl"
+                           class="form-control" />
+
+            </div>
+
+            <!-- =====================================================
+                 ROLES
+            ===================================================== -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    Roles
+
+                </label>
+
+                <RadzenDropDown Data="@AvailableRoles"
+                                TValue="IEnumerable<string>"
+                                Multiple="true"
+                                Chips="true"
+                                AllowFiltering="true"
+                                AllowClear="true"
+                                Placeholder="Select roles"
+                                Style="width:100%;"
+                                PopupStyle="z-index:99999 !important;"
+                                @bind-Value="SelectedRoles"
+                                Change="OnRolesChanged" />
+
+            </div>
+
+            <!-- =====================================================
+                 CARD COLOR
+            ===================================================== -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    Card Color
+
+                </label>
+
+                <InputText @bind-Value="Model.CardColor"
+                           class="form-control"
+                           placeholder="rp-admin" />
+
+            </div>
+
+            <!-- =====================================================
+                 SORT ORDER
+            ===================================================== -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    Sort Order
+
+                </label>
+
+                <InputNumber @bind-Value="Model.SortOrder"
+                             class="form-control" />
+
+            </div>
+
+            <!-- =====================================================
+                 OPEN TYPE
+            ===================================================== -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+
+                    Open Type
+
+                </label>
+
+                <InputSelect @bind-Value="Model.OpenType"
+                             class="form-control">
+
+                    <option value="Internal">
+
+                        Internal
+
+                    </option>
+
+                    <option value="External">
+
+                        External
+
+                    </option>
+
+                </InputSelect>
+
+            </div>
+
+            <!-- =====================================================
+                 ENABLED
+            ===================================================== -->
+
+            <div class="form-group checkbox-group">
+
+                <label class="form-label">
+
+                    Status
+
+                </label>
+
+                <div class="checkbox-wrap">
+
+                    <InputCheckbox @bind-Value="Model.IsEnabled"
+                                   class="form-check-input" />
+
+                    <span>
+
+                        Enabled
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================================
+             BUTTONS
+        ===================================================== -->
+
+        <div class="form-buttons">
+
+            <button type="submit"
+                    class="btn-save">
+
+                Save
+
+            </button>
+
+            <button type="button"
+                    class="btn-cancel"
+                    @onclick="Close">
+
+                Cancel
+
+            </button>
+
+        </div>
+
+    </div>
+
+</EditForm>
+
+@code {
+
+    // =====================================================
+    // PARAMETERS
+    // =====================================================
+
+    [Parameter]
+    public NavigationCardModel Model { get; set; }
+        = new();
+
+    [Parameter]
+    public EventCallback OnSaved { get; set; }
+
+    // =====================================================
+    // AVAILABLE ROLES
+    // =====================================================
+
+    private List<string>
+        AvailableRoles = [];
+
+    // =====================================================
+    // SELECTED ROLES
+    // =====================================================
+
+    private IEnumerable<string>
+        SelectedRoles = [];
+
+    // =====================================================
+    // INIT
+    // =====================================================
+
+    protected override async Task
+        OnInitializedAsync()
+    {
+        try
+        {
+            // ================================================
+            // LOAD SHAREPOINT ROLES
+            // ================================================
+
+            var roles =
+                await SharePointService
+                    .GetRolesAsync();
+
+            // ================================================
+            // DEBUG
+            // ================================================
+
+            Console.WriteLine(
+                $"SP ROLES COUNT: {roles.Count}");
+
+            // ================================================
+            // AVAILABLE ACTIVE ROLES
+            // ================================================
+
+            AvailableRoles =
+                roles
+
+                    .Where(x =>
+                        x.IsActive)
+
+                    .Select(x =>
+                        x.Title)
+
+                    .Distinct()
+
+                    .OrderBy(x => x)
+
+                    .ToList();
+
+            // ================================================
+            // DEBUG
+            // ================================================
+
+            Console.WriteLine(
+                $"AVAILABLE ROLES: {string.Join(",", AvailableRoles)}");
+
+            // ================================================
+            // EXISTING CARD ROLES
+            // ================================================
+
+            if (!string.IsNullOrWhiteSpace(
+                Model.Role))
+            {
+                SelectedRoles =
+                    Model.Role
+
+                        .Split(
+                            new[] { ',', ';' },
+                            StringSplitOptions
+                                .RemoveEmptyEntries)
+
+                        .Select(x =>
+                            x.Trim())
+
+                        .Distinct()
+
+                        .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"ROLE LOAD ERROR: {ex.Message}");
+
+            NotificationService.Notify(
+
+                NotificationSeverity.Error,
+
+                "Role Load Error",
+
+                ex.Message);
+        }
+    }
+
+    // =====================================================
+    // ROLE CHANGED
+    // =====================================================
+
+    private void
+        OnRolesChanged(object value)
+    {
+        if (value is IEnumerable<string> roles)
+        {
+            SelectedRoles =
+                roles;
+
+            Model.Role =
+                string.Join(
+                    ",",
+                    SelectedRoles);
+
+            Console.WriteLine(
+                $"SELECTED ROLES: {Model.Role}");
+        }
+    }
+
+    // =====================================================
+    // SAVE
+    // =====================================================
+
+    private async Task
+        SaveAsync()
+    {
+        try
+        {
+            // ================================================
+            // NORMALIZE ROLES
+            // ================================================
+
+            Model.Role =
+                string.Join(
+                    ",",
+                    SelectedRoles
+                        .Distinct());
+
+            Console.WriteLine(
+                $"SAVE ROLES: {Model.Role}");
+
+            // ================================================
+            // CREATE
+            // ================================================
+
+            if (string.IsNullOrWhiteSpace(
+                Model.Id))
+            {
+                await SharePointService
+                    .CreateNavigationCardAsync(Model);
+            }
+
+            // ================================================
+            // UPDATE
+            // ================================================
+
+            else
+            {
+                await SharePointService
+                    .UpdateNavigationCardAsync(Model);
+            }
+
+            // ================================================
+            // SUCCESS
+            // ================================================
+
+            NotificationService.Notify(
+
+                NotificationSeverity.Success,
+
+                "Success",
+
+                "Navigation card saved successfully.");
+
+            // ================================================
+            // CALLBACK
+            // ================================================
+
+            if (OnSaved.HasDelegate)
+            {
+                await OnSaved.InvokeAsync();
+            }
+
+            // ================================================
+            // CLOSE
+            // ================================================
+
+            DialogService.Close(true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"SAVE ERROR: {ex.Message}");
+
+            NotificationService.Notify(
+
+                NotificationSeverity.Error,
+
+                "Save Error",
+
+                ex.Message);
+        }
+    }
+
+    // =====================================================
+    // CLOSE
+    // =====================================================
+
+    private void
+        Close()
+    {
+        DialogService.Close(false);
+    }
+}
+
+<style>
+
+    .card-form-container {
+        padding: 10px;
+    }
+
+    /* =====================================================
+       GRID
+    ===================================================== */
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    /* =====================================================
+       MOBILE
+    ===================================================== */
+
+    @@media (max-width: 900px) {
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* =====================================================
+       GROUP
+    ===================================================== */
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* =====================================================
+       LABEL
+    ===================================================== */
+
+    .form-label {
+        margin-bottom: 6px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    /* =====================================================
+       INPUT
+    ===================================================== */
+
+    .form-control {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        padding: 10px;
+    }
+
+    /* =====================================================
+       CHECKBOX
+    ===================================================== */
+
+    .checkbox-group {
+        justify-content: center;
+    }
+
+    .checkbox-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 42px;
+    }
+
+    /* =====================================================
+       BUTTONS
+    ===================================================== */
+
+    .form-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 28px;
+    }
+
+    /* =====================================================
+       SAVE
+    ===================================================== */
+
+    .btn-save {
+        border: none;
+        background: #2563eb;
+        color: white;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: 600;
+    }
+
+    /* =====================================================
+       CANCEL
+    ===================================================== */
+
+    .btn-cancel {
+        border: none;
+        background: #6b7280;
+        color: white;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: 600;
+    }
+
+    /* =====================================================
+       DROPDOWN FIX
+    ===================================================== */
+
+    .rz-dropdown-panel {
+        z-index: 99999 !important;
+    }
+
+    .rz-multiselect-panel {
+        z-index: 99999 !important;
+    }
+
+</style>

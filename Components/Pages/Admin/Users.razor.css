@@ -1,0 +1,182 @@
+﻿/* =========================================================
+   MITANZ360Pro - USERS PAGE (ENTERPRISE VERSION)
+   ========================================================= */
+
+/* ================= PAGE ================= */
+
+.page-wrap {
+    padding-bottom: 40px;
+}
+
+/* ================= CARDS ================= */
+
+.top-card,
+.nice-card {
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    box-shadow: 0 6px 18px rgba(0,0,0,.04);
+    transition: all 0.2s ease;
+}
+
+    /* 🔥 HOVER EFFECT */
+    .nice-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,.08);
+    }
+
+.top-card {
+    padding: 18px;
+}
+
+/* ================= TEXT ================= */
+
+.title {
+    font-weight: 800;
+    color: #111827;
+    margin: 0;
+}
+
+/* 🔥 Email = Primary */
+.user-email {
+    font-weight: 600;
+    color: #111827;
+}
+
+/* 🔥 Username = Secondary */
+.user-username {
+    font-size: .9rem;
+    color: #6b7280;
+}
+
+/* 🔥 ID = Low priority */
+.user-id {
+    color: #9ca3af;
+    font-size: .75rem;
+    word-break: break-all;
+}
+
+/* ================= GRID ================= */
+
+.grid-gap {
+    row-gap: 18px;
+}
+
+/* ================= ROLE PILLS ================= */
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    font-size: .75rem;
+    font-weight: 500;
+}
+
+/* ================= BUTTON GROUP ================= */
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+/* ================= STATUS BADGE ================= */
+
+.status-badge {
+    font-size: .7rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 999px;
+}
+
+.status-active {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-hold {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-disabled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* =========================================================
+   🔥 BLADE SYSTEM (ENTERPRISE)
+   ========================================================= */
+
+.blade-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+}
+
+.blade-title {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #111827;
+}
+
+/* 🔥 FORM SPACING */
+.blade-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+    /* 🔥 LABEL STYLE */
+    .blade-body label {
+        font-size: .8rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    /* 🔥 INPUT SPACING */
+    .blade-body .form-control,
+    .blade-body .rz-dropdown {
+        margin-bottom: 14px;
+    }
+
+/* 🔥 FOOTER */
+.blade-footer {
+    padding: 14px 20px;
+    border-top: 1px solid #e5e7eb;
+    background: #ffffff;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 768px) {
+
+    .nice-card {
+        padding: 14px;
+    }
+
+    .blade-body {
+        padding: 16px;
+    }
+
+    .blade-footer {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+        .blade-footer button {
+            width: 100%;
+        }
+}

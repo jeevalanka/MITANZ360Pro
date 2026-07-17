@@ -1,0 +1,209 @@
+﻿@page "/lms-dashboard"
+@layout MainLayout_NoRightPan
+
+@attribute [Authorize(Roles = "Admin")]
+
+@using Radzen
+@using Radzen.Blazor
+
+<PageTitle>LMS Admin Dashboard</PageTitle>
+
+<div class="lms-admin">
+    <div class="lms-admin-frame">
+
+        <!-- Header -->
+        <div class="dash-header">
+            <div>
+                <h2>LMS Administration</h2>
+                <p>Real-time academic & operational overview</p>
+            </div>
+
+            <div class="dash-actions">
+                <RadzenBadge Text="LIVE" class="live-badge" />
+                <RadzenButton Icon="refresh" Text="Refresh" ButtonStyle="ButtonStyle.Primary" />
+            </div>
+        </div>
+
+        <!-- KPI Tiles (Glass) 1 -->
+        
+        <div style="color:antiquewhite">Academic Operations 1</div>
+        <div class="kpi-glass-grid">
+
+            <RadzenCard class="glass-tile">
+                <div class="tile-head">
+                    <span>Total Students</span>
+                    <RadzenIcon Icon="groups" />
+                </div>
+                <div class="tile-value">1,248</div>
+                <RadzenProgressBar Value="78" ShowValue="false" />
+            </RadzenCard>
+
+            <RadzenCard class="glass-tile">
+                <div class="tile-head">
+                    <span>Active Courses</span>
+                    <RadzenIcon Icon="menu_book" />
+                </div>
+                <div class="tile-value">64</div>
+                <RadzenBadge Text="12 Draft" class="warn" />
+            </RadzenCard>
+
+            <RadzenCard class="glass-tile">
+                <div class="tile-head">
+                    <span>Assessments</span>
+                    <RadzenIcon Icon="assignment" />
+                </div>
+                <div class="tile-value">312</div>
+                <RadzenBadge Text="9 Pending" class="warn" />
+            </RadzenCard>
+
+            <RadzenCard class="glass-tile">
+                <div class="tile-head">
+                    <span>Compliance</span>
+                    <RadzenIcon Icon="gpp_good" />
+                </div>
+                <div class="tile-value success">OK</div>
+                <span class="sub">NZQA / Internal QA</span>
+            </RadzenCard>
+        </div>
+
+        <!-- KPI Tiles (Glass) 2 -->
+        <div style="color:greenyellow">Academic Operations 2</div>
+        <div class="kpi-glass-grid">
+            
+
+            <RadzenCard class="glass-tile">
+                <div class="tile-head">
+                    <span>Moderation</span>
+                    <RadzenIcon Icon="assignment" />
+                </div>
+                <div class="tile-value">312</div>
+                <RadzenBadge Text="Pending" class="warn" />
+            </RadzenCard>
+
+            
+            
+            
+            <RadzenCard class="glass-tile">
+                <div class="tile-head">
+                    <span>Moderation</span>
+                    <RadzenIcon Icon="assignment" Style="@($"color:{iconColor}; font-size:20px;")" />
+                </div>
+
+                <div class="tile-value">
+                    @PendingModerationCount
+                    <RadzenBadge Text="@statusText" Style="@badgeStyle" />
+                </div>
+
+
+                <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+                    <RadzenButton Text="Open"
+                                  Icon="open_in_new"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Click="@OpenByStatus" />
+
+                    <RadzenButton Text="Reports"
+                                  Icon="analytics"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@(() => Nav.NavigateTo("/weather"))" />
+                </div>
+            </RadzenCard>
+
+
+
+        </div>
+
+        <!-- Charts / Analytics -->
+        <div class="analytics-grid">
+
+            <RadzenCard class="glass-panel">
+                <h4>Enrollment Trends</h4>
+                <div class="chart-placeholder">
+                    📊 Chart (RadzenLineSeries)
+                </div>
+            </RadzenCard>
+
+            <RadzenCard class="glass-panel">
+                <h4>Course Performance</h4>
+                <div class="chart-placeholder">
+                    📈 Chart (RadzenBarSeries)
+                </div>
+            </RadzenCard>
+
+            <RadzenCard class="glass-panel">
+                <h4>Assessment Status</h4>
+                <div class="chart-placeholder">
+                    🧮 Chart (RadzenDonutSeries)
+                </div>
+            </RadzenCard>
+
+        </div>
+
+    </div>
+</div>
+
+
+
+
+
+@code {
+    [Inject] NavigationManager Nav { get; set; } = default!;
+
+    int PendingModerationCount = 120;
+
+    string statusText = "";
+    string iconColor = "";
+    string badgeStyle = "";
+
+    protected override void OnParametersSet()
+    {
+        // 0–10 OK
+        if (PendingModerationCount <= 10)
+        {
+            statusText = "OK";
+            iconColor = "green";
+            badgeStyle = "background:rgba(34,197,94,0.22);border:1px solid rgba(34,197,94,0.45);color:green;padding:6px 10px;border-radius:999px;font-weight:700;";
+        }
+        // 11–25 Waiting
+        else if (PendingModerationCount <= 25)
+        {
+            statusText = "Waiting";
+            iconColor = "dodgerblue";
+            badgeStyle = "background:rgba(59,130,246,0.22);border:1px solid rgba(59,130,246,0.45);color:dodgerblue;padding:6px 10px;border-radius:999px;font-weight:700;";
+        }
+        // 26–100 Critical
+        else if (PendingModerationCount <= 100)
+        {
+            statusText = "Critical";
+            iconColor = "orange";
+            badgeStyle = "background:rgba(245,158,11,0.22);border:1px solid rgba(245,158,11,0.45);color:orange;padding:6px 10px;border-radius:999px;font-weight:700;";
+        }
+        // >100 Danger
+        else
+        {
+            statusText = "Danger";
+            iconColor = "red";
+            badgeStyle = "background:rgba(255,0,0,0.18);border:1px solid rgba(255,0,0,0.45);color:red;padding:6px 10px;border-radius:999px;font-weight:700;";
+        }
+    }
+
+    void OpenByStatus()
+    {
+        // ✅ Different navigation by condition (your rule)
+        if (PendingModerationCount <= 10)
+        {
+            Nav.NavigateTo("/moderation/overview");
+        }
+        else if (PendingModerationCount <= 25)
+        {
+            Nav.NavigateTo("/moderation/waiting");
+        }
+        else if (PendingModerationCount <= 100)
+        {
+            Nav.NavigateTo("/moderation/critical");
+        }
+        else
+        {
+            Nav.NavigateTo("/moderation/danger");
+        }
+    }
+}

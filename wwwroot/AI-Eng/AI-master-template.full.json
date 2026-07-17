@@ -1,0 +1,182 @@
+{
+  "_lock": {
+    "locked": true,
+    "allowStructureChange": false,
+    "allowedOverrides": [
+      "task",
+      "instruction",
+      "input",
+      "output.schema",
+      "actions",
+      "aiConfig",
+      "execution",
+      "orchestration"
+    ]
+  },
+
+  "meta": {
+    "version": "6.0-generic",
+    "templateName": "Universal AI Execution Template",
+    "description": "Fully generic AI processing template supporting all industries and use cases",
+    "namingConvention": "camelCase"
+  },
+
+  "task": {
+    "id": "generic-task",
+    "name": "ai-processing",
+    "type": "dynamic",
+    "subType": "dynamic",
+    "category": "universal",
+    "priority": "normal"
+  },
+
+  "system": {
+    "mode": "deterministic",
+    "rules": [
+      "Do NOT hallucinate",
+      "Use ONLY provided input",
+      "Return ONLY valid JSON",
+      "Follow schema strictly",
+      "Do NOT add extra fields",
+      "Include current date and time in ISO format in field 'generatedAt'",
+      "Include list of input sources used in field 'sourcesUsed'"
+    ],
+    "guardrails": {
+      "strictSchema": true,
+      "rejectUnknownFields": true,
+      "allowPartial": false,
+      "maxRetries": 2
+    }
+  },
+
+  "instruction": {
+    "objective": "Execute task based on provided input and task definition",
+    "taskType": "dynamic",
+    "mode": "adaptive",
+    "depth": "medium",
+    "outputStyle": "structured",
+    "rules": [
+      "STRICT OUTPUT MODE",
+      "Return ONLY JSON",
+      "No explanation outside JSON",
+      "Adapt behavior based on task.type and instruction.taskType"
+    ],
+    "requirements": [
+      "Interpret input context correctly",
+      "Apply reasoning relevant to the task",
+      "Generate output aligned with schema",
+      "Ensure logical consistency and completeness"
+    ]
+  },
+
+  "input": {
+    "mode": "multi-source",
+    "sources": [
+      {
+        "id": "primary",
+        "type": "manual",
+        "enabled": true,
+        "data": "dynamic input"
+      }
+    ]
+  },
+
+  "aiConfig": {
+    "provider": "azureOpenAI",
+    "deployment": "gpt-4o-mini",
+    "temperature": 0.1,
+    "maxTokens": 1800,
+    "responseFormat": "json"
+  },
+
+  "orchestration": {
+    "mode": "sequential",
+    "steps": [
+      {
+        "name": "interpretation",
+        "type": "analysis"
+      },
+      {
+        "name": "processing",
+        "type": "analysis"
+      },
+      {
+        "name": "validation",
+        "type": "validation"
+      },
+      {
+        "name": "finalization",
+        "type": "synthesis"
+      }
+    ]
+  },
+
+  "output": {
+    "format": "json",
+    "schema": {
+      "generatedAt": "string",
+      "sourcesUsed": "array",
+      "summary": "string",
+      "insights": "string",
+      "risks": "string",
+      "recommendations": "string"
+    },
+
+    "requirements": {
+      "summary": [
+        "Must reflect task objective",
+        "Must be concise and clear"
+      ],
+      "insights": [
+        "Must include key findings relevant to task",
+        "Must reflect reasoning based on input"
+      ],
+      "risks": [
+        "Must include potential risks, limitations, or uncertainties"
+      ],
+      "recommendations": [
+        "Must provide actionable outcomes aligned with task"
+      ]
+    },
+
+    "validation": {
+      "strict": true,
+      "requiredFields": [
+        "generatedAt",
+        "sourcesUsed",
+        "summary",
+        "insights",
+        "risks",
+        "recommendations"
+      ],
+      "rejectExtraFields": true
+    }
+  },
+
+  "actions": [],
+
+  "execution": {
+    "retryPolicy": {
+      "enabled": true,
+      "maxRetries": 2,
+      "strategy": "fix_json"
+    },
+    "timeoutSeconds": 120,
+    "parallelExecution": false
+  },
+
+  "security": {
+    "sanitizeInput": true,
+    "validateMappings": true,
+    "allowExternalCalls": false,
+    "dataClassification": "internal"
+  },
+
+  "monitoring": {
+    "logging": true,
+    "logLevel": "information",
+    "trackTokenUsage": true,
+    "trackExecutionTime": true,
+    "auditTrail": true
+  }
+}

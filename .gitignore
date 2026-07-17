@@ -1,0 +1,28 @@
+# Visual Studio
+.vs/
+
+# Build output
+bin/
+obj/
+
+# User files
+*.user
+*.suo
+*.cache
+*.dbmdl
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Publish
+*.pubxml.user
+
+# OS
+Thumbs.db
+Desktop.ini

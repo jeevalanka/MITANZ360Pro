@@ -1,0 +1,245 @@
+﻿@page "/video-player"
+@layout MainLayout_NoRightPan
+
+@inject NavigationManager Nav
+
+<div class="layout">
+
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar">
+
+        <div class="info-card">
+            <strong>Instructions</strong><br />
+            Select a video from the list to start learning.<br /><br />
+
+            <strong>Legal Notice</strong><br />
+            Educational use only.<br />
+            Credits belong to creators.<br /><br />
+
+            Thank you
+        </div>
+
+        <button class="home-btn" @onclick="GoHome">
+            Home
+        </button>
+
+        <h2>Available Videos</h2>
+
+        @foreach (var video in Videos)
+        {
+            <div class="video-card" @onclick="() => OpenVideo(video.Url)">
+                <b>@video.Title</b>
+            </div>
+        }
+
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+        <div class="header">Video Learning Portal</div>
+        <img src="/images/edu/mar-11.png" class="hero-image" />
+    </div>
+
+</div>
+
+@if (IsOpen)
+{
+    <div class="overlay" tabindex="0" @onkeydown="HandleKey">
+
+        <div class="player">
+
+            <button class="close" @onclick="CloseVideo">X</button>
+
+            <iframe src="@SelectedVideo"
+                    allow="autoplay; encrypted-media"
+                    allowfullscreen>
+            </iframe>
+
+        </div>
+    </div>
+}
+
+@code {
+    private string? SelectedVideo;
+    private bool IsOpen;
+
+    private readonly List<VideoItem> Videos = new()
+    {
+        new VideoItem("Azure Intro", "https://www.youtube.com/embed/aYByANhgT_w?autoplay=1&rel=0"),
+        new VideoItem("Global Teaching Reach", "https://www.youtube.com/embed/8ylwXUn44ZI?autoplay=1&rel=0"),
+        new VideoItem("Top 10 Uni in NZ", "https://www.youtube.com/embed/hwP3EysM2A8?autoplay=1&rel=0"),
+        new VideoItem("Top 10 Uni in AU", "https://www.youtube.com/embed/X3YUw0PtdNc?autoplay=1&rel=0")
+    };
+
+    private void OpenVideo(string url)
+    {
+        SelectedVideo = url;
+        IsOpen = true;
+    }
+
+    private void CloseVideo()
+    {
+        IsOpen = false;
+        SelectedVideo = null;
+    }
+
+    private void HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            CloseVideo();
+        }
+    }
+
+    private void GoHome()
+    {
+        Nav.NavigateTo("/");
+    }
+
+    private sealed record VideoItem(string Title, string Url);
+}
+
+<style>
+    body {
+        margin: 0;
+        font-family: Segoe UI, sans-serif;
+    }
+
+    .layout {
+        display: flex;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        color: white;
+    }
+
+    .sidebar {
+        width: 320px;
+        background: #020617;
+        padding: 15px;
+        overflow-y: auto;
+        border-right: 2px solid #f97316;
+    }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+    .home-btn {
+        width: 100%;
+        margin-bottom: 15px;
+        padding: 10px;
+        border-radius: 8px;
+        background: #f97316;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+        .home-btn:hover {
+            background: #fb923c;
+        }
+
+    .video-card {
+        background: #1e293b;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+        .video-card:hover {
+            background: #334155;
+            transform: scale(1.02);
+        }
+
+    .info-card {
+        background: #0f172a;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+    }
+
+    .header {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .hero-image {
+        width: 100%;
+        max-height: 80vh;
+        object-fit: contain;
+        border-radius: 10px;
+    }
+
+    .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.95);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 999999;
+        outline: none;
+    }
+
+    .player {
+        width: 95%;
+        height: 90%;
+        position: relative;
+        background: black;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+        .player iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+    .close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 22px;
+        cursor: pointer;
+        background: rgba(0,0,0,0.6);
+        color: white;
+        border: none;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+    }
+
+        .close:hover {
+            background: red;
+        }
+
+    @@media (max-width: 768px) {
+        .layout {
+            flex-direction: column;
+        }
+
+        .sidebar {
+            width: 100%;
+            border-right: none;
+            border-bottom: 2px solid #f97316;
+        }
+
+        .hero-image {
+            height: auto;
+        }
+    }
+</style>

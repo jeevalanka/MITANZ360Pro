@@ -1,0 +1,229 @@
+﻿# =====================================================================
+# MITANZ360Edu - Copilot Knowledge Pack Generator (FINAL)
+# =====================================================================
+
+$ErrorActionPreference = "Continue"
+
+# ---------------------------------------------------------------------
+# CONFIG
+# ---------------------------------------------------------------------
+$ProjectRoot = "D:\MITANZ360EDU-System\GitHub\mitanz360edu"
+$OutputFolder = Join-Path $ProjectRoot "Copilot-KnowledgePack"
+
+$RazorOutput  = Join-Path $OutputFolder "01_Razor_UI.txt"
+$CsOutput     = Join-Path $OutputFolder "02_CSharp_Backend.txt"
+$ConfigOutput = Join-Path $OutputFolder "03_Project_Config.txt"
+
+# ---------------------------------------------------------------------
+# RESET OUTPUT
+# ---------------------------------------------------------------------
+if (Test-Path $OutputFolder) {
+    Remove-Item $OutputFolder -Recurse -Force -ErrorAction SilentlyContinue
+}
+New-Item -ItemType Directory -Path $OutputFolder | Out-Null
+
+# ---------------------------------------------------------------------
+# EXCLUSIONS
+# ---------------------------------------------------------------------
+$ExcludedFolders = @(
+"bin","obj",".git",".github",".vs",".vscode",
+"node_modules","packages","artifacts","publish",
+"Copilot-KnowledgePack"
+)
+
+$ExcludedExtensions = @(
+".dll",".exe",".pdb",".cache",".user",".suo",
+".zip",".7z",".rar",
+".png",".jpg",".jpeg",".gif",".bmp",".ico",".svg",".webp",
+".mp3",".wav",".mp4",".avi",".mov"
+)
+
+# ---------------------------------------------------------------------
+# CONFIG FILE TYPES
+# ---------------------------------------------------------------------
+$ConfigExtensions = @(
+".json",".config",".csproj",".sln",".props",".targets",
+".editorconfig",".css",".scss",".js",".ts",
+".html",".cshtml",".sql",".xml",".txt",".md",
+".ps1",".yml",".yaml",".csv",".pubxml"
+)
+
+# ---------------------------------------------------------------------
+# FILTER
+# ---------------------------------------------------------------------
+function Should-IncludeFile {
+    param($file)
+
+    foreach ($folder in $ExcludedFolders) {
+        if ($file.FullName -like "*\$folder\*") { return $false }
+    }
+
+    if ($ExcludedExtensions -contains $file.Extension.ToLower()) {
+        return $false
+    }
+
+    return $true
+}
+
+# ---------------------------------------------------------------------
+# GET FILES
+# ---------------------------------------------------------------------
+$files = Get-ChildItem $ProjectRoot -Recurse -File | Where-Object {
+    Should-IncludeFile $_
+}
+
+$total = $files.Count
+$current = 0
+
+# ---------------------------------------------------------------------
+# STREAM WRITERS (HIGH PERFORMANCE)
+# ---------------------------------------------------------------------
+$RazorWriter  = [System.IO.StreamWriter]::new($RazorOutput, $false, [System.Text.Encoding]::UTF8)
+$CsWriter     = [System.IO.StreamWriter]::new($CsOutput, $false, [System.Text.Encoding]::UTF8)
+$ConfigWriter = [System.IO.StreamWriter]::new($ConfigOutput, $false, [System.Text.Encoding]::UTF8)
+
+# ---------------------------------------------------------------------
+# WRITE BLOCK FUNCTION
+# ---------------------------------------------------------------------
+function Write-Block {
+    param($writer, $relativePath, $content)
+
+    $writer.WriteLine("====================================================================")
+    $writer.WriteLine("FILE")
+    $writer.WriteLine($relativePath)
+    $writer.WriteLine("====================================================================")
+    $writer.WriteLine($content)
+    $writer.WriteLine("====================================================================")
+    $writer.WriteLine("END FILE")
+    $writer.WriteLine("====================================================================")
+}
+
+# ---------------------------------------------------------------------
+# COUNTERS
+# ---------------------------------------------------------------------
+$RazorCount = 0
+$CsCount = 0
+$ConfigCount = 0
+$Errors = @()
+
+$Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+# ---------------------------------------------------------------------
+# START
+# ---------------------------------------------------------------------
+Write-Host ""
+Write-Host "====================================================" -ForegroundColor Cyan
+Write-Host " MITANZ360Edu Knowledge Pack Generator"
+Write-Host "====================================================" -ForegroundColor Cyan
+Write-Host "Total Files: $total"
+Write-Host ""
+
+# ---------------------------------------------------------------------
+# PROCESS FILES
+# ---------------------------------------------------------------------
+foreach ($file in $files) {
+
+    $current++
+
+    # ✅ FIXED PERCENT CALCULATION
+    $percent = :Round(($current / $total) * 100)
+
+    $remaining = $total - $current
+    $elapsed = $Stopwatch.Elapsed.ToString("hh\:mm\:ss")
+
+    $relativePath = $file.FullName.Substring($ProjectRoot.Length + 1)
+
+    Write-Progress `
+        -Activity "Generating Knowledge Pack" `
+        -Status "$percent% | $relativePath" `
+        -PercentComplete $percent
+
+    Write-Host ("[{0,3}%] {1}/{2} | Remaining: {3} | Time: {4}" -f `
+        $percent, $current, $total, $remaining, $elapsed)
+
+    try {
+        $content = Get-Content $file.FullName -Raw -ErrorAction Stop
+
+        switch ($file.Extension.ToLower()) {
+
+            ".razor" {
+                Write-Block $RazorWriter $relativePath $content
+                $RazorCount++
+            }
+
+            ".cs" {
+                if ($file.Name.EndsWith(".razor.cs")) {
+                    Write-Block $RazorWriter $relativePath $content
+                    $RazorCount++
+                } else {
+                    Write-Block $CsWriter $relativePath $content
+                    $CsCount++
+                }
+            }
+
+            default {
+                if ($ConfigExtensions -contains $file.Extension.ToLower()) {
+                    Write-Block $ConfigWriter $relativePath $content
+                    $ConfigCount++
+                }
+            }
+        }
+    }
+    catch {
+        $Errors += "$relativePath -> $($_.Exception.Message)"
+    }
+}
+
+# ---------------------------------------------------------------------
+# CLOSE WRITERS
+# ---------------------------------------------------------------------
+$RazorWriter.Dispose()
+$CsWriter.Dispose()
+$ConfigWriter.Dispose()
+
+$Stopwatch.Stop()
+
+# ---------------------------------------------------------------------
+# ZIP OUTPUT
+# ---------------------------------------------------------------------
+$zipPath = Join-Path $ProjectRoot "Copilot-KnowledgePack.zip"
+
+if (Test-Path $zipPath) {
+    Remove-Item $zipPath -Force
+}
+
+Compress-Archive -Path "$OutputFolder\*" -DestinationPath $zipPath
+
+# ---------------------------------------------------------------------
+# SUMMARY
+# ---------------------------------------------------------------------
+Write-Host ""
+Write-Host "====================================================" -ForegroundColor Green
+Write-Host " FINAL SUMMARY"
+Write-Host "====================================================" -ForegroundColor Green
+
+Write-Host "Razor Files  : $RazorCount"
+Write-Host "C# Files     : $CsCount"
+Write-Host "Config Files : $ConfigCount"
+Write-Host "Total Files  : $($RazorCount + $CsCount + $ConfigCount)"
+Write-Host "Elapsed Time : $($Stopwatch.Elapsed)"
+
+Write-Host ""
+Write-Host "Errors: $($Errors.Count)"
+
+if ($Errors.Count -gt 0) {
+    foreach ($e in $Errors) {
+        Write-Host " - $e" -ForegroundColor Red
+    }
+}
+else {
+    Write-Host "No errors detected" -ForegroundColor Green
+}
+
+Write-Host ""
+Write-Host "ZIP Created: $zipPath" -ForegroundColor Cyan
+
+# ---------------------------------------------------------------------
+# OPEN OUTPUT
+# ---------------------------------------------------------------------
+Start-Process explorer.exe $OutputFolder

@@ -1,0 +1,60 @@
+{
+  "$schema": "1.0",
+  "Id": "0b043f21-6dff-40e1-b0d5-908f85d3f338",
+  "Name": "Write HTML File",
+  "Description": "est Case 1 - Write HTML File",
+  "Metadata": {
+    "Author": "",
+    "Department": "",
+    "Category": "",
+    "Tags": [],
+    "Version": "1.0.0",
+    "CreatedOn": "2026-06-18T06:05:49.961081Z",
+    "ModifiedOn": "2026-06-18T06:05:49.9610813Z",
+    "IsEnabled": true
+  },
+  "DataSources": [
+    {
+      "Id": "5d51943f-56b3-4f38-a6df-8a1966ff02f8",
+      "Name": "ai step",
+      "Type": "ai",
+      "Enabled": true,
+      "Order": 1,
+      "ContinueOnError": false,
+      "Inputs": [],
+      "Output": "aiOutput",
+      "Settings": {
+        "provider": "AzureOpenAI",
+        "model": "gpt-5",
+        "prompt": "You are a professional Microsoft Education Content Designer.\n\nGenerate a clean, modern, brochure-style HTML page.\n\nRequirements:\n\n- Return ONLY valid HTML.\n- Start with \u003C!DOCTYPE html\u003E.\n- Do not return explanations.\n- Do not return markdown.\n- Do not wrap HTML in code blocks.\n- Use embedded CSS only.\n- Use Segoe UI font.\n- Responsive layout.\n- Microsoft-inspired colors.\n- Clean and readable design.\n- Suitable for students and professionals.\n- Professional brochure appearance.\n\nUse:\n\nPrimary Color: #0078D4\nBackground: #F8F9FA\nText Color: #323130\n\nInclude:\n\n1. Hero Banner\n   - Course Title\n   - Short Tagline\n\n2. About This Course\n   - Brief introduction\n\n3. What You Will Learn\n   - 4-6 bullet points with icons\n\n4. Key Topics Covered\n   - Simple card layout\n\n5. Who Should Attend\n   - Target audience\n\n6. Exam Information\n   - Exam code\n   - Duration\n   - Question types\n   - Passing score\n\n7. Benefits of Certification\n   - Professional benefits\n\n8. Call to Action\n   - Encourage learning\n\n9. Professional Footer\n\nUse Font Awesome icons.\n\nContent Topic:\n\nMicrosoft Azure Fundamentals (AZ-900)\n\nThe page should look like a professional training brochure that can be given to students before enrolling in the course.\n\nReturn ONLY the complete HTML document."
+      }
+    },
+    {
+      "Id": "cc772b9d-e02b-40e7-82c6-ffdad5a34d26",
+      "Name": "file step",
+      "Type": "file",
+      "Enabled": true,
+      "Order": 2,
+      "ContinueOnError": false,
+      "Inputs": [],
+      "Output": "fileOutput",
+      "Settings": {
+        "path": "wwwroot\\Reports\\Test.html",
+        "operation": "UploadToSharePoint",
+        "input": "aiOutput",
+        "fileName": "JDVanz2.html"
+      }
+    }
+  ],
+  "AiSteps": [],
+  "Output": {
+    "Name": "result",
+    "Format": "Json",
+    "Template": "",
+    "SaveToFile": false,
+    "FileName": "",
+    "Directory": "",
+    "ReturnToClient": true
+  },
+  "Actions": []
+}

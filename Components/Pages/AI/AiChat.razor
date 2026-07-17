@@ -1,0 +1,585 @@
+@page "/ai-assistant"
+@layout MainLayout
+
+@using System.Text.Json
+@using MITANZ360Pro.Web.Services.AI
+@using Microsoft.AspNetCore.Components
+
+@inject AiWorkflowEngine WorkflowEngine
+@inject ILogger<AiChat> Logger
+
+<PageTitle>MITANZ360Pro AI Chat</PageTitle>
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-12 col-xl-10">
+
+            <!-- HEADER -->
+            <div class="card shadow-sm border-0 mb-4">
+
+                <div class="card-body">
+
+                    <h2 class="fw-bold text-primary mb-2">
+                        MITANZ360Pro AI Chat
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        # How to Get the Best Results
+
+                        * Be clear and specific about what you need.
+                        * Ask direct questions.
+                        * Provide relevant context when helpful.
+                        * Feel free to ask follow-up questions.
+                        * Avoid sharing sensitive personal information.
+                        * Let me know if you'd like more detail or a different approach.
+
+                        I'm ready to help—just ask!
+                    </p>
+
+                </div>
+
+            </div>
+
+            <!-- INPUT -->
+            <div class="card shadow-sm border-0 mb-4">
+
+                <div class="card-header">
+
+                    <h5 class="fw-semibold" >
+                        Prompt
+                    </h5>
+
+                </div>
+
+                <div class="card-body">
+
+                    <textarea class="form-control ai-textarea"
+                              rows="2"
+                              placeholder="Ask MITANZ360Pro AI..."
+                              @bind="Prompt">
+                    </textarea>
+
+                    <div class="row mt-3">
+
+                        <div class="col-md-4">
+
+                            <label class="form-label fw-semibold">
+                                Response Format
+                            </label>
+
+                            <select class="form-select"
+                                    @bind="SelectedOutputMode">
+
+                                <option value="@AiOutputMode.Text">
+                                    Plain Text
+                                </option>
+
+                                <option value="@AiOutputMode.Html">
+                                    HTML
+                                </option>
+
+                                <option value="@AiOutputMode.Markdown">
+                                    Markdown
+                                </option>
+
+                                <option value="@AiOutputMode.JsonOnly">
+                                    JSON
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+
+                        <button class="btn btn-primary px-4"
+                                @onclick="ExecuteAsync"
+                                disabled="@IsLoading">
+
+                            @if (IsLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2">
+                                </span>
+
+                                <span>
+                                    Processing...
+                                </span>
+                            }
+                            else
+                            {
+                                <span>
+                                    Send
+                                </span>
+                            }
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ERROR -->
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="alert alert-danger shadow-sm">
+
+                    <strong>
+                        Error:
+                    </strong>
+
+                    @ErrorMessage
+
+                </div>
+            }
+
+            <!-- RESPONSE -->
+            @if (!string.IsNullOrWhiteSpace(Response))
+            {
+                <div class="card shadow-sm border-0">
+
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+
+                        <span class="fw-semibold">
+                            AI Response
+                        </span>
+
+                        <small>
+                            @ResponseGeneratedAt
+                        </small>
+
+                    </div>
+
+                    <div class="card-body ai-response-container">
+
+                        @if (SelectedOutputMode == AiOutputMode.Html)
+                        {
+                            <div class="ai-html-response">
+
+                                @((MarkupString)Response)
+
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="ai-response-text">
+
+                                @Response
+
+                            </div>
+                        }
+
+                    </div>
+
+                </div>
+            }
+
+        </div>
+
+    </div>
+
+</div>
+
+@code
+{
+    private string Prompt { get; set; } =
+        string.Empty;
+
+    private string Response { get; set; } =
+        string.Empty;
+
+    private string ErrorMessage { get; set; } =
+        string.Empty;
+
+    private bool IsLoading { get; set; }
+
+    private string ResponseGeneratedAt { get; set; } =
+        string.Empty;
+
+    private AiOutputMode SelectedOutputMode { get; set; } =
+        AiOutputMode.Text;
+
+    private async Task ExecuteAsync()
+    {
+        try
+        {
+            ErrorMessage = string.Empty;
+
+            Response = string.Empty;
+
+            IsLoading = true;
+
+            Logger.LogInformation(
+                "AI chat execution started.");
+
+            var request =
+                new AiWorkflowRequest
+                {
+                    TaskType = AiTaskType.Chat,
+
+                    Prompt = Prompt,
+
+                    OutputMode = SelectedOutputMode,
+
+                    StrictJsonResponse = false,
+
+                    CorrelationId =
+                        Guid.NewGuid().ToString()
+                };
+
+            var result =
+                await WorkflowEngine.ExecuteAsync(
+                    request);
+
+            if (!result.Success)
+            {
+                ErrorMessage =
+                    string.Join(
+                        Environment.NewLine,
+                        result.Errors);
+
+                Logger.LogWarning(
+                    "AI workflow returned unsuccessful result.");
+
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(result.RawResponse))
+            {
+                ErrorMessage =
+                    "AI returned an empty response.";
+
+                return;
+            }
+
+            try
+            {
+                using var document =
+                    JsonDocument.Parse(
+                        result.RawResponse);
+
+                var content =
+                    document.RootElement
+                        .GetProperty("choices")[0]
+                        .GetProperty("message")
+                        .GetProperty("content")
+                        .GetString();
+
+                Response =
+                    content ??
+                    "No response generated.";
+            }
+            catch (Exception jsonEx)
+            {
+                Logger.LogWarning(
+                    jsonEx,
+                    "Failed to parse AI response.");
+
+                Response =
+                    "Unable to parse AI response.";
+            }
+
+            ResponseGeneratedAt =
+                DateTime.Now.ToString(
+                    "dd MMM yyyy hh:mm tt");
+
+            Logger.LogInformation(
+                "AI chat execution completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "AI chat execution failed.");
+
+            ErrorMessage =
+                ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}
+
+<style>
+
+    :root {
+        --ms-primary: #2563eb;
+        --ms-primary-dark: #1d4ed8;
+        --ms-bg: #f3f6fb;
+        --ms-surface: rgba(255,255,255,0.72);
+        --ms-border: rgba(255,255,255,0.35);
+        --ms-text: #0f172a;
+        --ms-muted: #475569;
+        --ms-shadow: 0 8px 32px rgba(15,23,42,0.08);
+    }
+
+    body {
+        background: linear-gradient( 135deg, #eef4ff 0%, #f8fbff 50%, #edf4ff 100%);
+    }
+
+    /* =========================
+           GLASS CARDS
+        ========================== */
+
+    .card {
+        background:lightblue;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--ms-border);
+        border-radius: 24px;
+        box-shadow: var(--ms-shadow);
+        overflow: hidden;
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 36px rgba(15,23,42,0.12);
+        }
+
+    .card-header {
+        background: rgba(255,255,255,0.45);
+        backdrop-filter: blur(12px);
+        border-radius: 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.25);
+        padding: 5px 20px;
+        font-weight: 600;
+    }
+
+    .card-body {
+        padding: 28px;
+    }
+
+    /* =========================
+           INPUT AREA
+        ========================== */
+
+    .ai-textarea {
+        resize: vertical;
+        min-height: 240px;
+        border-radius: 18px;
+        border: 1px solid rgba(203,213,225,0.7);
+        background: rgba(255,255,255,0.82);
+        color: var(--ms-text);
+        padding: 18px;
+        font-size: 1rem;
+        line-height: 1.7;
+        transition: all .2s ease;
+        box-shadow: inset 0 1px 2px rgba(15,23,42,0.04);
+    }
+
+        .ai-textarea:focus {
+            border-color: var(--ms-primary);
+            box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+            outline: none;
+        }
+
+    /* =========================
+           BUTTONS
+        ========================== */
+
+    .btn-primary {
+        background: linear-gradient( 135deg, #2563eb, #1d4ed8);
+        border: none;
+        border-radius: 14px;
+        padding: 12px 28px;
+        font-weight: 600;
+        box-shadow: 0 6px 16px rgba(37,99,235,0.25);
+        transition: all .2s ease;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(37,99,235,0.32);
+        }
+
+    /* =========================
+           RESPONSE CONTAINER
+        ========================== */
+
+    .ai-response-container {
+        background: rgba(255,255,255,0.55);
+        backdrop-filter: blur(18px);
+        border-top: 1px solid rgba(255,255,255,0.28);
+        padding: 30px;
+        border-radius: 0 0 24px 24px;
+    }
+
+    .ai-response-text {
+        color: var(--ms-text);
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        line-height: 1.9;
+        font-size: 1rem;
+        font-family: "Segoe UI", sans-serif;
+    }
+
+    /* =========================
+           HTML RENDERING
+        ========================== */
+
+    .ai-html-response {
+        background: rgba(255,255,255,0.72);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 22px;
+        padding: 32px;
+        color: var(--ms-text);
+        box-shadow: 0 8px 24px rgba(15,23,42,0.08);
+        line-height: 1.8;
+    }
+
+        /* =========================
+           HEADINGS
+        ========================== */
+
+        .ai-html-response h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #174ea6;
+            margin-bottom: 20px;
+        }
+
+        .ai-html-response h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1d4ed8;
+            margin-top: 28px;
+            margin-bottom: 16px;
+        }
+
+        .ai-html-response h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2563eb;
+            margin-top: 24px;
+            margin-bottom: 14px;
+        }
+
+        .ai-html-response p {
+            color: var(--ms-muted);
+            margin-bottom: 16px;
+        }
+
+        /* =========================
+           TABLES
+        ========================== */
+
+        .ai-html-response table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.65);
+            border-radius: 18px;
+            overflow: hidden;
+            margin-top: 24px;
+        }
+
+            .ai-html-response table th {
+                background: linear-gradient( 135deg, #1e40af, #2563eb);
+                color: white;
+                padding: 16px;
+                font-weight: 600;
+                border: none;
+            }
+
+            .ai-html-response table td {
+                padding: 16px;
+                border-bottom: 1px solid rgba(226,232,240,0.7);
+                color: var(--ms-muted);
+            }
+
+            .ai-html-response table tr:hover {
+                background: rgba(37,99,235,0.04);
+            }
+
+        /* =========================
+           NESTED CARDS
+        ========================== */
+
+        .ai-html-response .card {
+            background: rgba(255,255,255,0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.28);
+            border-radius: 20px;
+            margin-bottom: 24px;
+        }
+
+        /* =========================
+           ALERTS
+        ========================== */
+
+        .ai-html-response .alert {
+            border: none;
+            border-radius: 16px;
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(12px);
+        }
+
+        .ai-html-response .alert-info {
+            background: rgba(219,234,254,0.7);
+            color: #1e40af;
+        }
+
+        .ai-html-response .alert-success {
+            background: rgba(220,252,231,0.72);
+            color: #166534;
+        }
+
+        .ai-html-response .alert-warning {
+            background: rgba(254,249,195,0.75);
+            color: #92400e;
+        }
+
+        .ai-html-response .alert-danger {
+            background: rgba(254,226,226,0.75);
+            color: #991b1b;
+        }
+
+        /* =========================
+           CODE BLOCKS
+        ========================== */
+
+        .ai-html-response pre {
+            background: rgba(15,23,42,0.95);
+            color: #f8fafc;
+            border-radius: 16px;
+            padding: 22px;
+            overflow-x: auto;
+            font-size: 0.95rem;
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.04);
+        }
+
+        .ai-html-response code {
+            background: rgba(226,232,240,0.7);
+            padding: 3px 8px;
+            border-radius: 8px;
+            color: #0f172a;
+        }
+
+    /* =========================
+           SCROLLBAR
+        ========================== */
+
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: rgba(148,163,184,0.45);
+        border-radius: 20px;
+    }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(100,116,139,0.55);
+        }
+
+</style>

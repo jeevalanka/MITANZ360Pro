@@ -1,0 +1,45 @@
+{
+  "Application": {
+    "Name": "🎓 AI Learning Hub",
+    "ShortName": "MITANZ360",
+    "Version": "1.0.0",
+    "Environment": "Development",
+    "Company": "MITANZ NZ Ltd",
+    "Website": "https://www.mitanz.com",
+    "SupportEmail": "support@mitanz.com",
+    "SupportPhone": "\u002B64 220590223"
+  },
+  "Branding": {
+    "LogoUrl": "/images/Logo-v2.png",
+    "LogoSmallUrl": "/images/Logo-v2.png",
+    "PrimaryColor": "#f59e0b",
+    "SecondaryColor": "#0f172a",
+    "AccentColor": "#2563eb"
+  },
+  "Features": {
+    "EnableAI": true,
+    "EnableAudit": true,
+    "EnableCourseManagement": true,
+    "EnableStudentPortal": true,
+    "EnableTeacherPortal": true,
+    "EnableSharePointIntegration": true
+  },
+  "AI": {
+    "Provider": "AzureOpenAI",
+    "Model": "gpt-4o",
+    "Temperature": 0.2,
+    "MaxTokens": 2000,
+    "EnableEducationalAnalysis": true
+  },
+  "Client": {
+    "ClientName": "MITANZ Enterprise Client",
+    "ClientCode": "MITANZ-ENT",
+    "Region": "ANZ"
+  },
+  "EmailSettings": {
+    "Provider": "MicrosoftGraph",
+    "SenderName": "MITANZ360Pro",
+    "SenderEmail": "mail@mit-ga.com",
+    "AdminEmail": "jeevalanka@hotmail.com"
+  }
+}

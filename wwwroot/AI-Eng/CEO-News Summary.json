@@ -1,0 +1,76 @@
+﻿{
+  "_comments": {
+    "description": "CEO News Summary"
+  },
+
+  "taskName": "CEO News Summary",
+
+  "dataSources": [
+    {
+      "type": "web",
+      "url": "https://www.reuters.com"
+    }
+  ],
+
+  "instruction": {
+    "objective": "Summarize business news with decision-making impact",
+
+    "pipeline": [
+      "extract",
+      "filter",
+      "summarize"
+    ],
+
+    "tasks": [
+      "Extract key news points",
+      "Filter irrelevant content",
+      "Summarize with business impact"
+    ],
+
+    "rules": [
+      "Use only given data",
+      "No assumptions",
+      "Keep concise"
+    ],
+
+    "analysis": {
+      "depth": "medium",
+      "focus": [ "business impact" ]
+    },
+
+    "output": {
+      "style": "executive",
+      "tone": "professional",
+      "format": "structured"
+    }
+  },
+
+  "input": {
+    "articles": [
+      "Microsoft expands AI investments globally.",
+      "Global recession fears impact stock markets.",
+      "Startups struggle due to funding shortages."
+    ]
+  },
+
+  "outputSchema": {
+    "summary": "string",
+    "businessImpact": "string"
+  },
+
+  "settings": {
+    "temperature": 0.2,
+    "maxTokens": 1200
+  },
+
+  "execution": {
+    "autoFetchDataSources": true,
+    "strictSchema": true
+  },
+
+  "output": {
+    "format": "text",
+    "template": "",
+    "saveTo": ""
+  }
+}

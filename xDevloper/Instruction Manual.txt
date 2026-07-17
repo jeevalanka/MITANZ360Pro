@@ -1,0 +1,427 @@
+﻿MITANZ360Edu – Enterprise AI Developer Framework Report
+Full Enterprise Instruction Manual
+For:
+Human Developers
+AI Development Agents
+Enterprise Automation Systems
+SharePoint + Graph Engineers
+AI Workflow Orchestration
+
+1. 🎯 PROJECT IDENTITY
+Project Name
+MITANZ360Edu
+Project Type
+Enterprise AI-Driven Education & Management Platform
+
+2. 🏗️ CORE ARCHITECTURE STANDARD
+REQUIRED ARCHITECTURE
+Single-Service Partial-Class Enterprise Architecture
+
+3. 🧩 MAIN SERVICE RULE (CRITICAL)
+ONLY ONE MAIN SERVICE
+SharePointService
+
+This service controls:
+
+SharePoint Lists
+SharePoint Libraries
+Microsoft Graph operations
+CRUD operations
+Metadata operations
+RBAC management
+Navigation cards
+Courses
+User management
+Automation orchestration
+AI processing
+Workflow persistence
+Audit logging
+
+4. 🧠 PARTIAL CLASS STRUCTURE
+MUST USE public partial class SharePointService
+
+5. 📂 REQUIRED FILE STRUCTURE
+/Services/SharePoint/
+
+SharePointService.cs
+SharePointService.Users.cs
+SharePointService.Roles.cs
+SharePointService.Navigation.cs
+SharePointService.Courses.cs
+SharePointService.Documents.cs
+SharePointService.Automation.cs
+SharePointService.AI.cs
+SharePointService.Workflows.cs
+
+6. 🚫 STRICTLY FORBIDDEN
+NEVER CREATE
+Repository layer
+Duplicate services
+EF repositories for SharePoint
+Fragmented business services
+Hardcoded master data
+Multi-service architecture
+
+7. 📂 SHAREPOINT-DRIVEN SYSTEM (MANDATORY)
+ALL MASTER DATA MUST COME FROM SHAREPOINT
+Data Type	Source
+Roles	SharePoint List
+Navigation Cards	SharePoint List
+Courses	SharePoint List
+Users	SharePoint List
+Campuses	SharePoint List
+Documents	SharePoint Libraries
+Workflow Configurations	SharePoint Lists
+Automation Metadata	SharePoint Lists
+
+8. 🔐 AUTHENTICATION STANDARD
+Application Authentication
+Custom login system
+Session-based user access
+RBAC authorization
+Microsoft Access
+Microsoft Entra ID
+Client Credentials flow
+Microsoft Graph SDK integration
+
+9. 🏷️ ROLE MANAGEMENT STANDARD
+Roles MUST COME FROM
+SharePoint Roles List
+NEVER HARD-CODE ROLES
+
+Use:
+dynamic role loading
+SharePoint-driven RBAC
+Graph-driven access control
+
+10. 👤 GUEST ACCESS STANDARD
+IMPORTANT
+Guest is NOT a real role.
+
+Meaning
+Guest = authenticated/non-assigned user visibility
+
+Used ONLY for:
+
+visibility logic
+fallback access
+limited-access routing
+
+11. 🎨 UI/UX ENTERPRISE STANDARD
+REQUIRED DESIGN STYLE
+
+Use:
+Microsoft Dynamics style
+Glass Morphism UI
+Rounded corners
+Responsive layouts
+Enterprise shadows
+Professional spacing
+Soft enterprise colors
+
+12. 🪟 CARD / TILE STANDARD
+
+Whenever user requests:
+
+Card View
+Dashboard Cards
+Tiles
+Quick Access Cards
+
+ALWAYS USE:
+
+✅ Glass Style Cards
+REQUIRED FEATURES
+Feature	Required
+Rounded Corners	YES
+Glass Blur	YES
+Hover Animation	YES
+Responsive Grid	YES
+Mobile Friendly	YES
+Enterprise Colors	YES
+
+13. 📱 RESPONSIVE DESIGN STANDARD
+ALL UI MUST SUPPORT
+Device	Required
+Desktop	YES
+Tablet	YES
+Mobile	YES
+Wide Screen	YES
+Responsive Rule
+
+Use:
+
+grid-template-columns:
+repeat(auto-fit,minmax(...))
+
+14. 📐 FORM STANDARD
+CRUD FORMS MUST USE
+2-column responsive layout
+Radzen dialogs
+Responsive inputs
+Rounded controls
+Professional spacing
+Multi-select dropdowns
+Mobile stacking behavior
+
+15. 🧠 CRUD DEVELOPMENT STANDARD
+EVERY CRUD PAGE MUST INCLUDE
+Feature	Required
+Header	YES
+Subtitle	YES
+Search	YES
+Filter	YES
+Data Grid	YES
+Add Button	YES
+Edit Dialog	YES
+Delete Confirmation	YES
+Duplicate Feature	YES
+Status Badges	YES
+
+16. 🔄 AUTOMATION + AI STANDARD
+CRITICAL RULE
+
+Whenever:
+
+files uploaded
+metadata updated
+forms changed
+workflows executed
+AI runs
+automation processes data
+
+The result MUST update:
+
+SharePoint metadata fields
+
+17. 🧠 ENTERPRISE AUTOMATION FLOW
+User Action
+    ↓
+Blazor UI
+    ↓
+SharePointService
+    ↓
+AI / Automation / Processing
+    ↓
+Result Generated
+    ↓
+Update SharePoint Metadata
+    ↓
+Refresh UI
+
+18. 📦 FILE UPLOAD STANDARD
+
+When user uploads file:
+
+MUST:
+Upload to SharePoint Library
+Generate metadata
+Trigger automation
+Trigger AI processing
+Update metadata fields
+Update workflow status
+Log audit history
+19. 🧠 AI RESULT PERSISTENCE RULE
+NEVER KEEP AI RESULTS ONLY IN MEMORY
+
+AI results MUST persist into:
+
+SharePoint columns
+document metadata
+workflow logs
+audit logs
+
+20. 🔄 AUTOMATION ENGINE STANDARD
+ALL AUTOMATIONS MUST:
+READ FROM
+SharePoint Lists/Libraries
+PROCESS USING
+AIService
+AutomationService
+Workflow engine
+Graph integrations
+WRITE BACK TO
+SharePoint metadata fields
+
+21. 📊 STATUS FIELD STANDARD
+
+Every automation entity should support:
+
+Field	Purpose
+Status	Current state
+AIStatus	AI processing
+WorkflowStatus	Workflow stage
+LastProcessed	datetime
+ProcessedBy	service/user
+ErrorMessage	failure details
+RetryCount	resiliency
+22. 🧾 AUDIT LOGGING STANDARD
+EVERY UPDATE MUST LOG
+Field	Example
+Action	AI Summary
+User	admin@xyz.com
+
+Timestamp	utc
+Entity	Course
+EntityId	123
+Result	Success
+
+23. 🔥 SHAREPOINT IS THE DATABASE
+
+NOT:
+
+temporary memory
+local state
+disconnected cache
+UI state only
+
+24. 🧠 GRAPH API FIELD STANDARD
+MUST USE
+Internal SharePoint field names
+
+NOT display names.
+
+Microsoft Graph list item field updates depend on exact internal field names.
+
+25. 🔄 MULTI-SELECT FIELD STANDARD
+
+For:
+
+roles
+tags
+categories
+metadata collections
+
+Use:
+
+Collection(Edm.String)
+
+Graph-compatible structure.
+
+26. 🧪 DEBUG-FIRST ENGINEERING STANDARD
+
+ALL IMPLEMENTATIONS MUST INCLUDE:
+
+Console logging
+Exception tracing
+Failure diagnostics
+User notifications
+
+Example:
+
+Console.WriteLine(...)
+
+27. 🧾 FULL FILE DELIVERY RULE (CRITICAL)
+ALWAYS PROVIDE
+
+Complete updated files only.
+
+MUST INCLUDE
+using statements
+namespaces
+full Razor markup
+full C# code
+full styles
+full methods
+NEVER PROVIDE
+partial snippets
+incomplete methods
+shortened responses
+28. 🎨 COLOR & STYLE STANDARD
+USE PROFESSIONAL COLOR TOKENS
+
+Examples:
+
+rp-admin
+rp-student
+rp-finance
+rp-marketing
+rp-ai
+
+Avoid:
+
+harsh neon colors
+inconsistent UI
+flat styling
+
+29. 🚀 AI DEVELOPMENT AGENT RULES
+AI DEVELOPMENT AGENT MUST ALWAYS:
+ALWAYS
+preserve architecture consistency
+use SharePoint as master source
+update SharePoint metadata
+follow responsive design
+use glass-style cards
+maintain RBAC
+use Graph-compatible updates
+provide full updated files
+include logging
+include exception handling
+NEVER
+hardcode master data
+bypass SharePoint
+create duplicate services
+break responsive behavior
+provide partial code
+ignore automation metadata updates
+
+30. ✅ FINAL ENTERPRISE EXPECTATION
+
+Every implementation must be:
+
+Enterprise-grade
+Fully responsive
+SharePoint-driven
+AI-integrated
+Automation-aware
+Graph-compatible
+Metadata-persistent
+RBAC-secured
+Glass-UI compatible
+Mobile-friendly
+Fully traceable
+Fully debuggable
+Production-ready
+
+31. 🔗 MICROSOFT GRAPH REFERENCES
+SharePoint List Item Update
+
+Microsoft Graph updates SharePoint fields using:
+
+PATCH /sites/{site-id}/lists/{list-id}/items/{item-id}/fields
+
+with internal field names.
+
+32. 🔗 SHAREPOINT METADATA STANDARD
+ALL AI/AUTOMATION RESULTS MUST PERSIST
+
+Examples:
+
+AI summaries
+OCR results
+workflow statuses
+AI classifications
+generated tags
+audit traces
+
+must always update:
+
+SharePoint metadata
+list columns
+document library fields
+33. 🧠 FINAL SYSTEM VISION
+
+MITANZ360Edu is evolving into:
+
+Enterprise AI-Orchestrated SharePoint ERP Framework
+
+with:
+
+AI orchestration
+SharePoint metadata intelligence
+automation-driven workflows
+dynamic RBAC
+Graph-native architecture
+enterprise UI systems
+full auditability
+enterprise education workflows

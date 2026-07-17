@@ -1,0 +1,1001 @@
+﻿
+@page "/ai-workflow-runner"
+@layout MainLayout
+
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components
+@using MITANZ360Pro.Web.Services.AI
+
+@inject IWebHostEnvironment Environment
+@inject AiWorkflowEngine WorkflowEngine
+@inject ILogger<AiWorkflowRunner> Logger
+
+<PageTitle>AI Workflow Runner</PageTitle>
+
+<div class="container-fluid py-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-12 col-xl-10">
+
+            <!-- HEADER -->
+
+            <div class="card glass-card mb-4">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h2 class="fw-bold mb-1" style="color:orangered">
+                                AI Workflow Runner
+                            </h2>
+
+
+                            <div class="workflow-card">
+                                <h3>Technology Behind an AI Workflow Runner</h3>
+                                <p>
+                                    An AI Workflow Runner automates complex business processes by coordinating
+                                    multiple technologies.
+                                </p>
+
+                                <div class="feature">
+                                    <strong>Workflow Engine</strong>
+                                    <span>Executes workflow steps in the correct sequence.</span>
+                                </div>
+
+                                <div class="feature">
+                                    <strong>LLMs (AI Models)</strong>
+                                    <span>Understand and generate intelligent responses.</span>
+                                </div>
+
+                                <div class="feature">
+                                    <strong>APIs</strong>
+                                    <span>Connect with external applications and services.</span>
+                                </div>
+
+                                <div class="feature">
+                                    <strong>Database</strong>
+                                    <span>Stores workflow data, history, and outputs.</span>
+                                </div>
+
+                                <div class="feature">
+                                    <strong>Logic &amp; Conditions</strong>
+                                    <span>Handles rules, branching, and decision-making.</span>
+                                </div>
+
+                                <div class="feature">
+                                    <strong>Automation</strong>
+                                    <span>Triggers workflows from events, schedules, or user requests.</span>
+                                </div>
+
+                                <hr>
+
+                                <p>
+                                    <strong>Result:</strong> Intelligent, scalable, and fully automated
+                                    multi-step business workflows.
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- WORKFLOW -->
+
+            <div class="card glass-card mb-4" style="background-color:antiquewhite">
+
+                <div class="card-body">
+
+                    <div class="row g-4 align-items-end">
+
+                        <!-- WORKFLOW -->
+
+                        <div class="col-md-6">
+
+                            <label class="form-label fw-semibold">
+                                Workflow File
+                            </label>
+
+                            <select class="form-select"
+                                    @bind="SelectedWorkflow">
+
+                                <option value="">
+                                    -- Select Workflow --
+                                </option>
+
+                                @foreach (var workflow in WorkflowFiles)
+                                {
+                                    <option value="@workflow">
+                                        @workflow
+                                    </option>
+                                }
+
+                            </select>
+
+                        </div>
+
+                        <!-- OUTPUT MODE -->
+
+                        <div class="col-md-3">
+
+                            <label class="form-label fw-semibold">
+                                Response Mode
+                            </label>
+
+                            <select class="form-select"
+                                    @bind="SelectedOutputMode">
+
+                                <option value="@AiOutputMode.Text">
+                                    Text
+                                </option>
+
+                                <option value="@AiOutputMode.Html">
+                                    HTML
+                                </option>
+
+                                <option value="@AiOutputMode.JsonOnly">
+                                    JSON
+                                </option>
+
+                                <option value="@AiOutputMode.Markdown">
+                                    Markdown
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                        <!-- BUTTON -->
+
+                        <div class="col-md-3">
+
+                            <button class="btn btn-primary w-100"
+                                    @onclick="ExecuteWorkflowAsync"
+                                    disabled="@IsLoading">
+
+                                @if (IsLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2">
+                                    </span>
+
+                                    <span>
+                                        Processing...
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>
+                                        Run Workflow
+                                    </span>
+                                }
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ERROR -->
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="alert alert-danger glass-card">
+
+                    @ErrorMessage
+
+                </div>
+            }
+
+            <!-- RESPONSE -->
+            @if (!string.IsNullOrWhiteSpace(Response))
+            {
+                <div class="card glass-card ai-result-card">
+
+                    <div class="card-header ai-header">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <h5 class="mb-0 fw-bold">
+                                    AI Workflow Result
+                                </h5>
+
+                                <small class="text-muted">
+                                    Microsoft Enterprise AI Workspace
+                                </small>
+
+                            </div>
+
+                            <div class="text-end">
+
+                                <div class="badge bg-primary px-3 py-2">
+                                    @SelectedOutputMode
+                                </div>
+
+                                <div class="small text-muted mt-1">
+                                    @GeneratedAt
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="card-body ai-workspace-body">
+
+                        @switch (SelectedOutputMode)
+                        {
+                            case AiOutputMode.Html:
+
+                                <div class="ai-html-workspace">
+
+                                    @((MarkupString)Response)
+
+                                </div>
+
+                                break;
+
+                            case AiOutputMode.JsonOnly:
+
+                                <div class="json-viewer">
+
+                                    <pre>
+@Response
+                                    </pre>
+
+                                </div>
+
+                                break;
+
+                            case AiOutputMode.Markdown:
+
+                                <div class="markdown-viewer">
+
+                                    <pre>
+@Response
+                                    </pre>
+
+                                </div>
+
+                                break;
+
+                            default:
+
+                                <div class="text-viewer">
+
+                                    <div class="ai-text-content">
+
+                                        @Response
+
+                                    </div>
+
+                                </div>
+
+                                break;
+                        }
+
+                    </div>
+
+                </div>
+            }
+
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+
+    :root {
+        --ms-primary: #2563eb;
+        --ms-primary-light: #dbeafe;
+        --ms-bg: #f4f8fc;
+        --ms-surface: rgba(255,255,255,0.72);
+        --ms-border: rgba(255,255,255,0.45);
+        --ms-shadow: 0 10px 30px rgba(15,23,42,0.08);
+        --ms-text: #0f172a;
+        --ms-muted: #64748b;
+    }
+
+    body {
+        background: linear-gradient( 135deg, #eef5ff 0%, #f8fbff 50%, #edf4ff 100%);
+        font-family: "Segoe UI", sans-serif;
+        color: var(--ms-text);
+    }
+
+    /* =========================
+           GLASS CARDS
+        ========================== */
+
+    .glass-card,
+    .glass-card-inner {
+        background: rgba(255,255,255,0.68);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255,255,255,0.42);
+        border-radius: 24px;
+        box-shadow: 0 8px 30px rgba(15,23,42,0.06);
+        transition: all 0.25s ease;
+    }
+
+        .glass-card-inner:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 34px rgba(15,23,42,0.08);
+        }
+
+    /* =========================
+           MAIN CONTAINERS
+        ========================== */
+
+    .card {
+        overflow: hidden;
+        border: none;
+    }
+
+    .card-body {
+        padding: 28px;
+    }
+
+    .ai-workspace-body {
+        padding: 35px;
+    }
+
+    /* =========================
+           HEADER
+        ========================== */
+
+    .ai-header {
+        background: rgba(255,255,255,0.42);
+        border-bottom: 1px solid rgba(255,255,255,0.32);
+        padding: 24px 30px;
+    }
+
+        .ai-header h5 {
+            color: var(--ms-text);
+            font-weight: 700;
+        }
+
+    /* =========================
+           TYPOGRAPHY
+        ========================== */
+
+    h1, h2, h3, h4, h5 {
+        color: var(--ms-text);
+        font-weight: 700;
+        letter-spacing: -0.4px;
+    }
+
+    p {
+        color: var(--ms-muted);
+        line-height: 1.9;
+        font-size: 1rem;
+    }
+
+    /* =========================
+           TEXT RESPONSE
+        ========================== */
+
+    .text-viewer {
+        background: rgba(255,255,255,0.62);
+        border: 1px solid rgba(255,255,255,0.35);
+        border-radius: 22px;
+        padding: 28px;
+    }
+
+    .ai-text-content {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        line-height: 1.9;
+        color: var(--ms-text);
+        font-size: 1rem;
+    }
+
+    /* =========================
+           HTML WORKSPACE
+        ========================== */
+
+    .ai-html-workspace {
+        background: transparent;
+    }
+
+    /* =========================
+           JSON VIEWER
+        ========================== */
+
+    .json-viewer {
+        background: rgba(15,23,42,0.92);
+        border-radius: 22px;
+        padding: 30px;
+        overflow-x: auto;
+        box-shadow: inset 0 1px 2px rgba(255,255,255,0.05);
+    }
+
+        .json-viewer pre {
+            color: #f8fafc;
+            margin: 0;
+            line-height: 1.8;
+            font-size: 0.92rem;
+        }
+
+    /* =========================
+           TABLES
+        ========================== */
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        table td {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(226,232,240,0.6);
+            color: var(--ms-text);
+            font-size: 0.95rem;
+        }
+
+            table td:last-child {
+                text-align: right;
+                font-weight: 700;
+            }
+
+    /* =========================
+           ALERTS
+        ========================== */
+
+    .alert {
+        border: none;
+        border-radius: 18px;
+        padding: 18px 20px;
+        line-height: 1.7;
+    }
+
+    .alert-primary {
+        background: rgba(37,99,235,0.12);
+        color: #1d4ed8;
+    }
+
+    .alert-danger {
+        background: rgba(239,68,68,0.12);
+        color: #b91c1c;
+    }
+
+    .alert-success {
+        background: rgba(34,197,94,0.12);
+        color: #15803d;
+    }
+
+    /* =========================
+           FORMS
+        ========================== */
+
+    .form-select {
+        border-radius: 18px;
+        border: 1px solid rgba(203,213,225,0.8);
+        background: rgba(255,255,255,0.72);
+        padding: 13px 18px;
+        min-height: 52px;
+        box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+        font-weight: 500;
+    }
+
+        .form-select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37,99,235,0.15);
+        }
+
+    /* =========================
+           BUTTONS
+        ========================== */
+
+    .btn-primary {
+        border: none;
+        border-radius: 18px;
+        min-height: 52px;
+        font-weight: 600;
+        background: linear-gradient( 135deg, #2563eb, #1d4ed8);
+        box-shadow: 0 10px 22px rgba(37,99,235,0.22);
+        transition: all 0.25s ease;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(37,99,235,0.28);
+        }
+
+    /* =========================
+           BADGES
+        ========================== */
+
+    .badge {
+        border-radius: 14px;
+        font-weight: 600;
+        padding: 10px 14px;
+        letter-spacing: 0.3px;
+    }
+
+    /* =========================
+           RESPONSIVE
+        ========================== */
+
+    @@media (max-width: 768px) {
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .ai-workspace-body {
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            font-size: 1.4rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+        }
+    }
+
+</style>
+
+@code
+{
+    private List<string> WorkflowFiles =
+        [];
+
+    private string SelectedWorkflow =
+        string.Empty;
+
+    private string Response =
+        string.Empty;
+
+    private string ErrorMessage =
+        string.Empty;
+
+    private string GeneratedAt =
+        string.Empty;
+
+    private bool IsLoading;
+
+    private AiOutputMode SelectedOutputMode { get; set; } =
+        AiOutputMode.Html;
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            var folder =
+                Path.Combine(
+                    Environment.WebRootPath,
+                    "AI-Eng");
+
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            WorkflowFiles =
+                Directory
+                    .GetFiles(folder, "*.json")
+                    .Select(Path.GetFileNameWithoutExtension)
+                    .OrderBy(x => x)
+                    .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Failed to load workflow files.");
+
+            ErrorMessage =
+                ex.Message;
+        }
+    }
+
+    private async Task ExecuteWorkflowAsync()
+    {
+        try
+        {
+            ErrorMessage = string.Empty;
+
+            Response = string.Empty;
+
+            IsLoading = true;
+
+            var workflowPath =
+                Path.Combine(
+                    Environment.WebRootPath,
+                    "AI-Eng",
+                    $"{SelectedWorkflow}.json");
+
+            if (!File.Exists(workflowPath))
+            {
+                ErrorMessage =
+                    "Workflow file not found.";
+
+                return;
+            }
+
+            var rawJson =
+                await File.ReadAllTextAsync(
+                    workflowPath);
+
+            Logger.LogInformation(
+                "Executing workflow: {Workflow}",
+                SelectedWorkflow);
+
+            var request =
+                new AiWorkflowRequest
+                {
+                    TaskType =
+                        AiTaskType.Chat,
+
+                    Prompt =
+                        rawJson,
+
+                    OutputMode =
+                        SelectedOutputMode,
+
+                    StrictJsonResponse =
+                        SelectedOutputMode ==
+                        AiOutputMode.JsonOnly,
+
+                    SystemPrompt =
+                        """
+                        You are an enterprise AI workflow execution engine.
+
+                        The provided JSON contains:
+                        - instructions
+                        - orchestration
+                        - execution rules
+                        - output requirements
+                        - workflow metadata
+
+                        Read the JSON carefully.
+
+                        Execute the workflow exactly as instructed.
+
+                        Return output according to the workflow definition.
+                        """,
+
+                    CorrelationId =
+                        Guid.NewGuid().ToString()
+                };
+
+            var result =
+                await WorkflowEngine.ExecuteAsync(
+                    request);
+
+            if (!result.Success)
+            {
+                ErrorMessage =
+                    string.Join(
+                        System.Environment.NewLine,
+                        result.Errors);
+
+                return;
+            }
+
+            Response =
+                ExtractContent(
+                    result.RawResponse);
+
+            GeneratedAt =
+                DateTime.Now.ToString(
+                    "dd MMM yyyy hh:mm tt");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Workflow execution failed.");
+
+            ErrorMessage =
+                ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+
+private static string ExtractContent(
+    string rawResponse)
+    {
+        try
+        {
+            // STEP 1
+            // Extract AI content
+
+            using var document =
+                JsonDocument.Parse(rawResponse);
+
+            var content =
+                document.RootElement
+                    .GetProperty("choices")[0]
+                    .GetProperty("message")
+                    .GetProperty("content")
+                    .GetString();
+
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return rawResponse;
+            }
+
+            // STEP 2
+            // Remove markdown wrappers
+
+            content =
+                content
+                    .Replace("```json", "")
+                    .Replace("```", "")
+                    .Trim();
+
+            // STEP 3
+            // Try parse JSON
+
+            using var jsonDocument =
+                JsonDocument.Parse(content);
+
+            var root =
+                jsonDocument.RootElement;
+
+            // STEP 4
+            // Build Enterprise HTML
+
+            var html =
+                new System.Text.StringBuilder();
+
+            html.Append(
+            """
+            <div class='container-fluid'>
+
+                <div class='row g-4'>
+            """);
+
+            // SUMMARY
+
+            if (root.TryGetProperty(
+                "summary",
+                out var summary))
+            {
+                html.Append(
+                    $"""
+                <div class='col-12'>
+
+                    <div class='card glass-card-inner'>
+
+                        <div class='card-body'>
+
+                            <h3 class='mb-3'>
+                                Executive Summary
+                            </h3>
+
+                            <p>
+                                {summary.GetString()}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                """);
+            }
+
+            // CURRENCY ANALYSIS
+
+            if (root.TryGetProperty(
+                "currencyAnalysis",
+                out var currencies))
+            {
+                foreach (var item in
+                    currencies.EnumerateArray())
+                {
+                    html.Append(
+                        $"""
+                    <div class='col-md-6'>
+
+                        <div class='card glass-card-inner h-100'>
+
+                            <div class='card-body'>
+
+                                <h4 class='mb-3 text-primary'>
+                                    {item.GetProperty("currency").GetString()}
+                                </h4>
+
+                                <table class='table table-borderless'>
+
+                                    <tr>
+                                        <td>
+                                            Best Buying
+                                        </td>
+
+                                        <td>
+                                            <strong>
+                                                {item.GetProperty("bestBuyingBank").GetString()}
+                                            </strong>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>
+                                            Best Selling
+                                        </td>
+
+                                        <td>
+                                            <strong>
+                                                {item.GetProperty("bestSellingBank").GetString()}
+                                            </strong>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>
+                                            Highest Buying
+                                        </td>
+
+                                        <td>
+                                            {item.GetProperty("highestBuyingRate").GetDecimal()}
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>
+                                            Lowest Selling
+                                        </td>
+
+                                        <td>
+                                            {item.GetProperty("lowestSellingRate").GetDecimal()}
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>
+                                            Variance
+                                        </td>
+
+                                        <td>
+                                            {item.GetProperty("variance").GetDecimal()}
+                                        </td>
+                                    </tr>
+
+                                </table>
+
+                                <div class='alert alert-primary mt-3'>
+
+                                    {item.GetProperty("insight").GetString()}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                    """);
+                }
+            }
+
+            // MARKET INSIGHTS
+
+            if (root.TryGetProperty(
+                "marketInsights",
+                out var marketInsights))
+            {
+                html.Append(
+                    $"""
+                <div class='col-12'>
+
+                    <div class='card glass-card-inner'>
+
+                        <div class='card-body'>
+
+                            <h3 class='mb-3'>
+                                Market Insights
+                            </h3>
+
+                            <p>
+                                {marketInsights.GetString()}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                """);
+            }
+
+            // RISK INDICATORS
+
+            if (root.TryGetProperty(
+                "riskIndicators",
+                out var risks))
+            {
+                html.Append(
+                    $"""
+                <div class='col-12'>
+
+                    <div class='card glass-card-inner'>
+
+                        <div class='card-body'>
+
+                            <h3 class='mb-3 text-danger'>
+                                Risk Indicators
+                            </h3>
+
+                            <p>
+                                {risks.GetString()}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                """);
+            }
+
+            // RECOMMENDATIONS
+
+            if (root.TryGetProperty(
+                "recommendations",
+                out var recommendations))
+            {
+                html.Append(
+                    $"""
+                <div class='col-12'>
+
+                    <div class='card glass-card-inner'>
+
+                        <div class='card-body'>
+
+                            <h3 class='mb-3 text-success'>
+                                Recommendations
+                            </h3>
+
+                            <p>
+                                {recommendations.GetString()}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                """);
+            }
+
+            html.Append(
+            """
+                </div>
+
+            </div>
+            """);
+
+            return html.ToString();
+        }
+        catch
+        {
+            return rawResponse;
+        }
+    }
+}

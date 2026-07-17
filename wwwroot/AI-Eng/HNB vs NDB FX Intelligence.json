@@ -1,0 +1,195 @@
+{
+  "_lock": {
+    "locked": true,
+    "allowStructureChange": false,
+    "allowedOverrides": [
+      "input",
+      "execution",
+      "actions"
+    ]
+  },
+  "meta": {
+    "version": "1.1",
+    "templateName": "HNB vs NDB FX Intelligence",
+    "description": "Compare HNB and NDB exchange rates and generate executive treasury intelligence report",
+    "department": "Finance",
+    "owner": "Treasury Division",
+    "reportType": "Executive FX Analysis"
+  },
+  "task": {
+    "id": "hnb-ndb-fx-analysis",
+    "name": "bank-exchange-rate-analysis",
+    "type": "analysis",
+    "subType": "finance",
+    "priority": "high"
+  },
+  "system": {
+    "mode": "deterministic",
+    "rules": [
+      "Do NOT hallucinate",
+      "Use ONLY provided bank exchange rate sources",
+      "Analyze ONLY USD, AUD, NZD and JPY",
+      "Return ONLY valid JSON",
+      "Follow schema strictly",
+      "Do NOT add extra fields",
+      "Include generatedAt in ISO format"
+    ],
+    "guardrails": {
+      "strictSchema": true,
+      "rejectUnknownFields": true,
+      "allowPartial": false,
+      "maxRetries": 2
+    }
+  },
+  "instruction": {
+    "objective": "Analyze and compare exchange rates between HNB and NDB banks and generate treasury intelligence report.",
+    "analysis": {
+      "depth": "high",
+      "focus": [
+        "best buying rates",
+        "best selling rates",
+        "currency variance",
+        "market spread analysis",
+        "bank competitiveness",
+        "treasury risk indicators",
+        "currency movement trends"
+      ],
+      "currencies": [
+        "USD",
+        "AUD",
+        "NZD",
+        "JPY"
+      ],
+      "requirements": [
+        "Compare all selected currencies across banks",
+        "Identify strongest buying bank",
+        "Identify lowest selling bank",
+        "Calculate variance between banks",
+        "Generate executive treasury insights",
+        "Highlight unusual spreads",
+        "Provide treasury recommendations"
+      ]
+    }
+  },
+  "input": {
+    "mode": "multi-source",
+    "sources": [
+      {
+        "id": "hnb-rates",
+        "type": "web",
+        "enabled": true,
+        "config": {
+          "url": "https://www.hnb.lk/exchange-rates",
+          "bankName": "HNB"
+        }
+      },
+      {
+        "id": "ndb-rates",
+        "type": "web",
+        "enabled": true,
+        "config": {
+          "url": "https://www.ndbbank.com/rates/exchange-rates",
+          "bankName": "NDB"
+        }
+      }
+    ]
+  },
+  "aiConfig": {
+    "provider": "azureOpenAI",
+    "deployment": "gpt-4o-mini",
+    "temperature": 0.1,
+    "maxTokens": 2200,
+    "responseFormat": "json"
+  },
+  "orchestration": {
+    "mode": "sequential",
+    "steps": [
+      {
+        "name": "exchange-rate-analysis",
+        "type": "analysis",
+        "input": "input",
+        "output": "fxAnalysis",
+        "schema": {
+          "generatedAt": "string",
+          "summary": "string",
+          "currencyAnalysis": "array",
+          "marketInsights": "string",
+          "riskIndicators": "string",
+          "recommendations": "string"
+        }
+      }
+    ]
+  },
+  "output": {
+    "format": "json",
+    "schema": {
+      "generatedAt": "string",
+      "summary": "string",
+      "currencyAnalysis": [
+        {
+          "currency": "string",
+          "bestBuyingBank": "string",
+          "bestSellingBank": "string",
+          "highestBuyingRate": "number",
+          "lowestSellingRate": "number",
+          "variance": "number",
+          "marketPosition": "string",
+          "insight": "string"
+        }
+      ],
+      "marketInsights": "string",
+      "riskIndicators": "string",
+      "recommendations": "string"
+    },
+    "validation": {
+      "strict": true,
+      "requiredFields": [
+        "generatedAt",
+        "summary",
+        "currencyAnalysis",
+        "marketInsights",
+        "riskIndicators",
+        "recommendations"
+      ],
+      "rejectExtraFields": true
+    }
+  },
+  "actions": [
+    {
+      "id": "sharepoint-upsert",
+      "type": "sharepoint.upsert",
+      "enabled": true,
+      "target": {
+        "listName": "TreasuryFxAnalysis"
+      },
+      "mapping": {
+        "Title": "output.summary",
+        "MarketInsights": "output.marketInsights",
+        "RiskIndicators": "output.riskIndicators",
+        "Recommendations": "output.recommendations"
+      }
+    }
+  ],
+  "execution": {
+    "retryPolicy": {
+      "enabled": true,
+      "maxRetries": 2,
+      "strategy": "fix_json"
+    },
+    "timeoutSeconds": 120,
+    "parallelExecution": false
+  },
+  "security": {
+    "sanitizeInput": true,
+    "validateMappings": true,
+    "allowExternalCalls": true,
+    "dataClassification": "internal"
+  },
+  "monitoring": {
+    "logging": true,
+    "logLevel": "information",
+    "trackTokenUsage": true,
+    "trackExecutionTime": true,
+    "auditTrail": true
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "_lock": {
+    "locked": true,
+    "allowStructureChange": false,
+    "allowedOverrides": [
+      "task",
+      "instruction",
+      "input",
+      "output.schema",
+      "actions",
+      "aiConfig",
+      "execution",
+      "orchestration"
+    ]
+  },
+
+  "meta": {
+    "version": "6.0-forex",
+    "templateName": "Forex Daily Analysis",
+    "description": "Daily exchange rate comparison across Sri Lankan banks",
+    "namingConvention": "camelCase"
+  },
+
+  "task": {
+    "id": "exchange-rate-analysis",
+    "name": "daily-forex-report",
+    "type": "analysis",
+    "subType": "financial",
+    "category": "banking",
+    "priority": "high"
+  },
+
+  "system": {
+    "mode": "deterministic",
+    "rules": [
+      "Do NOT hallucinate",
+      "Use ONLY provided input",
+      "Return ONLY valid JSON",
+      "Follow schema strictly"
+    ],
+    "guardrails": {
+      "strictSchema": true,
+      "rejectUnknownFields": true,
+      "allowPartial": false
+    }
+  },
+
+  "instruction": {
+    "objective": "Extract and analyze exchange rates from multiple Sri Lankan banks",
+    "taskType": "financial-analysis",
+    "mode": "strict",
+    "depth": "high",
+    "outputStyle": "structured"
+  },
+
+  "input": {
+    "mode": "multi-source",
+    "sources": [
+      { "id": "sampath", "type": "url", "enabled": true, "data": "https://www.sampath.lk/en/rates-and-charges" },
+      { "id": "hnb", "type": "url", "enabled": true, "data": "https://www.hnb.net/foreign-exchange-rates" },
+      { "id": "nsb", "type": "url", "enabled": true, "data": "https://www.nsb.lk/rates" },
+      { "id": "cbsl", "type": "url", "enabled": true, "data": "https://www.cbsl.gov.lk/en/rates-and-indicators/exchange-rates" }
+    ],
+    "parameters": {
+      "currencies": ["USD", "NZD", "AUD", "GBP"],
+      "requiredRates": ["buying", "selling"]
+    }
+  },
+
+  "aiConfig": {
+    "provider": "azureOpenAI",
+    "deployment": "gpt-4o-mini",
+    "temperature": 0.1,
+    "maxTokens": 1500,
+    "responseFormat": "json"
+  },
+
+  "orchestration": {
+    "mode": "sequential",
+    "steps": [
+      { "name": "extract", "type": "analysis" },
+      { "name": "normalize", "type": "processing" },
+      { "name": "compare", "type": "analysis" },
+      { "name": "validate", "type": "validation" },
+      { "name": "report", "type": "synthesis" }
+    ]
+  },
+
+  "output": {
+    "format": "json",
+    "schema": {
+      "generatedAt": "string",
+      "sourcesUsed": "array",
+      "rates": "object",
+      "bestRates": "object",
+      "summary": "string",
+      "insights": "string",
+      "risks": "string",
+      "recommendations": "string"
+    }
+  },
+
+  "actions": [],
+
+  "execution": {
+    "retryPolicy": {
+      "enabled": true,
+      "maxRetries": 2
+    },
+    "timeoutSeconds": 120
+  },
+
+  "security": {
+    "sanitizeInput": true,
+    "validateMappings": true,
+    "allowExternalCalls": true
+  },
+
+  "monitoring": {
+    "logging": true,
+    "logLevel": "information",
+    "auditTrail": true
+  }
+}

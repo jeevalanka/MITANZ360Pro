@@ -1,0 +1,635 @@
+﻿@page "/help-documents"
+@layout MainLayout_No_Left_RightPan
+
+@using Microsoft.AspNetCore.Components
+@using System.Text.Encodings.Web
+
+@inject IWebHostEnvironment Environment
+@inject NavigationManager Navigation
+
+<PageTitle>Help Documents</PageTitle>
+
+<div class="doc-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar-panel">
+
+        <!-- HEADER + HOME -->
+        <div class="top-header">
+            <div class="sidebar-header">
+                <div class="sidebar-info">
+                    <h2>Help Documents</h2>
+                    <p>Application Help Center</p>
+                </div>
+            </div>
+
+            <button class="home-button" @onclick="GoHome">
+                🏠 Home
+            </button>
+        </div>
+
+        <!-- NAV TREE -->
+        <div class="nav-section">
+            <div class="nav-section-title">🧠 Help (Knowledge)</div>
+
+            @if (RootNode is null)
+            {
+                <div class="empty-message">Loading…</div>
+            }
+            else if (RootNode.Children.Count == 0)
+            {
+                <div class="empty-message">No help documents found.</div>
+            }
+            else
+            {
+                <div class="tree-root">
+                    @RenderNode(RootNode, 0)
+                </div>
+            }
+        </div>
+
+    </aside>
+
+    <!-- CONTENT -->
+    <main class="content-panel">
+        <div class="document-container">
+            <div style="background:#ffffff; color:#1f1f1f; padding:20px; border-radius:10px;">
+                @((MarkupString)HtmlContent)
+            </div>
+        </div>
+    </main>
+
+</div>
+
+@code {
+
+    private string HtmlContent = "";
+    private DocNode? RootNode;
+
+    private string HelpRootPath = "";
+    private string HelpRootName = "HelpDoc";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitializeAsync();
+    }
+
+    private async Task InitializeAsync()
+    {
+        try
+        {
+            HelpRootPath = Path.Combine(Environment.WebRootPath, "HelpDoc");
+
+            if (!Directory.Exists(HelpRootPath))
+                Directory.CreateDirectory(HelpRootPath);
+
+            RootNode = BuildTree(HelpRootPath, HelpRootName, isRoot: true);
+
+            // Auto-load first file found
+            var firstFile = FindFirstPreviewableFile(RootNode);
+
+            if (firstFile is not null)
+            {
+                firstFile.IsOpen = true;
+                await LoadDocument(firstFile.RelativePath);
+            }
+            else
+            {
+                HtmlContent = "<div class='system-message'>No help documents available.</div>";
+            }
+        }
+        catch
+        {
+            HtmlContent = "<div class='system-message'>Failed to initialize help center.</div>";
+
+            RootNode = new DocNode
+            {
+                Name = HelpRootName,
+                IsFolder = true,
+                IsExpanded = true
+            };
+        }
+    }
+
+    // =========================================
+    // BUILD TREE
+    // =========================================
+    private DocNode BuildTree(string physicalPath, string displayName, bool isRoot = false)
+    {
+        var node = new DocNode
+        {
+            Name = displayName,
+            PhysicalPath = physicalPath,
+            RelativePath = isRoot ? "" : GetRelativePathSafe(physicalPath),
+            IsFolder = true,
+            IsExpanded = isRoot
+        };
+
+        // Folders first
+        foreach (var dir in Directory.EnumerateDirectories(physicalPath).OrderBy(d => d))
+        {
+            var folderName = Path.GetFileName(dir);
+
+            if (string.IsNullOrWhiteSpace(folderName))
+                continue;
+
+            node.Children.Add(BuildTree(dir, folderName));
+        }
+
+        // Then files
+        foreach (var file in Directory.EnumerateFiles(physicalPath).OrderBy(f => f))
+        {
+            var fileName = Path.GetFileName(file);
+
+            if (string.IsNullOrWhiteSpace(fileName))
+                continue;
+
+            node.Children.Add(new DocNode
+            {
+                Name = fileName,
+                PhysicalPath = file,
+                RelativePath = GetRelativePathSafe(file),
+                IsFolder = false,
+                IsExpanded = false,
+                IsOpen = false
+            });
+        }
+
+        return node;
+    }
+
+    // =========================================
+    // FIND FIRST FILE
+    // =========================================
+    private DocNode? FindFirstPreviewableFile(DocNode node)
+    {
+        foreach (var child in node.Children)
+        {
+            if (!child.IsFolder)
+            {
+                if (IsPreviewable(child.Name))
+                    return child;
+            }
+            else
+            {
+                var found = FindFirstPreviewableFile(child);
+
+                if (found is not null)
+                    return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsPreviewable(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+
+        return ext is ".html" or ".htm" or ".txt" or ".md";
+    }
+
+    // =========================================
+    // TREE RENDER
+    // =========================================
+    private RenderFragment RenderNode(DocNode node, int depth) => builder =>
+    {
+        // Skip virtual root
+        if (depth == 0)
+        {
+            foreach (var child in node.Children)
+                builder.AddContent(0, RenderNode(child, depth + 1));
+
+            return;
+        }
+
+        var indentPx = (depth - 1) * 14;
+
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "tree-row");
+        builder.AddAttribute(2, "style", $"padding-left:{indentPx}px;");
+
+        // =====================================
+        // FOLDER
+        // =====================================
+        if (node.IsFolder)
+        {
+            builder.OpenElement(3, "button");
+
+            builder.AddAttribute(4, "class", "folder-button");
+            builder.AddAttribute(5, "title", node.Name);
+
+            builder.AddAttribute(
+                6,
+                "onclick",
+                EventCallback.Factory.Create(this, () =>
+                {
+                    ToggleFolder(node);
+                    StateHasChanged();
+                }));
+
+            builder.AddContent(7, node.IsExpanded ? "📂 " : "📁 ");
+            builder.AddContent(8, node.Name);
+
+            builder.CloseElement();
+
+            if (node.IsExpanded)
+            {
+                builder.OpenElement(9, "div");
+                builder.AddAttribute(10, "class", "tree-children");
+
+                foreach (var child in node.Children)
+                    builder.AddContent(11, RenderNode(child, depth + 1));
+
+                builder.CloseElement();
+            }
+        }
+
+        // =====================================
+        // FILE
+        // =====================================
+        else
+        {
+            builder.OpenElement(12, "button");
+
+            builder.AddAttribute(
+                13,
+                "class",
+                node.IsSelected
+                    ? "file-button selected"
+                    : "file-button");
+
+            builder.AddAttribute(14, "title", node.RelativePath);
+
+            builder.AddAttribute(
+                15,
+                "onclick",
+                EventCallback.Factory.Create(this, async () =>
+                {
+                    // Reset all book icons
+                    ResetOpenState(RootNode);
+
+                    // Open selected
+                    node.IsOpen = true;
+
+                    await LoadDocument(node.RelativePath);
+
+                    StateHasChanged();
+                }));
+
+            // Dynamic icon
+            builder.AddContent(16, node.IsOpen ? "📖 " : "📙 ");
+
+            // Display name
+            builder.AddContent(17, GetDisplayName(node.Name));
+
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    };
+
+    // =========================================
+    // TOGGLE FOLDER
+    // =========================================
+    private void ToggleFolder(DocNode node)
+    {
+        node.IsExpanded = !node.IsExpanded;
+    }
+
+    // =========================================
+    // LOAD DOCUMENT
+    // =========================================
+    private async Task LoadDocument(string relativePath)
+    {
+        try
+        {
+            ClearSelection(RootNode);
+            MarkSelected(RootNode, relativePath);
+
+            var fullPath = GetFullPathSafe(relativePath);
+
+            if (!File.Exists(fullPath))
+            {
+                HtmlContent = "<div class='system-message'>Document not found.</div>";
+                return;
+            }
+
+            var ext = Path.GetExtension(fullPath).ToLowerInvariant();
+
+            // HTML
+            if (ext is ".html" or ".htm")
+            {
+                HtmlContent = await File.ReadAllTextAsync(fullPath);
+                return;
+            }
+
+            // TEXT / MD
+            if (ext is ".txt" or ".md")
+            {
+                var text = await File.ReadAllTextAsync(fullPath);
+
+                var encoded = HtmlEncoder.Default.Encode(text);
+
+                HtmlContent =
+                    $"<div class='text-viewer'><pre>{encoded}</pre></div>";
+
+                return;
+            }
+
+            HtmlContent =
+                "<div class='system-message'>Preview not supported for this file type.</div>";
+        }
+        catch
+        {
+            HtmlContent = "<div class='system-message'>Failed to load document.</div>";
+        }
+    }
+
+    // =========================================
+    // RESET OPEN STATE
+    // =========================================
+    private void ResetOpenState(DocNode? node)
+    {
+        if (node is null)
+            return;
+
+        node.IsOpen = false;
+
+        foreach (var child in node.Children)
+            ResetOpenState(child);
+    }
+
+    // =========================================
+    // CLEAR SELECTION
+    // =========================================
+    private void ClearSelection(DocNode? node)
+    {
+        if (node is null)
+            return;
+
+        node.IsSelected = false;
+
+        foreach (var child in node.Children)
+            ClearSelection(child);
+    }
+
+    // =========================================
+    // MARK SELECTED
+    // =========================================
+    private bool MarkSelected(DocNode? node, string relativePath)
+    {
+        if (node is null)
+            return false;
+
+        if (!node.IsFolder &&
+            string.Equals(
+                node.RelativePath,
+                relativePath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            node.IsSelected = true;
+            return true;
+        }
+
+        foreach (var child in node.Children)
+        {
+            if (MarkSelected(child, relativePath))
+            {
+                node.IsExpanded = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private string GetDisplayName(string file)
+        => Path.GetFileNameWithoutExtension(file);
+
+    // =========================================
+    // SAFE RELATIVE PATH
+    // =========================================
+    private string GetRelativePathSafe(string fullPath)
+    {
+        var rel = Path.GetRelativePath(HelpRootPath, fullPath);
+
+        rel = rel.Replace('\\', '/');
+
+        return rel;
+    }
+
+    // =========================================
+    // SAFE FULL PATH
+    // =========================================
+    private string GetFullPathSafe(string relativePath)
+    {
+        relativePath =
+            (relativePath ?? "")
+            .Replace('\\', '/')
+            .TrimStart('/');
+
+        var combined = Path.Combine(HelpRootPath, relativePath);
+
+        var full = Path.GetFullPath(combined);
+
+        var rootFull = Path.GetFullPath(HelpRootPath);
+
+        if (!full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Invalid path.");
+
+        return full;
+    }
+
+    // =========================================
+    // HOME
+    // =========================================
+    private void GoHome(){Navigation.NavigateTo("/");}
+
+    // =========================================
+    // MODEL
+    // =========================================
+    private sealed class DocNode
+    {
+        public string Name { get; set; } = "";
+        public string PhysicalPath { get; set; } = "";
+        public string RelativePath { get; set; } = "";
+
+        public bool IsFolder { get; set; }
+        public bool IsExpanded { get; set; }
+        public bool IsSelected { get; set; }
+
+        // 📖 / 📙
+        public bool IsOpen { get; set; }
+
+        public List<DocNode> Children { get; } = new();
+    }
+}
+
+<style>
+    .doc-layout {
+        display: flex;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f8fafc, #eef2ff);
+    }
+
+    /* SIDEBAR */
+    .sidebar-panel {
+        width: 300px;
+        min-width: 300px;
+        height: 100vh;
+        overflow-y: auto;
+        background: linear-gradient(180deg, white, blue);
+        color: black;
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .top-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+        color: black;
+    }
+
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .sidebar-info h2 {
+        margin: 0;
+        font-size: 0.98rem;
+        font-weight: 700;
+        color: orangered;
+    }
+
+    .sidebar-info p {
+        margin-top: 2px;
+        font-size: 0.72rem;
+        color: ash;
+    }
+
+    /* HOME */
+    .home-button {
+        border: none;
+        border-radius: 12px;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        background: linear-gradient(80deg, lightblue, blue);
+        color: white;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    /* NAVIGATION */
+    .nav-section-title {
+        font-size: 0.80rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: green;
+    }
+
+    .empty-message {
+        padding: 12px;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.05);
+        font-size: 0.82rem;
+    }
+
+    .tree-root {
+        padding-bottom: 8px;
+    }
+
+    .tree-row {
+        margin-bottom: 6px;
+    }
+
+    .folder-button,
+    .file-button {
+        width: 100%;
+        border: none;
+        padding: 9px 10px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.05);
+        color: white;
+        text-align: left;
+        font-size: 0.82rem;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+        .folder-button:hover,
+        .file-button:hover {
+            background: linear-gradient(135deg, #2563eb, #06b6d4);
+        }
+
+        .file-button.selected {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+
+    .tree-children {
+        margin-top: 6px;
+    }
+
+    /* CONTENT */
+    .content-panel {
+        flex: 1;
+        height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 10px;
+    }
+
+    .document-container {
+        width: 100%;
+        min-height: 100%;
+        overflow-y: visible;
+        overflow-x: hidden;
+        background: white;
+        border-radius: 18px;
+        box-shadow: 0 20px 45px rgba(0,0,0,0.08);
+    }
+
+    .system-message {
+        padding: 26px;
+        font-size: 0.95rem;
+    }
+
+    .text-viewer {
+        padding: 18px 20px;
+    }
+
+        .text-viewer pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+            font-size: 0.9rem;
+        }
+
+    /* RESPONSIVE */
+    @@media (max-width: 992px) {
+        .doc-layout {
+            flex-direction: column;
+        }
+
+        .sidebar-panel {
+            width: 100%;
+            min-width: 100%;
+            height: auto;
+            max-height: 380px;
+        }
+
+        .content-panel {
+            height: calc(100vh - 380px);
+            overflow-y: auto;
+        }
+    }
+</style>

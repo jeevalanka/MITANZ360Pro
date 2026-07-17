@@ -1,0 +1,822 @@
+﻿@page "/users"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin,SysAdmin")]
+
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Radzen
+@using Radzen.Blazor
+
+@using MITANZ360Pro.Web.Data
+@using MITANZ360Pro.Web.Models
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IServiceScopeFactory ScopeFactory
+@inject NotificationService NotificationService
+
+<PageTitle>User Management</PageTitle>
+
+<div class="container mt-4 page-wrap">
+
+    <!-- ===================================================== -->
+    <!-- HEADER -->
+    <!-- ===================================================== -->
+    <div class="top-card mb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h3 class="title mb-1">User Management</h3>
+                <div class="subtle">Manage users, roles and access status.</div>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <RadzenTextBox @bind-Value="search"
+                               Placeholder="Search users..."
+                               Style="width:300px;" />
+
+                <RadzenButton Text="New User"
+                              Icon="person_add"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Click="OpenCreateUserBlade" />
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- USERS -->
+    <!-- ===================================================== -->
+    <div class="row g-3">
+        @foreach (var u in FilteredUsers())
+        {
+            <div class="col-12 col-md-6 col-xl-4">
+                <RadzenCard class="nice-card p-3" Style="border-radius: 18px;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="mb-1">@DisplayName(u)</h5>
+
+                            <div class="subtle">@u.Email</div>
+
+                            <div class="mt-2">
+                                <RadzenBadge Text="@GetStatusBadgeText(u)"
+                                             Style="@GetStatusBadgeStyle(u)" />
+                            </div>
+
+                            <div class="mt-2">
+                                @if (userRoles.TryGetValue(u.Id, out var rr) && rr.Any())
+                                {
+                                    <span class="pill">@string.Join(", ", rr)</span>
+                                }
+                                else
+                                {
+                                    <span class="subtle">No roles assigned</span>
+                                }
+                            </div>
+                        </div>
+
+                        <RadzenButton Icon="edit"
+                                      Size="ButtonSize.Small"
+                                      ButtonStyle="ButtonStyle.Primary"
+                                      Click="@(async () => await OpenEditUserBlade(u))" />
+                    </div>
+
+                    <!-- ACTIONS -->
+                    <div class="mt-3 d-flex gap-2 flex-wrap">
+                        @switch (GetStatus(u))
+                        {
+                            case UserStatus.Active:
+                                <RadzenButton Text="Hold"
+                                              Icon="pause_circle"
+                                              Size="ButtonSize.Small"
+                                              ButtonStyle="ButtonStyle.Warning"
+                                              Disabled="@busy"
+                                              Click="@(async () => await AskStatusChange(u, UserStatus.Hold))" />
+
+                                <RadzenButton Text="Disable"
+                                              Icon="block"
+                                              Size="ButtonSize.Small"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Disabled="@busy"
+                                              Click="@(async () => await AskStatusChange(u, UserStatus.Disabled))" />
+                                break;
+
+                            case UserStatus.Hold:
+                            case UserStatus.Disabled:
+                                <RadzenButton Text="Enable"
+                                              Icon="check_circle"
+                                              Size="ButtonSize.Small"
+                                              ButtonStyle="ButtonStyle.Success"
+                                              Disabled="@busy"
+                                              Click="@(async () => await AskStatusChange(u, UserStatus.Active))" />
+                                break;
+                        }
+                    </div>
+                </RadzenCard>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ===================================================== -->
+<!-- USER SIDE PANEL -->
+<!-- ===================================================== -->
+<RadzenSidebar Position="SidebarPosition.Right"
+               Visible="@showUserBlade"
+               Class="mit-blade">
+    <div class="blade-header">
+        <div class="d-flex align-items-center gap-2">
+            <RadzenIcon Icon="@userBladeIcon"
+                        Style="@($"color:{userBladeIconColor};")" />
+
+            <h4 class="mb-0">@userBladeTitle</h4>
+        </div>
+
+        <RadzenButton Icon="close"
+                      Size="ButtonSize.Small"
+                      ButtonStyle="ButtonStyle.Light"
+                      Click="@CloseUserBlade" />
+    </div>
+
+    <div class="blade-body">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <RadzenLabel Text="Username" />
+                <RadzenTextBox @bind-Value="model.UserName"
+                               Name="Username"
+                               Style="width:100%;" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <RadzenLabel Text="Email" />
+                <RadzenTextBox @bind-Value="model.Email"
+                               Name="Email"
+                               Style="width:100%;" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <RadzenLabel Text="Phone" />
+                <RadzenTextBox @bind-Value="model.PhoneNumber"
+                               Name="Phone"
+                               Style="width:100%;" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <RadzenLabel Text="Status" />
+                <RadzenDropDown TValue="UserStatus"
+                                Data="@statusEnumValues"
+                                @bind-Value="model.Status"
+                                Style="width:100%;" />
+            </div>
+
+            <div class="col-12 mb-3">
+                <RadzenLabel Text="Roles" />
+
+                <RadzenDropDownDataGrid TValue="IEnumerable<string>"
+                                        Data="@allRoles"
+                                        TextProperty="Name"
+                                        ValueProperty="Name"
+                                        Multiple="true"
+                                        Chips="true"
+                                        AllowFiltering="true"
+                                        @bind-Value="model.Roles"
+                                        Style="width:100%;">
+                    <Columns>
+                        <RadzenDropDownDataGridColumn Property="Name" Title="Role" />
+                    </Columns>
+                </RadzenDropDownDataGrid>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <RadzenLabel Text="Password" />
+                <RadzenPassword @bind-Value="model.Password"
+                                Name="Password"
+                                Style="width:100%;" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <RadzenLabel Text="Confirm Password" />
+                <RadzenPassword @bind-Value="model.ConfirmPassword"
+                                Name="ConfirmPassword"
+                                Style="width:100%;" />
+            </div>
+
+            @if (isEditMode)
+            {
+                <div class="col-12">
+                    <div class="subtle">
+                        Leave password blank to keep the current password.
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="blade-footer">
+        <RadzenButton Text="Cancel"
+                      ButtonStyle="ButtonStyle.Light"
+                      Click="@CloseUserBlade"
+                      Disabled="@busy" />
+
+        <RadzenButton Text="Save"
+                      Icon="save"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Disabled="@busy"
+                      Click="AskSaveUser" />
+    </div>
+</RadzenSidebar>
+
+@code
+{
+    private const string HiddenUserEmail = "supper@mitanz360.edu";
+
+    // =====================================================
+    // ENUM
+    // =====================================================
+
+    private enum UserStatus
+    {
+        Active,
+        Hold,
+        Disabled
+    }
+
+    private readonly IReadOnlyList<UserStatus> statusEnumValues = Enum.GetValues<UserStatus>();
+
+    // =====================================================
+    // STATE
+    // =====================================================
+
+    private List<ApplicationUser> users = new();
+    private List<RoleOption> allRoles = new();
+    private Dictionary<string, List<string>> userRoles = new();
+
+    private bool showUserBlade;
+    private bool busy;
+    private bool isEditMode;
+
+    private string search = string.Empty;
+    private string userBladeTitle = "New User";
+    private string userBladeIcon = "person_add";
+    private string userBladeIconColor = "#2563eb";
+
+    private ApplicationUser? editingUser;
+    private CreateEditUserModel model = new();
+
+    // =====================================================
+    // INITIALIZE
+    // =====================================================
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoles();
+        await LoadUsersAndRoleMap();
+    }
+
+    // =====================================================
+    // LOAD ROLES (IDENTITY = SINGLE SOURCE OF TRUTH)
+    // =====================================================
+
+    private async Task LoadRoles()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            allRoles = await db.Roles
+                .AsNoTracking()
+                .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+                .OrderBy(r => r.Name)
+                .Select(r => new RoleOption
+                {
+                    Name = r.Name!
+                })
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Notify(ex.Message, NotificationSeverity.Error);
+        }
+    }
+
+    // =====================================================
+    // LOAD USERS + ASSIGNED ROLES
+    // =====================================================
+
+    private async Task LoadUsersAndRoleMap()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var loadedUsers = await db.Users
+                .AsNoTracking()
+                .OrderBy(x => x.UserName)
+                .ToListAsync();
+
+            users = loadedUsers
+                .Where(u => !IsHiddenUser(u))
+                .ToList();
+
+            var visibleUserIds = users
+                .Select(x => x.Id)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var pairs = await
+                (
+                    from ur in db.UserRoles
+                    join r in db.Roles on ur.RoleId equals r.Id
+                    where !string.IsNullOrWhiteSpace(r.Name)
+                    select new
+                    {
+                        ur.UserId,
+                        RoleName = r.Name!
+                    }
+                )
+                .AsNoTracking()
+                .ToListAsync();
+
+            userRoles = pairs
+                .Where(x => visibleUserIds.Contains(x.UserId))
+                .GroupBy(x => x.UserId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(x => x.RoleName)
+                          .Distinct(StringComparer.OrdinalIgnoreCase)
+                          .OrderBy(x => x)
+                          .ToList());
+        }
+        catch (Exception ex)
+        {
+            Notify(ex.Message, NotificationSeverity.Error);
+        }
+    }
+
+    // =====================================================
+    // FILTER
+    // =====================================================
+
+    private IEnumerable<ApplicationUser> FilteredUsers()
+    {
+        var visibleUsers = users.Where(u => !IsHiddenUser(u));
+
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            return visibleUsers;
+        }
+
+        var s = search.Trim().ToLowerInvariant();
+
+        return visibleUsers.Where(u =>
+            (u.UserName ?? string.Empty).ToLowerInvariant().Contains(s) ||
+            (u.Email ?? string.Empty).ToLowerInvariant().Contains(s) ||
+            (u.PhoneNumber ?? string.Empty).ToLowerInvariant().Contains(s));
+    }
+
+    // =====================================================
+    // DISPLAY HELPERS
+    // =====================================================
+
+    private static string DisplayName(ApplicationUser u)
+        => string.IsNullOrWhiteSpace(u.UserName) ? "(no username)" : u.UserName;
+
+    private static bool IsHiddenUser(ApplicationUser u)
+        => string.Equals(
+            u.Email?.Trim(),
+            HiddenUserEmail,
+            StringComparison.OrdinalIgnoreCase);
+
+    private UserStatus GetStatus(ApplicationUser u)
+    {
+        if (u.LockoutEnd is null || u.LockoutEnd <= DateTimeOffset.UtcNow)
+        {
+            return UserStatus.Active;
+        }
+
+        // Long lockout is treated as Disabled
+        if (u.LockoutEnd >= DateTimeOffset.UtcNow.AddYears(50))
+        {
+            return UserStatus.Disabled;
+        }
+
+        return UserStatus.Hold;
+    }
+
+    private string GetStatusBadgeText(ApplicationUser u)
+        => GetStatus(u) switch
+        {
+            UserStatus.Active => "ACTIVE",
+            UserStatus.Hold => "HOLD",
+            _ => "DISABLED"
+        };
+
+    private string GetStatusBadgeStyle(ApplicationUser u)
+        => GetStatus(u) switch
+        {
+            UserStatus.Active => "background:#16a34a;color:white;",
+            UserStatus.Hold => "background:#f59e0b;color:white;",
+            _ => "background:#dc2626;color:white;"
+        };
+
+    // =====================================================
+    // CREATE
+    // =====================================================
+
+    private async Task OpenCreateUserBlade()
+    {
+        await LoadRoles();
+
+        isEditMode = false;
+        editingUser = null;
+
+        model = new CreateEditUserModel
+        {
+            Status = UserStatus.Active,
+            Roles = Array.Empty<string>()
+        };
+
+        userBladeTitle = "New User";
+        userBladeIcon = "person_add";
+        userBladeIconColor = "#2563eb";
+
+        showUserBlade = true;
+    }
+
+    // =====================================================
+    // EDIT
+    // =====================================================
+
+    private async Task OpenEditUserBlade(ApplicationUser u)
+    {
+        if (IsHiddenUser(u))
+        {
+            Notify("This user cannot be managed from this screen.", NotificationSeverity.Warning);
+            return;
+        }
+
+        await LoadRoles();
+
+        isEditMode = true;
+        editingUser = u;
+
+        var roles = userRoles.TryGetValue(u.Id, out var assigned)
+            ? assigned
+            : new List<string>();
+
+        model = new CreateEditUserModel
+        {
+            Id = u.Id,
+            UserName = u.UserName ?? string.Empty,
+            Email = u.Email ?? string.Empty,
+            PhoneNumber = u.PhoneNumber,
+            Status = GetStatus(u),
+            Roles = roles.ToList(),
+            Password = string.Empty,
+            ConfirmPassword = string.Empty
+        };
+
+        userBladeTitle = "Edit User";
+        userBladeIcon = "manage_accounts";
+        userBladeIconColor = "#ea580c";
+
+        showUserBlade = true;
+    }
+
+    // =====================================================
+    // SAVE USER
+    // =====================================================
+
+    private async Task AskSaveUser()
+    {
+        try
+        {
+            busy = true;
+
+            var validationError = ValidateModel();
+            if (!string.IsNullOrWhiteSpace(validationError))
+            {
+                Notify(validationError, NotificationSeverity.Error);
+                return;
+            }
+
+            using var scope = ScopeFactory.CreateScope();
+
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+            var selectedRoles = model.Roles
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            // Validate that every selected role exists in Identity
+            var existingRoleNames = await roleManager.Roles
+                .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+                .Select(r => r.Name!)
+                .ToListAsync();
+
+            var missingRoles = selectedRoles
+                .Where(role => !existingRoleNames.Any(er => string.Equals(er, role, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            if (missingRoles.Any())
+            {
+                Notify($"These roles do not exist in Identity: {string.Join(", ", missingRoles)}",
+                    NotificationSeverity.Error);
+                return;
+            }
+
+            if (!isEditMode)
+            {
+                var user = new ApplicationUser
+                {
+                    UserName = model.UserName.Trim(),
+                    Email = model.Email.Trim(),
+                    PhoneNumber = NormalizeOptional(model.PhoneNumber),
+                    EmailConfirmed = true
+                };
+
+                ApplyStatus(user, model.Status);
+
+                var createResult = await userManager.CreateAsync(user, model.Password);
+                if (!createResult.Succeeded)
+                {
+                    NotifyIdentityErrors(createResult);
+                    return;
+                }
+
+                if (selectedRoles.Any())
+                {
+                    var addToRolesResult = await userManager.AddToRolesAsync(user, selectedRoles);
+                    if (!addToRolesResult.Succeeded)
+                    {
+                        NotifyIdentityErrors(addToRolesResult);
+                        return;
+                    }
+                }
+
+                Notify("User created");
+            }
+            else
+            {
+                var user = await userManager.FindByIdAsync(model.Id!);
+                if (user is null)
+                {
+                    Notify("User not found", NotificationSeverity.Error);
+                    return;
+                }
+
+                if (IsHiddenUser(user))
+                {
+                    Notify("This user cannot be managed from this screen.", NotificationSeverity.Warning);
+                    return;
+                }
+
+                user.UserName = model.UserName.Trim();
+                user.Email = model.Email.Trim();
+                user.PhoneNumber = NormalizeOptional(model.PhoneNumber);
+
+                ApplyStatus(user, model.Status);
+
+                var updateResult = await userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    NotifyIdentityErrors(updateResult);
+                    return;
+                }
+
+                // Optional password reset on edit
+                if (!string.IsNullOrWhiteSpace(model.Password))
+                {
+                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+                    var resetResult = await userManager.ResetPasswordAsync(user, resetToken, model.Password);
+
+                    if (!resetResult.Succeeded)
+                    {
+                        NotifyIdentityErrors(resetResult);
+                        return;
+                    }
+                }
+
+                // Role diff update (safer than remove-all + add-all)
+                var currentRoles = await userManager.GetRolesAsync(user);
+
+                var rolesToRemove = currentRoles
+                    .Except(selectedRoles, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var rolesToAdd = selectedRoles
+                    .Except(currentRoles, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (rolesToRemove.Any())
+                {
+                    var removeResult = await userManager.RemoveFromRolesAsync(user, rolesToRemove);
+                    if (!removeResult.Succeeded)
+                    {
+                        NotifyIdentityErrors(removeResult);
+                        return;
+                    }
+                }
+
+                if (rolesToAdd.Any())
+                {
+                    var addResult = await userManager.AddToRolesAsync(user, rolesToAdd);
+                    if (!addResult.Succeeded)
+                    {
+                        NotifyIdentityErrors(addResult);
+                        return;
+                    }
+                }
+
+                Notify("User updated");
+            }
+
+            showUserBlade = false;
+
+            await LoadRoles();
+            await LoadUsersAndRoleMap();
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Notify(ex.Message, NotificationSeverity.Error);
+        }
+        finally
+        {
+            busy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // =====================================================
+    // STATUS CHANGE
+    // =====================================================
+
+    private async Task AskStatusChange(ApplicationUser u, UserStatus status)
+    {
+        if (IsHiddenUser(u))
+        {
+            Notify("This user cannot be managed from this screen.", NotificationSeverity.Warning);
+            return;
+        }
+
+        try
+        {
+            busy = true;
+
+            using var scope = ScopeFactory.CreateScope();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+            var user = await userManager.FindByIdAsync(u.Id);
+            if (user is null)
+            {
+                Notify("User not found", NotificationSeverity.Error);
+                return;
+            }
+
+            if (IsHiddenUser(user))
+            {
+                Notify("This user cannot be managed from this screen.", NotificationSeverity.Warning);
+                return;
+            }
+
+            ApplyStatus(user, status);
+
+            var result = await userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                NotifyIdentityErrors(result);
+                return;
+            }
+
+            Notify(status switch
+            {
+                UserStatus.Active => "User enabled",
+                UserStatus.Hold => "User placed on hold",
+                _ => "User disabled"
+            });
+
+            await LoadUsersAndRoleMap();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Notify(ex.Message, NotificationSeverity.Error);
+        }
+        finally
+        {
+            busy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // =====================================================
+    // HELPERS
+    // =====================================================
+
+    private string? ValidateModel()
+    {
+        if (string.IsNullOrWhiteSpace(model.UserName))
+        {
+            return "Username is required.";
+        }
+
+        if (string.IsNullOrWhiteSpace(model.Email))
+        {
+            return "Email is required.";
+        }
+
+        if (string.Equals(model.Email.Trim(), HiddenUserEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            return "This account cannot be managed from this screen.";
+        }
+
+        if (!isEditMode && string.IsNullOrWhiteSpace(model.Password))
+        {
+            return "Password is required for a new user.";
+        }
+
+        if (!string.Equals(model.Password, model.ConfirmPassword, StringComparison.Ordinal))
+        {
+            return "Password and confirm password do not match.";
+        }
+
+        return null;
+    }
+
+    private static string? NormalizeOptional(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static void ApplyStatus(ApplicationUser user, UserStatus status)
+    {
+        switch (status)
+        {
+            case UserStatus.Active:
+                user.LockoutEnabled = false;
+                user.LockoutEnd = null;
+                break;
+
+            case UserStatus.Hold:
+                user.LockoutEnabled = true;
+                user.LockoutEnd = DateTimeOffset.UtcNow.AddDays(7);
+                break;
+
+            case UserStatus.Disabled:
+                user.LockoutEnabled = true;
+                user.LockoutEnd = DateTimeOffset.MaxValue;
+                break;
+        }
+    }
+
+    private void NotifyIdentityErrors(IdentityResult result)
+    {
+        Notify(
+            string.Join(", ", result.Errors.Select(x => x.Description)),
+            NotificationSeverity.Error);
+    }
+
+    private void CloseUserBlade()
+    {
+        showUserBlade = false;
+    }
+
+    private void Notify(
+        string message,
+        NotificationSeverity severity = NotificationSeverity.Success)
+    {
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = severity,
+            Summary = message,
+            Duration = 3000
+        });
+    }
+
+    // =====================================================
+    // VIEW MODELS
+    // =====================================================
+
+    private sealed class RoleOption
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class CreateEditUserModel
+    {
+        public string? Id { get; set; }
+
+        public string UserName { get; set; } = string.Empty;
+
+        public string Email { get; set; } = string.Empty;
+
+        public string? PhoneNumber { get; set; }
+
+        public UserStatus Status { get; set; } = UserStatus.Active;
+
+        public IEnumerable<string> Roles { get; set; } = Array.Empty<string>();
+
+        public string Password { get; set; } = string.Empty;
+
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

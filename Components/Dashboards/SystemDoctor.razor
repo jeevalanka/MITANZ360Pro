@@ -1,0 +1,856 @@
+﻿@page "/system-doctor"
+@layout MainLayout_NoRightPan
+@attribute [Authorize(Roles = "Admin,SysAdmin")]
+
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Authorization
+@using MITANZ360Pro.Web.Services
+@using MITANZ360Pro.Web.Services.SystemDoctor
+@inject SharePointService SharePointService
+
+<CascadingAuthenticationState>
+    <div class="sd-page">
+        <div class="sd-header">
+            <div class="sd-title">
+                <div class="sd-title-icon">@((MarkupString)Icons.HeartPulse)</div>
+                <div>
+                    <h2>System Doctor</h2>
+                    <div class="sd-subtitle">Real-time application & platform health (runtime + Microsoft Graph)</div>
+                </div>
+            </div>
+
+            <div class="sd-controls glass">
+                <div class="sd-control-row">
+                    <label class="sd-switch">
+                        <input type="checkbox" @bind="autoRefresh" />
+                        <span class="sd-slider"></span>
+                    </label>
+                    <span class="sd-control-label">Auto refresh</span>
+
+                    <select class="sd-select" @bind="refreshSeconds">
+                        <option value="2">2s</option>
+                        <option value="3">3s</option>
+                        <option value="5">5s</option>
+                        <option value="10">10s</option>
+                    </select>
+
+                    <button class="sd-btn" @onclick="RunFullReport" disabled="@isBusy">
+                        @((MarkupString)Icons.Stethoscope) Run Full Health Report
+                    </button>
+
+                    <button class="sd-btn sd-btn-secondary" @onclick="RunDeepChecks" disabled="@isBusy">
+                        @((MarkupString)Icons.Radar) Deep Graph Checks
+                    </button>
+                </div>
+
+                <div class="sd-control-row small">
+                    <span class="sd-pill">Last update: <b>@(lastUpdateLocal)</b></span>
+                    <span class="sd-pill">Report time: <b>@(lastReportMsText)</b></span>
+                    <span class="sd-pill">History points: <b>@history.Count</b></span>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+            <div class="sd-alert glass sd-alert-danger">
+                @((MarkupString)Icons.TriangleExclamation) @error
+            </div>
+        }
+
+        <div class="sd-grid">
+            <!-- LIVE METRICS -->
+            <div class="glass sd-card">
+                <div class="sd-card-title">
+                    @((MarkupString)Icons.Activity) Live Runtime Metrics
+                </div>
+
+                <div class="sd-metric-grid">
+                    @Metric("CPU", cpuPercentText, "cpu", Icons.Cpu)
+                    @Metric("Working Set", $"{lastSnapshot?.WorkingSetMb:F0} MB", "mem", Icons.Memory)
+                    @Metric("GC Heap", $"{lastSnapshot?.GcHeapMb:F0} MB", "gc", Icons.Database)
+                    @Metric("Threads", $"{lastSnapshot?.ThreadCount}", "thr", Icons.Threads)
+                    @Metric("Handles", lastSnapshot?.HandleCount >= 0 ? $"{lastSnapshot.HandleCount}" : "N/A", "hdl", Icons.Link)
+                    @Metric("Uptime", uptimeText, "upt", Icons.Clock)
+                </div>
+
+                <div class="sd-charts">
+                    <div class="sd-chart">
+                        <div class="sd-chart-title">@((MarkupString)Icons.Cpu) CPU % (computed)</div>
+                        @Sparkline(history.Select(h => h.CpuPercent).ToList(), 0, 100, "#7cffe1")
+                    </div>
+
+                    <div class="sd-chart">
+                        <div class="sd-chart-title">@((MarkupString)Icons.Memory) Working Set (MB)</div>
+                        @Sparkline(history.Select(h => h.WorkingSetMb).ToList(), 0, AutoMax(history.Select(h => h.WorkingSetMb)), "#8ab4ff")
+                    </div>
+
+                    <div class="sd-chart">
+                        <div class="sd-chart-title">@((MarkupString)Icons.Database) GC Heap (MB)</div>
+                        @Sparkline(history.Select(h => h.GcHeapMb).ToList(), 0, AutoMax(history.Select(h => h.GcHeapMb)), "#ffd37a")
+                    </div>
+                </div>
+            </div>
+
+            <!-- APP IDENTITY -->
+            <div class="glass sd-card">
+                <div class="sd-card-title">
+                    @((MarkupString)Icons.Info) Application Identity
+                </div>
+
+                <div class="sd-kv">
+                    @KV("App", lastSnapshot?.ApplicationName ?? "-")
+                    @KV("Version", lastSnapshot?.Version ?? "-")
+                    @KV("Environment", lastSnapshot?.EnvironmentName ?? "-")
+                    @KV("Content Root", lastSnapshot?.ContentRootPath ?? "-")
+                    @KV("Machine", lastSnapshot?.MachineName ?? "-")
+                    @KV("OS", lastSnapshot?.OSDescription ?? "-")
+                    @KV(".NET", lastSnapshot?.FrameworkDescription ?? "-")
+                    @KV("Arch", lastSnapshot?.ProcessArchitecture ?? "-")
+                </div>
+            </div>
+
+            <!-- HEALTH CHECKS -->
+            <div class="glass sd-card sd-card-wide">
+                <div class="sd-card-title">
+                    @((MarkupString)Icons.Shield) Health Checks (Runtime + Microsoft Graph)
+                </div>
+
+                @if (lastReport is null)
+                {
+                    <div class="sd-muted">Run a report to see checks.</div>
+                }
+                else
+                {
+                    <div class="sd-checks">
+                        @foreach (var c in lastReport.Checks)
+                        {
+                            <div class="sd-check glass2">
+                                <div class="sd-check-top">
+                                    <div class="sd-check-name">
+                                        <span class="sd-check-icon">@((MarkupString)GetCategoryIcon(c.Category))</span>
+                                        <span>@c.Category</span>
+                                        <span class="sd-dot">•</span>
+                                        <b>@c.Name</b>
+                                    </div>
+                                    <div class="sd-badge @BadgeClass(c.Status)">
+                                        @c.Status
+                                    </div>
+                                </div>
+
+                                <div class="sd-check-msg">@c.Message</div>
+
+                                @if (!string.IsNullOrWhiteSpace(c.Recommendation))
+                                {
+                                    <div class="sd-check-rec">
+                                        <span class="sd-rec-icon">@((MarkupString)Icons.Lightbulb)</span>
+                                        @c.Recommendation
+                                    </div>
+                                }
+
+                                <div class="sd-check-meta">
+                                    <span>@c.CheckedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)</span>
+                                    @if (c.Value.HasValue)
+                                    {
+                                        <span class="sd-dot">•</span>
+                                        <span>Value: <b>@c.Value.Value.ToString("0.##", CultureInfo.InvariantCulture) @c.Unit</b></span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</CascadingAuthenticationState>
+
+@code
+{
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private bool autoRefresh = true;
+    private int refreshSeconds = 3;
+
+    private bool isBusy;
+    private string? error;
+
+    private SystemDoctorSnapshot? lastSnapshot;
+    private SystemDoctorReport? lastReport;
+
+    private string lastUpdateLocal = "-";
+    private string lastReportMsText = "-";
+
+    // Real CPU% computed between snapshots (no fake)
+    private double lastCpuPercent;
+    private string cpuPercentText => lastSnapshot is null ? "-" : $"{lastCpuPercent:0.0}%";
+    private string uptimeText => lastSnapshot is null ? "-" : TimeSpan.FromSeconds(lastSnapshot.UptimeSeconds).ToString("g");
+
+    // Historical series for charts (real-time)
+    private readonly List<HistoryPoint> history = new();
+    private PeriodicTimer? timer;
+    private CancellationTokenSource? loopCts;
+
+    private sealed class HistoryPoint
+    {
+        public DateTimeOffset AtUtc { get; set; }
+        public double CpuPercent { get; set; }
+        public double WorkingSetMb { get; set; }
+        public double GcHeapMb { get; set; }
+        public double TotalProcessorSeconds { get; set; }
+        public double UptimeSeconds { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshSnapshotOnly(); // immediate real snapshot
+        StartOrRestartLoop();
+    }
+
+    private void StartOrRestartLoop()
+    {
+        loopCts?.Cancel();
+        loopCts?.Dispose();
+        loopCts = new CancellationTokenSource();
+
+        timer?.Dispose();
+        timer = new PeriodicTimer(TimeSpan.FromSeconds(refreshSeconds));
+
+        _ = LoopAsync(loopCts.Token);
+    }
+
+    private async Task LoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                if (autoRefresh)
+                    await RefreshSnapshotOnly();
+
+                await timer!.WaitForNextTickAsync(ct);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RefreshSnapshotOnly()
+    {
+        try
+        {
+            error = null;
+
+            var user = await GetUserAsync();
+            var snap = await SharePointService.GetSystemDoctorSnapshotAsync(user);
+
+            ComputeCpuPercentAndUpdateHistory(snap);
+            lastSnapshot = snap;
+
+            lastUpdateLocal = DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ComputeCpuPercentAndUpdateHistory(SystemDoctorSnapshot snap)
+    {
+        // CPU% is computed from real TotalProcessorTime deltas between samples
+        var now = snap.CapturedAtUtc;
+        var tp = snap.TotalProcessorSeconds;
+
+        if (history.Count > 0)
+        {
+            var prev = history[^1];
+            var dt = (now - prev.AtUtc).TotalSeconds;
+            var dCpu = tp - prev.TotalProcessorSeconds;
+
+            if (dt > 0 && snap.ProcessorCount > 0)
+            {
+                var raw = (dCpu / (dt * snap.ProcessorCount)) * 100.0;
+                lastCpuPercent = Math.Clamp(raw, 0, 100);
+            }
+        }
+
+        history.Add(new HistoryPoint
+        {
+            AtUtc = now,
+            CpuPercent = lastCpuPercent,
+            WorkingSetMb = snap.WorkingSetMb,
+            GcHeapMb = snap.GcHeapMb,
+            TotalProcessorSeconds = tp,
+            UptimeSeconds = snap.UptimeSeconds
+        });
+
+        // keep last 60 points
+        if (history.Count > 60)
+            history.RemoveRange(0, history.Count - 60);
+    }
+
+    private async Task RunFullReport()
+    {
+        isBusy = true;
+        try
+        {
+            error = null;
+            var user = await GetUserAsync();
+
+            var report = await SharePointService.GetSystemDoctorReportAsync(
+                user,
+                deepGraphChecks: false);
+
+            lastReport = report;
+            lastReportMsText = $"{report.ElapsedMs} ms";
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task RunDeepChecks()
+    {
+        isBusy = true;
+        try
+        {
+            error = null;
+            var user = await GetUserAsync();
+
+            var report = await SharePointService.GetSystemDoctorReportAsync(
+                user,
+                deepGraphChecks: true);
+
+            lastReport = report;
+            lastReportMsText = $"{report.ElapsedMs} ms";
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task<System.Security.Claims.ClaimsPrincipal> GetUserAsync()
+    {
+        if (AuthenticationStateTask is null)
+            throw new InvalidOperationException("AuthenticationState is not available.");
+
+        var state = await AuthenticationStateTask;
+        return state.User;
+    }
+
+    protected override void OnParametersSet()
+    {
+        // If refresh interval changed, restart timer
+        StartOrRestartLoop();
+    }
+
+    public void Dispose()
+    {
+        loopCts?.Cancel();
+        loopCts?.Dispose();
+        timer?.Dispose();
+    }
+
+    // ---------- UI helpers ----------
+
+    private RenderFragment Metric(string title, string value, string key, string iconSvg) => builder =>
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "sd-metric glass2");
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "sd-metric-icon");
+        builder.AddMarkupContent(seq++, iconSvg);
+        builder.CloseElement();
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "sd-metric-body");
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "sd-metric-title");
+        builder.AddContent(seq++, title);
+        builder.CloseElement();
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "sd-metric-value");
+        builder.AddContent(seq++, value);
+        builder.CloseElement();
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private RenderFragment KV(string k, string v) => builder =>
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "sd-kv-row");
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "sd-kv-k");
+        builder.AddContent(seq++, k);
+        builder.CloseElement();
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "sd-kv-v");
+        builder.AddContent(seq++, v);
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private string BadgeClass(HealthStatus status) => status switch
+    {
+        HealthStatus.Critical => "sd-badge-critical",
+        HealthStatus.Warning => "sd-badge-warning",
+        _ => "sd-badge-healthy"
+    };
+
+    private static string GetCategoryIcon(string category) => category switch
+    {
+        "Graph" => Icons.Cloud,
+        "Security" => Icons.Shield,
+        "Runtime" => Icons.Activity,
+        _ => Icons.Info
+    };
+
+    private static double AutoMax(IEnumerable<double> values)
+    {
+        var max = values.DefaultIfEmpty(1).Max();
+        if (max <= 0) return 1;
+        return max * 1.15;
+    }
+
+    private RenderFragment Sparkline(List<double> values, double min, double max, string stroke) => builder =>
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "svg");
+        builder.AddAttribute(seq++, "class", "sd-spark");
+        builder.AddAttribute(seq++, "viewBox", "0 0 200 60");
+        builder.AddAttribute(seq++, "preserveAspectRatio", "none");
+
+        // grid
+        builder.OpenElement(seq++, "path");
+        builder.AddAttribute(seq++, "d", "M0 50 H200");
+        builder.AddAttribute(seq++, "class", "sd-spark-grid");
+        builder.CloseElement();
+
+        var pts = BuildPoints(values, min, max, 200, 60, 6);
+        builder.OpenElement(seq++, "polyline");
+        builder.AddAttribute(seq++, "fill", "none");
+        builder.AddAttribute(seq++, "stroke", stroke);
+        builder.AddAttribute(seq++, "stroke-width", "2.5");
+        builder.AddAttribute(seq++, "points", pts);
+        builder.AddAttribute(seq++, "class", "sd-spark-line");
+        builder.CloseElement();
+
+        builder.CloseElement();
+    };
+
+    private static string BuildPoints(List<double> values, double min, double max, int width, int height, int pad)
+    {
+        if (values is null || values.Count == 0)
+            return string.Empty;
+
+        var w = width - pad * 2;
+        var h = height - pad * 2;
+
+        var denom = (max - min);
+        if (denom <= 0) denom = 1;
+
+        var step = values.Count == 1 ? 0 : (double)w / (values.Count - 1);
+
+        return string.Join(" ",
+            values.Select((v, i) =>
+            {
+                var x = pad + (step * i);
+                var norm = (v - min) / denom;
+                norm = Math.Clamp(norm, 0, 1);
+                var y = pad + (h * (1 - norm));
+                return $"{x:0.##},{y:0.##}";
+            }));
+    }
+
+    private static class Icons
+    {
+        public const string HeartPulse =
+            @"<svg width='26' height='26' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M12 21s-7-4.35-9.5-8.5C.4 9.2 2.2 6 5.8 6c2 0 3.2 1 4.2 2.2C11 7 12.2 6 14.2 6c3.6 0 5.4 3.2 3.3 6.5C19 16.65 12 21 12 21Z' stroke='currentColor' stroke-width='1.6'/>
+                <path d='M3 13h4l2-4 2 8 2-4h6' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/>
+              </svg>";
+
+        public const string Activity =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M4 12h4l2-6 4 12 2-6h4' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/>
+              </svg>";
+
+        public const string Stethoscope =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M6 3v6a4 4 0 0 0 8 0V3' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+                <path d='M10 13v2a6 6 0 0 0 12 0v-1' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+                <circle cx='20' cy='14' r='2' stroke='currentColor' stroke-width='1.8'/>
+              </svg>";
+
+        public const string Radar =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.8'/>
+                <circle cx='12' cy='12' r='5' stroke='currentColor' stroke-width='1.2' opacity='0.7'/>
+                <path d='M12 12l6-6' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+              </svg>";
+
+        public const string Info =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.8'/>
+                <path d='M12 10v6' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+                <path d='M12 7h.01' stroke='currentColor' stroke-width='2.4' stroke-linecap='round'/>
+              </svg>";
+
+        public const string Shield =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6l8-4Z' stroke='currentColor' stroke-width='1.8'/>
+              </svg>";
+
+        public const string Cloud =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M7 18h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.6 1.8A3.5 3.5 0 0 0 7 18Z' stroke='currentColor' stroke-width='1.8'/>
+              </svg>";
+
+        public const string Cpu =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <rect x='8' y='8' width='8' height='8' rx='1.2' stroke='currentColor' stroke-width='1.8'/>
+                <path d='M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+              </svg>";
+
+        public const string Memory =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <rect x='4' y='8' width='16' height='8' rx='1.2' stroke='currentColor' stroke-width='1.8'/>
+                <path d='M7 8V6M11 8V6M15 8V6M17 8V6M7 16v2M11 16v2M15 16v2M17 16v2' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+              </svg>";
+
+        public const string Database =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <ellipse cx='12' cy='6' rx='7' ry='3' stroke='currentColor' stroke-width='1.8'/>
+                <path d='M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6' stroke='currentColor' stroke-width='1.8'/>
+                <path d='M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6' stroke='currentColor' stroke-width='1.8'/>
+              </svg>";
+
+        public const string Threads =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M7 7h10M7 12h10M7 17h10' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+              </svg>";
+
+        public const string Link =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+                <path d='M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+              </svg>";
+
+        public const string Clock =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.8'/>
+                <path d='M12 7v6l4 2' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/>
+              </svg>";
+
+        public const string Lightbulb =
+            @"<svg width='16' height='16' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M9 18h6M10 22h4' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+                <path d='M8 14c-1-1-2-2.3-2-4a6 6 0 1 1 12 0c0 1.7-1 3-2 4l-.8 1.2H8.8L8 14Z' stroke='currentColor' stroke-width='1.8' stroke-linejoin='round'/>
+              </svg>";
+
+        public const string TriangleExclamation =
+            @"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M12 3 2.5 20h19L12 3Z' stroke='currentColor' stroke-width='1.8' stroke-linejoin='round'/>
+                <path d='M12 9v5' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/>
+                <path d='M12 17h.01' stroke='currentColor' stroke-width='2.6' stroke-linecap='round'/>
+              </svg>";
+    }
+}
+
+<style>
+    /* ===========================
+       MICROSOFT FLUENT THEME
+       =========================== */
+    :root {
+        --bg-main: #0f1115;
+        --bg-panel: #16181d;
+        --bg-panel-strong: #1b1f26;
+        --border-soft: rgba(255,255,255,0.08);
+        --border-strong: rgba(255,255,255,0.14);
+        --text-primary: #ffffff;
+        --text-secondary: #c8cbd4;
+        --text-muted: #9aa0b4;
+        --accent-blue: #3b82f6; /* Fluent Blue */
+        --accent-cyan: #22d3ee; /* Azure Cyan */
+        --accent-purple: #8b5cf6;
+        --ok: #22c55e; /* Success */
+        --warn: #f59e0b; /* Warning */
+        --crit: #ef4444; /* Error */
+    }
+
+    /* ===========================
+       PAGE BASE
+       =========================== */
+    .sd-page {
+        padding: 20px;
+        background: var(--bg-main);
+        color: var(--text-primary);
+        font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* ===========================
+       FLUENT CARDS
+       =========================== */
+    .glass {
+        background: var(--bg-panel);
+        border: 1px solid var(--border-soft);
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.45);
+    }
+
+    .glass-strong {
+        background: var(--bg-panel-strong);
+        border: 1px solid var(--border-strong);
+    }
+
+    /* ===========================
+       HEADERS
+       =========================== */
+    .sd-title h2 {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .sd-subtitle {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    /* ===========================
+       GRID LAYOUT
+       =========================== */
+    .sd-grid {
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        gap: 16px;
+    }
+
+    @@media (max-width: 1200px) {
+        .sd-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ===========================
+       METRIC CARDS
+       =========================== */
+    .sd-metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    @@media (max-width: 900px) {
+        .sd-metric-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 520px) {
+        .sd-metric-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .sd-metric {
+        padding: 14px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        background: #1b1f26;
+        border: 1px solid var(--border-soft);
+        border-radius: 10px;
+    }
+
+    .sd-metric-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient( 135deg, var(--accent-blue), var(--accent-cyan) );
+        color: white;
+    }
+
+    .sd-metric-title {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+
+    .sd-metric-value {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    /* ===========================
+       CHARTS
+       =========================== */
+    .sd-charts {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    @@media (max-width: 900px) {
+        .sd-charts {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .sd-chart {
+        padding: 12px;
+        border-radius: 10px;
+        background: #1b1f26;
+        border: 1px solid var(--border-soft);
+    }
+
+    .sd-chart-title {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+    }
+
+    /* ===========================
+       HEALTH CHECKS
+       =========================== */
+    .sd-check {
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border-soft);
+        background: #1b1f26;
+    }
+
+    .sd-check-name {
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .sd-check-msg {
+        margin-top: 6px;
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+
+    /* ===========================
+       STATUS BADGES (FLUENT)
+       =========================== */
+    .sd-badge {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .sd-badge-healthy {
+        background: rgba(34,197,94,0.15);
+        color: var(--ok);
+        border: 1px solid rgba(34,197,94,0.35);
+    }
+
+    .sd-badge-warning {
+        background: rgba(245,158,11,0.15);
+        color: var(--warn);
+        border: 1px solid rgba(245,158,11,0.35);
+    }
+
+    .sd-badge-critical {
+        background: rgba(239,68,68,0.15);
+        color: var(--crit);
+        border: 1px solid rgba(239,68,68,0.35);
+    }
+
+    /* ===========================
+       KEY / VALUE LIST
+       =========================== */
+    .sd-kv-row {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 10px;
+        padding: 10px;
+        border-radius: 8px;
+        background: #1b1f26;
+        border: 1px solid var(--border-soft);
+    }
+
+    .sd-kv-k {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .sd-kv-v {
+        font-size: 13px;
+        color: var(--text-primary);
+    }
+
+    /* ===========================
+       ALERTS
+       =========================== */
+    .sd-alert {
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 16px;
+        font-size: 13px;
+    }
+
+    .sd-alert-danger {
+        background: rgba(239,68,68,0.12);
+        border: 1px solid rgba(239,68,68,0.35);
+        color: var(--crit);
+    }
+
+    /* ===========================
+       BUTTONS (FLUENT)
+       =========================== */
+    .sd-btn {
+        padding: 8px 14px;
+        border-radius: 8px;
+        background: var(--accent-blue);
+        color: white;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+    }
+
+        .sd-btn:hover {
+            filter: brightness(1.08);
+        }
+
+    .sd-btn-secondary {
+        background: transparent;
+        color: var(--text-primary);
+        border: 1px solid var(--border-soft);
+    }
+
+    /* ===========================
+       SPARKLINES
+       =========================== */
+    .sd-spark {
+        width: 100%;
+        height: 60px;
+    }
+
+    .sd-spark-line {
+        stroke-width: 2.5;
+    }
+</style>

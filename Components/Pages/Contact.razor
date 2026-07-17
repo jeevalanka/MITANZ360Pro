@@ -1,0 +1,262 @@
+﻿@page "/contact"
+@rendermode InteractiveServer
+@layout MainLayout
+@using System.ComponentModel.DataAnnotations
+@using MITANZ360Pro.Web.Services
+
+@inject IGraphMailService GraphMailService
+@inject ILogger<Contact> Logger
+@inject IConfiguration Configuration
+
+<PageTitle>Contact Us</PageTitle>
+
+<style>
+    /* ===== Layout Density Fix ===== */
+    .contact-card {
+        max-width: 920px;
+        margin: auto;
+    }
+
+    .form-label {
+        color: lightgoldenrodyellow;
+        font-weight: 500;
+        margin-bottom: .25rem;
+    }
+
+    .form-control,
+    .form-select {
+        padding: .5rem .7rem;
+        border-radius: .75rem;
+        font-size: .95rem;
+    }
+
+    textarea.form-control {
+        min-height: 110px;
+    }
+
+    .form-check-label {
+        color: #e5e7eb;
+        font-size: .9rem;
+    }
+
+    .right-pane small {
+        color: lightblue;
+        letter-spacing: .04em;
+        font-size: .7rem;
+    }
+
+    .right-pane .value {
+        color: #e5e7eb;
+        font-weight: 500;
+        font-size: .9rem;
+    }
+</style>
+
+<div class="container py-4">
+    <div class="contact-card">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="row g-0">
+
+                <!-- LEFT PANEL -->
+                <div class="col-lg-7 bg-dark text-white">
+                    <div class="p-4">
+
+                        <h2 class="fw-bold mb-1" style="color:darkorange">
+                            Contact Us
+                        </h2>
+
+                        <p class="mb-3" style="color:darkgreen">
+                            @App.Name — Enterprise AI Education Platform
+                        </p>
+
+                        @if (!string.IsNullOrWhiteSpace(successMessage))
+                        {
+                            <div class="alert alert-success py-2 px-3 rounded-3 mb-3">
+                                @successMessage
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(errorMessage))
+                        {
+                            <div class="alert alert-danger py-2 px-3 rounded-3 mb-3">
+                                @errorMessage
+                            </div>
+                        }
+
+                        <EditForm Model="@model" OnValidSubmit="@SubmitAsync">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+
+                            <div class="mb-3">
+                                <label class="form-label">Full Name</label>
+                                <InputText class="form-control"
+                                           @bind-Value="model.FullName" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Email Address</label>
+                                <InputText class="form-control"
+                                           @bind-Value="model.Email" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Problem Category</label>
+                                <InputSelect class="form-select"
+                                             @bind-Value="model.Category">
+                                    @foreach (var c in Categories)
+                                    {
+                                        <option value="@c">@c</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Subject</label>
+                                <InputText class="form-control"
+                                           @bind-Value="model.Subject" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Message</label>
+                                <InputTextArea class="form-control"
+                                               rows="4"
+                                               @bind-Value="model.Message" />
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <InputCheckbox class="form-check-input"
+                                               @bind-Value="model.SendCopyToUser" />
+                                <label class="form-check-label">
+                                    Send me a copy
+                                </label>
+                            </div>
+
+                            <button class="btn btn-success w-100 py-2 rounded-3"
+                                    disabled="@isSubmitting">
+                                @(isSubmitting ? "Sending…" : "Send Message")
+                            </button>
+                        </EditForm>
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL -->
+                <div class="col-lg-5 bg-black text-white right-pane">
+                    <div class="p-4 h-100">
+
+                        <h5 class="fw-bold mb-1">@App.Name</h5>
+                        <p class="text-secondary mb-3">@Client.ClientName</p>
+
+                        <hr class="border-secondary mb-3" />
+
+                        <div class="mb-2">
+                            <small>ENVIRONMENT</small>
+                            <div class="value">@App.Environment</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <small>VERSION</small>
+                            <div class="value">@App.Version</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <small>COMPANY</small>
+                            <div class="value">@App.Company</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <small>SUPPORT EMAIL</small>
+                            <div class="value">@App.SupportEmail</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <small>SUPPORT PHONE</small>
+                            <div class="value">@App.SupportPhone</div>
+                        </div>
+
+                        <div>
+                            <small>CLIENT REGION</small>
+                            <div class="value">@Client.Region</div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly List<string> Categories =
+    [
+        "General Inquiry",
+        "Login / Account Access",
+        "Technical Issue",
+        "Billing",
+        "Feedback",
+        "Other"
+    ];
+
+    private ContactModel model = new();
+    private bool isSubmitting;
+    private string? successMessage;
+    private string? errorMessage;
+
+    private ApplicationInfo App => Configuration.GetSection("Application").Get<ApplicationInfo>()!;
+    private ClientInfo Client => Configuration.GetSection("Client").Get<ClientInfo>()!;
+
+    private async Task SubmitAsync()
+    {
+        isSubmitting = true;
+        successMessage = errorMessage = null;
+
+        try
+        {
+            await GraphMailService.SendMailAsync(new GraphMailRequest
+            {
+                Subject = $"[{model.Category}] {model.Subject}",
+                Body = model.Message,
+                To = [Configuration["EmailSettings:AdminEmail"]!],
+                Cc = model.SendCopyToUser ? [model.Email] : [],
+                ReplyTo = model.Email
+            });
+
+            successMessage = "Your message has been sent successfully.";
+            model = new();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "CONTACT FAILED");
+            errorMessage = "Unable to send message.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    public class ContactModel
+    {
+        [Required] public string FullName { get; set; } = "";
+        [Required, EmailAddress] public string Email { get; set; } = "";
+        public string Category { get; set; } = "General Inquiry";
+        [Required] public string Subject { get; set; } = "";
+        [Required] public string Message { get; set; } = "";
+        public bool SendCopyToUser { get; set; } = true;
+    }
+
+    public record ApplicationInfo(
+        string Name,
+        string ShortName,
+        string Version,
+        string Environment,
+        string Company,
+        string Website,
+        string SupportEmail,
+        string SupportPhone);
+
+    public record ClientInfo(
+        string ClientName,
+        string ClientCode,
+        string Region);
+}

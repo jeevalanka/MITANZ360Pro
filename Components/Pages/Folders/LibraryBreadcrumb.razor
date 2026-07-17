@@ -1,0 +1,67 @@
+@* ═══════════════════════════════════════════════════════════════════
+   LibraryBreadcrumb.razor  (new)
+
+   Per the architecture doc's open question: SharePointService has no
+   "get parent chain" call today, so this builds the trail client-side
+   from the folder-click history the workspace already tracks, rather
+   than adding a new Graph round-trip. If a server-side parent chain
+   is added later, only LibraryWorkspace's PathStack construction needs
+   to change — this component just renders whatever list it's given.
+═══════════════════════════════════════════════════════════════════ *@
+@using MITANZ360Pro.Web.Services
+
+<div class="lib-breadcrumb">
+    <span class="crumb root @(Path.Count == 0 ? "current" : "")" @onclick="() => OnCrumbClick.InvokeAsync(null)">
+        📚 Library
+    </span>
+
+    @for (int i = 0; i < Path.Count; i++)
+    {
+        var folder = Path[i];
+        var isLast = i == Path.Count - 1;
+        <span class="crumb-sep">›</span>
+        <span class="crumb @(isLast ? "current" : "")" @onclick="() => OnCrumbClick.InvokeAsync(isLast ? null : folder)">
+            @(string.IsNullOrWhiteSpace(folder.Title) ? folder.Name : folder.Title)
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter] public List<LibraryItem> Path { get; set; } = new();
+    [Parameter] public EventCallback<LibraryItem?> OnCrumbClick { get; set; }
+}
+
+<style>
+    .lib-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 4px;
+        font-size: 0.82rem;
+        color: #475569;
+        flex-wrap: wrap;
+    }
+
+    .crumb {
+        cursor: pointer;
+    }
+
+        .crumb:hover {
+            text-decoration: underline;
+            color: #2563EB;
+        }
+
+        .crumb.current {
+            color: #0F172A;
+            font-weight: 600;
+            cursor: default;
+        }
+
+        .crumb.current:hover {
+            text-decoration: none;
+        }
+
+    .crumb-sep {
+        color: #cbd5e1;
+    }
+</style>

@@ -1,0 +1,183 @@
+﻿@page "/"
+@layout MainLayout
+
+@inject NavigationManager Navigation
+
+<link href="css/home.css" rel="stylesheet" />
+
+<section class="hero-fin">
+
+    <div class="hero-container">
+
+        <!-- =======================================
+             HERO BANNER
+        ======================================== -->
+        <div class="hero-image">
+            <img src="images/home.png"
+                 class="hero-img"
+                 alt="MITANZ360Pro Hero Banner" />
+        </div>
+
+    </div>
+
+    <!-- =======================================
+             AI PLATFORM FEATURES
+        ======================================== -->
+    <div class="feature-image">
+        <img src="images/ai base functions.png"
+             class="feature-img"
+             alt="MITANZ360Pro AI Features" />
+    </div>
+</section>
+
+@code
+{
+    private void GoToReconciliation()
+    {
+        Navigation.NavigateTo("/reconciliation");
+    }
+}
+
+<style>
+
+    /* ===========================================
+           PAGE
+        =========================================== */
+
+    .hero-fin {
+        width: 100%;
+        padding: 18px;
+        background: #f5f6f8;
+        box-sizing: border-box;
+    }
+
+    /* ===========================================
+           MAIN CONTAINER
+        =========================================== */
+
+    .hero-container {
+        width: 100%;
+        background: #ffffff;
+        border: 2px solid #ff9800;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.10);
+        padding: 20px;
+        overflow: hidden;
+    }
+
+    /* ===========================================
+           HERO IMAGE
+        =========================================== */
+
+    .hero-image {
+        width: 100%;
+        margin-bottom: 0px;
+        text-align: center;
+    }
+
+    .hero-img {
+        width: 100%;
+        height: auto;
+        display: block;
+        margin: auto;
+        border-radius: 12px;
+        transition: all .3s ease;
+    }
+
+        .hero-img:hover {
+            transform: scale(1.01);
+        }
+
+    /* ===========================================
+           AI FEATURES IMAGE
+        =========================================== */
+
+    .feature-image {
+        width: 100%;
+        text-align: center;
+        margin-top: 0px;
+    }
+
+    .feature-img {
+        width: 100%;
+        max-width: 1800px;
+        height: auto;
+        display: block;
+        margin: auto;
+        border-radius: 12px;
+        transition: all .3s ease;
+    }
+
+        .feature-img:hover {
+            transform: scale(1.01);
+        }
+
+    /* ===========================================
+           RESPONSIVE
+        =========================================== */
+
+    @@media (max-width:1400px) {
+
+        .hero-container {
+            padding: 18px;
+        }
+    }
+
+    @@media (max-width:1200px) {
+
+        .hero-fin {
+            padding: 14px;
+        }
+
+        .hero-image {
+            margin-bottom: 25px;
+        }
+    }
+
+    @@media (max-width:992px) {
+
+        .hero-fin {
+            padding: 12px;
+        }
+
+        .hero-container {
+            padding: 15px;
+        }
+
+        .hero-image {
+            margin-bottom: 20px;
+        }
+    }
+
+    @@media (max-width:768px) {
+
+        .hero-fin {
+            padding: 10px;
+        }
+
+        .hero-container {
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .hero-image {
+            margin-bottom: 18px;
+        }
+    }
+
+    @@media (max-width:576px) {
+
+        .hero-fin {
+            padding: 8px;
+        }
+
+        .hero-container {
+            padding: 10px;
+        }
+
+        .hero-image {
+            margin-bottom: 15px;
+        }
+    }
+
+</style>

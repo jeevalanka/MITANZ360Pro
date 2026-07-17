@@ -1,0 +1,405 @@
+@using System.Linq
+@using MITANZ360Pro.Web.Services
+@inject SharePointService _spService
+
+<div class="lib-nav-shell">
+    <div class="lib-nav-header">
+        <div class="lib-nav-title">LIBRARY NAVIGATION</div>
+
+        <button type="button"
+                class="lib-nav-collapse-btn"
+                title="Collapse navigation"
+                aria-label="Collapse navigation">
+            &#171;
+        </button>
+    </div>
+
+    <div class="lib-tree" role="tree" aria-label="Library folders">
+        @if (isLoadingRoot)
+        {
+            <div class="lib-tree-empty">Loading library…</div>
+        }
+        else
+        {
+            @foreach (var item in _rootItems)
+            {
+                @RenderTreeItem(item, 0)
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string DriveId { get; set; } = "";
+    [Parameter] public LibraryItem? SelectedFolder { get; set; }
+    [Parameter] public EventCallback<LibraryItem> OnFolderSelected { get; set; }
+    [Parameter] public EventCallback<string> OnDriveResolved { get; set; }
+    [Parameter] public EventCallback<List<LibraryItem>> OnRootLoaded { get; set; }
+
+    private List<LibraryItem> _rootItems = new();
+    private readonly Dictionary<string, List<LibraryItem>> _childrenCache = new();
+    private readonly HashSet<string> _expanded = new();
+    private readonly HashSet<string> _loadingFolders = new();
+
+    private bool isLoadingRoot = true;
+    private string? _lastLoadedDriveId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Safer than only OnInitializedAsync when parameters can change later.
+        if (_rootItems.Count == 0 || _lastLoadedDriveId != DriveId)
+        {
+            await LoadRootAsync();
+            _lastLoadedDriveId = DriveId;
+        }
+    }
+
+    private async Task LoadRootAsync()
+    {
+        isLoadingRoot = true;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(DriveId))
+            {
+                var ctx = await _spService.GetRootContextAsync();
+
+                DriveId = ctx.DriveId;
+
+                _rootItems = ctx.Items
+                    .Where(x => x.IsFolder)
+                    .ToList();
+
+                _childrenCache["root"] = ctx.Items;
+
+                if (OnDriveResolved.HasDelegate)
+                    await OnDriveResolved.InvokeAsync(DriveId);
+
+                if (OnRootLoaded.HasDelegate)
+                    await OnRootLoaded.InvokeAsync(ctx.Items);
+            }
+            else
+            {
+                var items = await _spService.GetLibraryFolderChildrenAsync(DriveId, "root");
+
+                _rootItems = items
+                    .Where(x => x.IsFolder)
+                    .ToList();
+
+                _childrenCache["root"] = items;
+
+                if (OnRootLoaded.HasDelegate)
+                    await OnRootLoaded.InvokeAsync(items);
+            }
+        }
+        finally
+        {
+            isLoadingRoot = false;
+        }
+    }
+
+    private async Task ToggleExpandAsync(LibraryItem folder)
+    {
+        if (_expanded.Contains(folder.Id))
+        {
+            _expanded.Remove(folder.Id);
+            return;
+        }
+
+        _expanded.Add(folder.Id);
+
+        if (!_childrenCache.ContainsKey(folder.Id))
+        {
+            _loadingFolders.Add(folder.Id);
+            StateHasChanged();
+
+            try
+            {
+                var children = await _spService.GetLibraryFolderChildrenAsync(folder.DriveId, folder.Id);
+                _childrenCache[folder.Id] = children ?? new List<LibraryItem>();
+            }
+            finally
+            {
+                _loadingFolders.Remove(folder.Id);
+            }
+        }
+    }
+
+    private async Task SelectFolderAsync(LibraryItem item)
+    {
+        if (OnFolderSelected.HasDelegate)
+            await OnFolderSelected.InvokeAsync(item);
+    }
+
+    private async Task HandleKeyDownAsync(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e, LibraryItem item)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await SelectFolderAsync(item);
+        }
+    }
+
+    private string GetDisplayName(LibraryItem item)
+        => string.IsNullOrWhiteSpace(item.Title) ? item.Name : item.Title;
+
+    private string GetNodeIcon(LibraryItem item, int depth)
+    {
+        var name = GetDisplayName(item).Trim();
+
+        // top-level style by semantic name
+        if (depth == 0)
+        {
+            if (name.Contains("AI-Generated-Reports", StringComparison.OrdinalIgnoreCase)) return "⭐";
+            if (name.Contains("All-Staff", StringComparison.OrdinalIgnoreCase)) return "👥";
+            if (name.Contains("Courses", StringComparison.OrdinalIgnoreCase)) return "🎓";
+            if (name.Contains("Group-Administrators", StringComparison.OrdinalIgnoreCase)) return "👥";
+        }
+
+        if (name.Contains("sysadmin", StringComparison.OrdinalIgnoreCase)) return "🌐";
+        if (name.Contains("Tutor", StringComparison.OrdinalIgnoreCase)) return "👤";
+        if (name.Contains("Models", StringComparison.OrdinalIgnoreCase)) return "🧊";
+        if (name.Contains("Activities", StringComparison.OrdinalIgnoreCase)) return "📈";
+        if (name.Contains("Share", StringComparison.OrdinalIgnoreCase)) return "🔗";
+        if (name.Contains("Assessment", StringComparison.OrdinalIgnoreCase)) return "📋";
+
+        return "📁";
+    }
+
+    private string GetItemClass(bool isSelected, int depth)
+    {
+        var cls = "lib-tree-item";
+        if (isSelected) cls += " selected";
+        if (depth == 0) cls += " top-level";
+        return cls;
+    }
+
+    private RenderFragment RenderTreeItem(LibraryItem item, int depth) => builder =>
+    {
+        if (!item.IsFolder) return;
+
+        var isExpanded = _expanded.Contains(item.Id);
+        var isSelected = SelectedFolder?.Id == item.Id;
+        var isLoadingThis = _loadingFolders.Contains(item.Id);
+        var displayName = GetDisplayName(item);
+        var iconText = GetNodeIcon(item, depth);
+
+        var seq = 0;
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "lib-tree-node");
+
+        // ROW
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", GetItemClass(isSelected, depth));
+        builder.AddAttribute(seq++, "style", $"--node-indent:{depth * 22}px;");
+        builder.AddAttribute(seq++, "role", "treeitem");
+        builder.AddAttribute(seq++, "tabindex", "0");
+        builder.AddAttribute(seq++, "aria-expanded", item.IsFolder ? isExpanded : null);
+        builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => SelectFolderAsync(item)));
+        builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs>(this, e => HandleKeyDownAsync(e, item)));
+
+        // CHEVRON
+        builder.OpenElement(seq++, "span");
+        builder.AddAttribute(seq++, "class", $"lib-tree-chevron {(isExpanded ? "expanded" : "")}");
+        builder.AddAttribute(seq++, "title", isExpanded ? "Collapse" : "Expand");
+        builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ToggleExpandAsync(item)));
+        builder.AddAttribute(seq++, "onclick:stopPropagation", true);
+        builder.AddContent(seq++, item.IsFolder ? "▸" : "");
+        builder.CloseElement();
+
+        // ICON
+        builder.OpenElement(seq++, "span");
+        builder.AddAttribute(seq++, "class", "lib-tree-icon");
+        builder.AddContent(seq++, iconText);
+        builder.CloseElement();
+
+        // NAME
+        builder.OpenElement(seq++, "span");
+        builder.AddAttribute(seq++, "class", "lib-tree-name");
+        builder.AddContent(seq++, displayName);
+        builder.CloseElement();
+
+        // LOADING
+        if (isLoadingThis)
+        {
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "lib-tree-spinner");
+            builder.AddContent(seq++, "…");
+            builder.CloseElement();
+        }
+
+        builder.CloseElement(); // row
+
+        // CHILDREN
+        if (isExpanded && _childrenCache.ContainsKey(item.Id))
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "lib-tree-children");
+
+            foreach (var child in _childrenCache[item.Id].Where(x => x.IsFolder))
+            {
+                builder.AddContent(seq++, RenderTreeItem(child, depth + 1));
+            }
+
+            builder.CloseElement();
+        }
+
+        builder.CloseElement(); // node
+    };
+}
+
+<style>
+    .lib-nav-shell {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: radial-gradient(circle at top left, rgba(37,99,235,.05), transparent 28%), linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+        border-right: 1px solid #e8edf7;
+        padding: 10px 10px 14px;
+    }
+
+    .lib-nav-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 4px 12px;
+    }
+
+    .lib-nav-title {
+        font-size: .78rem;
+        font-weight: 800;
+        letter-spacing: .08em;
+        color: #7d89a6;
+        text-transform: uppercase;
+    }
+
+    .lib-nav-collapse-btn {
+        width: 34px;
+        height: 34px;
+        border: 1px solid #e6ebf5;
+        border-radius: 10px;
+        background: #fff;
+        color: #6d7b99;
+        box-shadow: 0 2px 8px rgba(31, 41, 55, 0.06);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: default; /* hook a real collapse callback later if needed */
+    }
+
+    .lib-tree {
+        overflow: auto;
+        padding: 2px 0 8px;
+        font-size: .96rem;
+        color: #4b587c;
+        user-select: none;
+    }
+
+    .lib-tree-empty {
+        padding: 14px 10px;
+        color: #7a859e;
+        font-size: .86rem;
+    }
+
+    .lib-tree-node {
+        display: block;
+    }
+
+    .lib-tree-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 42px;
+        margin: 2px 0;
+        padding: 8px 10px 8px calc(var(--node-indent) + 8px);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background-color .18s ease, color .18s ease, transform .12s ease;
+        outline: none;
+        white-space: nowrap;
+    }
+
+        .lib-tree-item:hover {
+            background: #f4f7fd;
+            color: #33415f;
+        }
+
+        .lib-tree-item:focus-visible {
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, .18);
+            background: #f6f9ff;
+        }
+
+        .lib-tree-item.selected {
+            background: linear-gradient(90deg, rgba(59,130,246,.10) 0%, rgba(59,130,246,.06) 100%);
+            color: #2f6cf1;
+            font-weight: 700;
+        }
+
+            .lib-tree-item.selected::after {
+                content: "";
+                position: absolute;
+                top: 6px;
+                bottom: 6px;
+                right: 2px;
+                width: 4px;
+                border-radius: 999px;
+                background: #2f6cf1;
+            }
+
+        .lib-tree-item.top-level {
+            margin-top: 4px;
+            font-weight: 700;
+        }
+
+    .lib-tree-chevron {
+        width: 14px;
+        flex: 0 0 14px;
+        font-size: .78rem;
+        color: #7d89a6;
+        transform: rotate(0deg);
+        transition: transform .16s ease, color .16s ease;
+        text-align: center;
+    }
+
+        .lib-tree-chevron.expanded {
+            transform: rotate(90deg);
+        }
+
+    .lib-tree-icon {
+        width: 22px;
+        flex: 0 0 22px;
+        font-size: 1rem;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .lib-tree-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .lib-tree-spinner {
+        margin-left: auto;
+        color: #94a3b8;
+        font-size: .78rem;
+    }
+
+    .lib-tree-children {
+        display: block;
+    }
+
+        /* nicer spacing on nested rows */
+        .lib-tree-children .lib-tree-item {
+            color: #55627f;
+            font-weight: 500;
+        }
+
+            .lib-tree-children .lib-tree-item.selected {
+                color: #2f6cf1;
+                font-weight: 700;
+            }
+</style>

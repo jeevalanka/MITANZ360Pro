@@ -1,0 +1,43 @@
+﻿You gave me the above image displaying code files, but the Course ID should be selected from the dropdown list (the Course list should be picked from SharePoint). I need a full CRUD operation.
+1. Use the Radzen free component
+2. Professional Colors, Cards with rounded corners, Glass type, responsive
+3. User-friendly
+4. Microsoft Look & Feel
+5. Create all the files in one go
+
+
+
+
+Generate FULLY FUNCTIONAL production-ready CRUD system ONLY using these exact files.
+
+Requirements:
+1. Fully runnable without placeholders
+2. Full Create / Read / Update / Delete operations
+3. Full SharePoint Graph integration
+4. Full user views and navigation
+5. Full Radzen free component implementation
+6. Microsoft Fluent / Dynamics style UI
+7. Responsive enterprise design
+8. Rich text editor support
+9. Dashboard fully connected
+10. All buttons operational
+11. Validation included
+12. Notifications included
+13. Dialog confirmations included
+14. Course dropdown loaded from SharePoint
+15. All pages connected together
+16. No extra services
+17. No extra files
+18. No placeholders
+19. No pseudo code
+20. Deliver COMPLETE FULL FILES ONLY
+
+Use ONLY these files:
+- ModelContentModel.cs
+- ContentTypeEnum.cs
+- ModelContent.razor
+- ModelContentViewer.razor
+- ModelContentAdmin.razor
+- ModelContentMenu.razor
+- ModelContentCard.razor
+- SharePointService.Modules.cs

@@ -1,0 +1,362 @@
+/* =====================================================
+   MITANZ360Edu - GLOBAL ERP UI SYSTEM (FINAL FIXED)
+   ===================================================== */
+
+
+/* 🔥 MAIN BODY CONTROL */
+.main-body {
+    width: 100%;
+    max-width: 100%;
+    padding: 15px;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+/* 🔥 PREVENT TABLE BREAKING LAYOUT */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* 🔥 FIX FLEX OVERFLOW (CRITICAL) */
+.layout-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 🔥 ENSURE RIGHT PANEL STAYS FIXED */
+.layout-right {
+    width: 300px;
+    min-width: 260px;
+}
+
+/* ================= RESET ================= */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    height: 100%;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #f5f6f8;
+}
+
+/* ================= LAYOUT ================= */
+
+.page {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 🔥 CRITICAL FIX */
+body, html {
+    overflow: hidden;
+}
+
+/* ================= SIDEBAR ================= */
+.sidebar {
+    background: #000;
+    border-right: 2px solid #FF8C00;
+    width: 70px;
+    min-width: 70px;
+    max-width: 260px;
+    transition: width 0.3s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 10; /* 🔥 FIX */
+}
+
+    .sidebar.expanded {
+        width: 260px;
+    }
+
+    .sidebar.collapsed {
+        width: 70px;
+    }
+
+    .sidebar .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        color: #ccc;
+        text-decoration: none;
+    }
+
+        .sidebar .nav-link:hover {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+        }
+
+    .sidebar.collapsed .menu-text {
+        display: none;
+    }
+
+    .sidebar.collapsed .nav-link {
+        justify-content: center;
+    }
+
+/* ================= MAIN ================= */
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: visible !important; /* 🔥 REQUIRED */
+    position: relative;
+    z-index: 1;
+}
+
+/* ================= TOP BAR ================= */
+
+.top-row {
+    height: 60px;
+    background: #000;
+    border-bottom: 1px solid #FF8C00;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.top-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-left: 10px;
+}
+
+.top-right {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding-right: 15px;
+}
+
+.top-row i {
+    color: #FF8C00 !important;
+}
+
+.app-title {
+    color: #FF8C00;
+    font-weight: 600;
+}
+
+/* ================= BUTTON ================= */
+
+.burger-btn,
+.top-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* ================= CONTENT ================= */
+
+.content {
+    padding: 24px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+/* ================= CARD ================= */
+
+.card {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+/* =========================================================
+   🔥 RADZEN SAFE SYSTEM (FIXED)
+   ========================================================= */
+
+/* 🔥 DIALOG (TOP PRIORITY) */
+.rz-dialog-wrapper {
+    z-index: 9999 !important;
+}
+
+/* 🔥 BLADE */
+.rz-sidebar.mit-blade {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    left: auto !important; /* 🔥 FORCE RIGHT SIDE */
+    bottom: 0 !important;
+    width: 560px !important;
+    max-width: 94vw !important;
+    background: #ffffff !important;
+    z-index: 9998 !important;
+}
+
+/* 🔥 PUSH CONTENT WHEN BLADE OPENS */
+body.blade-open main {
+    margin-right: 560px; /* same as blade width */
+    transition: margin 0.3s ease;
+}
+
+/* Mobile safe */
+@media (max-width: 768px) {
+    body.blade-open main {
+        margin-right: 0;
+    }
+}
+
+/* 🔥 OVERLAY (CLICK SAFE) */
+.rz-dialog-mask,
+.rz-overlay,
+.rz-sidebar-mask {
+    background: rgba(0,0,0,0.4) !important;
+    z-index: 9997 !important;
+}
+
+/* 🔥 DROPDOWN (ALWAYS TOP) */
+.rz-dropdown-panel {
+    z-index: 10000 !important;
+}
+
+/* =========================================================
+   🔥 POINTER EVENTS FIX (CRITICAL)
+   ========================================================= */
+
+/* Allow UI interaction */
+.rz-dialog-wrapper,
+.rz-sidebar,
+.rz-dropdown-panel {
+    pointer-events: auto !important;
+}
+
+/* Prevent layout blocking clicks */
+.page,
+.sidebar,
+main,
+.content {
+    pointer-events: auto;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 580px) {
+
+    .rz-sidebar.mit-blade {
+        width: 100vw !important;
+    }
+
+    .content {
+        padding: 16px;
+    }
+}
+
+
+/* 🔥 FORCE LABEL VISIBILITY (RADZEN SAFE) */
+.rz-label {
+    display: block !important;
+    color: #1f2937 !important; /* dark text */
+    font-weight: 600 !important;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+}
+
+/* 🔥 ENSURE LABEL NOT HIDDEN BY PARENT */
+.blade-body {
+    color: #111827 !important;
+}
+
+/* 🔥 FIX INPUT TEXT VISIBILITY */
+.rz-inputtext,
+.rz-dropdown,
+.rz-password {
+    color: #111827 !important;
+    background: #ffffff !important;
+}
+
+/* =========================================
+   MITANZ360Edu - USER HEADER UI (GLOBAL)
+   ========================================= */
+
+/* Container */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-right: 10px;
+}
+
+/* 👤 Icon */
+.user-icon-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    color: #ff8800;
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+}
+
+    .user-icon-link:hover {
+        color: #ffaa33;
+        transform: scale(1.05);
+    }
+
+/* 🧾 Text container */
+.user-text-inline {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+/* 👤 Username */
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4ea1ff;
+    white-space: nowrap;
+}
+
+/* 🛡 Role */
+.user-role {
+    font-size: 12px;
+    color: #ff8800;
+    opacity: 0.9;
+}
+
+/* =========================================
+   TOPBAR ALIGNMENT FIX (IMPORTANT)
+   ========================================= */
+
+/* Right section container (if used) */
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+    /* Force inline layout */
+    .topbar-right .user-info {
+        margin-left: auto;
+    }
+
+/* =========================================
+   MOBILE RESPONSIVE
+   ========================================= */
+
+@media (max-width: 768px) {
+
+    .user-text-inline {
+        display: none; /* Hide text on mobile */
+    }
+
+    .user-icon-link {
+        font-size: 24px;
+    }
+}

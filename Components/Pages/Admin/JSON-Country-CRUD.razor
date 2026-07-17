@@ -1,0 +1,715 @@
+﻿@page "/json-country-crud"
+@layout MainLayout
+
+@using System.Text.Json
+@using MITANZ360Pro.Web.Services
+@using Radzen
+@using Radzen.Blazor
+
+@inject JsonLookupDataService JsonLookupDataService
+@inject NotificationService NotificationService
+
+<PageTitle>Country JSON CRUD</PageTitle>
+
+<div class="json-shell">
+
+    <!-- ===================================================== -->
+    <!-- SIDEBAR -->
+    <!-- ===================================================== -->
+
+    <div class="json-sidebar">
+
+        <!-- HEADER -->
+
+        <div class="json-sidebar-header">
+
+            <div class="json-title">
+                Country Manager
+            </div>
+
+            <div class="json-subtitle">
+                JSON Enterprise CRUD Console
+            </div>
+
+        </div>
+
+        <!-- TOOLBAR -->
+
+        <div class="json-toolbar">
+
+            <RadzenButton Text="New"
+                          Icon="add"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Click="CreateNew" />
+
+            <RadzenButton Text="Refresh"
+                          Icon="refresh"
+                          ButtonStyle="ButtonStyle.Light"
+                          Click="LoadAsync" />
+
+        </div>
+
+        <!-- COUNTRY LIST -->
+
+        <div class="json-list">
+
+            @foreach (var item in Countries)
+            {
+                <button class="json-item @(SelectedCountry?.Code == item.Code ? "active" : "")"
+                        @onclick="() => SelectCountry(item)">
+
+                    <div class="json-item-name">
+                        @item.Name
+                    </div>
+
+                    <div class="json-item-meta">
+                        @item.Code | @item.Currency
+                    </div>
+
+                </button>
+            }
+
+        </div>
+
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- MAIN -->
+    <!-- ===================================================== -->
+
+    <div class="json-main">
+
+        @if (Model == null)
+        {
+            <div class="empty">
+
+                <div class="empty-icon">
+                    🌍
+                </div>
+
+                <div class="empty-title">
+                    Select Country
+                </div>
+
+            </div>
+        }
+        else
+        {
+            <div class="editor-shell">
+
+                <!-- ========================================= -->
+                <!-- HEADER -->
+                <!-- ========================================= -->
+
+                <div class="editor-header">
+
+                    <div>
+
+                        <div class="editor-title">
+                            @(IsNew
+                                ? "New Country"
+                                : Model.Name)
+                        </div>
+
+                        <div class="editor-subtitle">
+                            JSON CRUD Management
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ========================================= -->
+                <!-- TOOLBAR -->
+                <!-- ========================================= -->
+
+                <div class="editor-toolbar">
+
+                    <RadzenButton Text="Save"
+                                  Icon="save"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Click="SaveAsync" />
+
+                    @if (!IsNew)
+                    {
+                        <RadzenButton Text="Delete"
+                                      Icon="delete"
+                                      ButtonStyle="ButtonStyle.Danger"
+                                      Click="DeleteAsync" />
+                    }
+
+                </div>
+
+                <!-- ========================================= -->
+                <!-- FORM -->
+                <!-- ========================================= -->
+
+                <div class="editor-form">
+
+                    <div class="ms-form-shell">
+
+                        <!-- ================================= -->
+                        <!-- GENERAL -->
+                        <!-- ================================= -->
+
+                        <div class="ms-section">
+
+                            <div class="ms-section-title">
+                                General Information
+                            </div>
+
+                            <div class="ms-grid">
+
+                                <div class="ms-field">
+
+                                    <label>
+                                        Country Name
+                                    </label>
+
+                                    <RadzenTextBox @bind-Value="Model.Name"
+                                                   Style="width:100%" />
+
+                                </div>
+
+                                <div class="ms-field">
+
+                                    <label>
+                                        Country Code
+                                    </label>
+
+                                    <RadzenTextBox @bind-Value="Model.Code"
+                                                   Style="width:100%" />
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ================================= -->
+                        <!-- FINANCIAL -->
+                        <!-- ================================= -->
+
+                        <div class="ms-section">
+
+                            <div class="ms-section-title">
+                                Financial Information
+                            </div>
+
+                            <div class="ms-grid">
+
+                                <div class="ms-field">
+
+                                    <label>
+                                        Currency
+                                    </label>
+
+                                    <RadzenTextBox @bind-Value="Model.Currency"
+                                                   Style="width:100%" />
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ================================= -->
+                        <!-- REGION -->
+                        <!-- ================================= -->
+
+                        <div class="ms-section">
+
+                            <div class="ms-section-title">
+                                Regional Settings
+                            </div>
+
+                            <div class="ms-grid">
+
+                                <div class="ms-field">
+
+                                    <label>
+                                        Timezone
+                                    </label>
+
+                                    <RadzenTextBox @bind-Value="Model.Timezone"
+                                                   Style="width:100%" />
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ================================= -->
+                        <!-- JSON -->
+                        <!-- ================================= -->
+
+                        <div class="ms-section">
+
+                            <div class="ms-section-title">
+                                JSON Preview
+                            </div>
+
+                            <RadzenTextArea Value="@JsonPreview"
+                                            ReadOnly="true"
+                                            Rows="14"
+                                            Style="
+                            width:100%;
+                            font-family:Consolas;
+                            font-size:13px;" />
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@code {
+
+    // =====================================================
+    // STATE
+    // =====================================================
+
+    private List<
+        JsonLookupDataService.CountryModel>
+        Countries = [];
+
+    private JsonLookupDataService.CountryModel?
+        SelectedCountry;
+
+    private JsonLookupDataService.CountryModel?
+        Model;
+
+    private bool IsNew;
+
+    // =====================================================
+    // JSON PREVIEW
+    // =====================================================
+
+    private string JsonPreview =>
+        JsonSerializer.Serialize(
+            Model,
+            new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+    // =====================================================
+    // INIT
+    // =====================================================
+
+    protected override async Task
+        OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    // =====================================================
+    // LOAD
+    // =====================================================
+
+    private async Task LoadAsync()
+    {
+        Countries =
+            await JsonLookupDataService
+                .GetCountriesAsync();
+    }
+
+    // =====================================================
+    // SELECT
+    // =====================================================
+
+    private void SelectCountry(
+        JsonLookupDataService.CountryModel item)
+    {
+        IsNew = false;
+
+        SelectedCountry = item;
+
+        Model =
+            new JsonLookupDataService.CountryModel
+            {
+                Name = item.Name,
+                Code = item.Code,
+                Currency = item.Currency,
+                Timezone = item.Timezone
+            };
+    }
+
+    // =====================================================
+    // NEW
+    // =====================================================
+
+    private void CreateNew()
+    {
+        IsNew = true;
+
+        SelectedCountry = null;
+
+        Model =
+            new JsonLookupDataService.CountryModel
+            {
+                Name = "",
+                Code = "",
+                Currency = "",
+                Timezone = ""
+            };
+    }
+
+    // =====================================================
+    // SAVE
+    // =====================================================
+
+    private async Task SaveAsync()
+    {
+        if (Model == null)
+            return;
+
+        try
+        {
+            // =============================================
+            // INSERT
+            // =============================================
+
+            if (IsNew)
+            {
+                await JsonLookupDataService
+                    .AddCountryAsync(
+                        Model);
+
+                NotificationService.Notify(
+                    NotificationSeverity.Success,
+                    "Created",
+                    "Country added successfully.");
+            }
+
+            // =============================================
+            // UPDATE
+            // =============================================
+
+            else
+            {
+                await JsonLookupDataService
+                    .UpdateCountryAsync(
+                        Model);
+
+                NotificationService.Notify(
+                    NotificationSeverity.Success,
+                    "Updated",
+                    "Country updated successfully.");
+            }
+
+            await LoadAsync();
+
+            IsNew = false;
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(
+                NotificationSeverity.Error,
+                "Save Error",
+                ex.Message);
+        }
+    }
+
+    // =====================================================
+    // DELETE
+    // =====================================================
+
+    private async Task DeleteAsync()
+    {
+        if (Model == null)
+            return;
+
+        try
+        {
+            await JsonLookupDataService
+                .DeleteCountryAsync(
+                    Model.Code);
+
+            NotificationService.Notify(
+                NotificationSeverity.Success,
+                "Deleted",
+                "Country removed.");
+
+            await LoadAsync();
+
+            Model = null;
+
+            SelectedCountry = null;
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(
+                NotificationSeverity.Error,
+                "Delete Error",
+                ex.Message);
+        }
+    }
+}
+
+<style>
+
+    html,
+    body {
+        margin: 0;
+        background: #f3f4f6;
+        font-family: "Segoe UI", sans-serif;
+        overflow: hidden;
+    }
+
+    /* ===================================================== */
+    /* SHELL */
+    /* ===================================================== */
+
+    .json-shell {
+        display: flex;
+        height: calc(100vh - 56px);
+        background: #f3f4f6;
+    }
+
+    /* ===================================================== */
+    /* SIDEBAR */
+    /* ===================================================== */
+
+    .json-sidebar {
+        width: 340px;
+        min-width: 340px;
+        background: white;
+        border-right: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* ===================================================== */
+    /* HEADER */
+    /* ===================================================== */
+
+    .json-sidebar-header {
+        padding: 30px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .json-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .json-subtitle {
+        margin-top: 6px;
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    /* ===================================================== */
+    /* TOOLBAR */
+    /* ===================================================== */
+
+    .json-toolbar {
+        display: flex;
+        gap: 12px;
+        padding: 18px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    /* ===================================================== */
+    /* LIST */
+    /* ===================================================== */
+
+    .json-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px;
+    }
+
+    .json-item {
+        width: 100%;
+        border: none;
+        border-radius: 16px;
+        background: #f8fafc;
+        margin-bottom: 12px;
+        padding: 18px;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+        .json-item:hover {
+            background: #eff6ff;
+        }
+
+        .json-item.active {
+            background: #2563eb;
+            color: white;
+        }
+
+    .json-item-name {
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .json-item-meta {
+        margin-top: 6px;
+        font-size: 12px;
+        opacity: 0.85;
+    }
+
+    /* ===================================================== */
+    /* MAIN */
+    /* ===================================================== */
+
+    .json-main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 36px;
+    }
+
+    /* ===================================================== */
+    /* EMPTY */
+    /* ===================================================== */
+
+    .empty {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .empty-icon {
+        font-size: 84px;
+    }
+
+    .empty-title {
+        margin-top: 20px;
+        font-size: 34px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    /* ===================================================== */
+    /* EDITOR */
+    /* ===================================================== */
+
+    .editor-shell {
+        background: white;
+        border-radius: 24px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+    }
+
+    /* ===================================================== */
+    /* HEADER */
+    /* ===================================================== */
+
+    .editor-header {
+        padding: 32px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .editor-title {
+        font-size: 38px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .editor-subtitle {
+        margin-top: 8px;
+        font-size: 14px;
+        color: #64748b;
+    }
+
+    /* ===================================================== */
+    /* TOOLBAR */
+    /* ===================================================== */
+
+    .editor-toolbar {
+        display: flex;
+        gap: 12px;
+        padding: 20px 28px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    /* ===================================================== */
+    /* FORM */
+    /* ===================================================== */
+
+    .editor-form {
+        padding: 32px;
+    }
+
+    /* ===================================================== */
+    /* MICROSOFT FORM */
+    /* ===================================================== */
+
+    .ms-form-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+    }
+
+    .ms-section {
+        padding: 28px;
+        border: 1px solid #e5e7eb;
+        border-radius: 20px;
+        background: white;
+    }
+
+    .ms-section-title {
+        margin-bottom: 22px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .ms-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px;
+    }
+
+    .ms-field label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+    }
+
+    /* ===================================================== */
+    /* RESPONSIVE */
+    /* ===================================================== */
+
+    @@media (max-width: 1000px) {
+
+        .json-shell {
+            flex-direction: column;
+            height: auto;
+        }
+
+        .json-sidebar {
+            width: 100%;
+            min-width: 100%;
+            border-right: none;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .ms-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .json-main {
+            padding: 18px;
+        }
+    }
+
+</style>

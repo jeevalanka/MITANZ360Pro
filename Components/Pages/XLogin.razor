@@ -1,0 +1,438 @@
+﻿@page "/xlogin"
+
+@using Microsoft.AspNetCore.Antiforgery
+@layout MainLayout_No_Left_RightPan
+
+@inject IAntiforgery Antiforgery
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager Navigation
+
+<PageTitle>MITANZ360Pro Login</PageTitle>
+
+<div class="login-page">
+
+    <!-- BACKGROUND -->
+    <div class="bg-overlay"></div>
+
+    <!-- LOGIN CARD -->
+    <div class="login-card">
+
+        <!-- HEADER -->
+        <div class="xlogin-header">
+
+            <div class="xlogin-brand-row">
+
+                <img src="images/logo-v3.png"
+                     class="xlogin-logo"
+                     alt="MITANZ360Pro Logo" />
+
+                <h1 class="xlogin-title">
+                    MITANZ360Pro
+                </h1>
+
+            </div>
+
+            <p class="xlogin-subtitle">
+                Enterprise AI Education Framework
+            </p>
+
+        </div>
+
+        <!-- ERROR -->
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+            <div class="login-error">
+
+                @error
+
+            </div>
+        }
+
+        <!-- BUTTON ROW -->
+        <div class="xlogin-button-row">
+
+            <!-- LOGIN FORM -->
+            <form method="post"
+                  action="/auth/login"
+                  FormName="LoginForm">
+
+                <!-- ANTIFORGERY -->
+                <input type="hidden"
+                       name="__RequestVerificationToken"
+                       value="@GetAntiForgeryToken()" />
+
+                <!-- EMAIL -->
+                <input type="hidden"
+                       name="email"
+                       value="@email" />
+
+                <!-- PASSWORD -->
+                <input type="hidden"
+                       name="password"
+                       value="@password" />
+
+                <button type="submit"
+                        class="xlogin-btn login-btn"
+                        disabled="@IsInvalidInput"
+                        @onclick="OnLoginClick">
+
+                    @if (isLoading)
+                    {
+                        <span>⏳ Logging in...</span>
+                    }
+                    else
+                    {
+                        <span>🔐</span>
+                        <span>Login</span>
+                    }
+
+                </button>
+            </form>
+
+            <!-- GUEST FORM -->
+            <form method="post"
+                  action="/auth/logout"
+                  FormName="GuestForm">
+
+                <!-- ANTIFORGERY -->
+                <input type="hidden"
+                       name="__RequestVerificationToken"
+                       value="@GetAntiForgeryToken()" />
+
+                <button type="submit"
+                        class="xlogin-btn guest-btn">
+
+                    <span>🌍</span>
+                    <span>Guest Access</span>
+
+                </button>
+
+            </form>
+
+        </div>
+
+        <!-- FORM GRID -->
+        <div class="form-grid">
+
+            <!-- EMAIL -->
+            <div class="form-group">
+
+                <label>Email Address</label>
+
+                <input type="email"
+                       @bind="email"
+                       class="custom-input"
+                       placeholder="Enter your email"
+                       autocomplete="username" />
+
+            </div>
+
+            <!-- PASSWORD -->
+            <div class="form-group">
+
+                <label>Password</label>
+
+                <div class="password-wrapper">
+
+                    <input type="@(showPassword ? "text" : "password")"
+                           @bind="password"
+                           class="custom-input"
+                           placeholder="Enter your password"
+                           autocomplete="current-password" />
+
+                    <button type="button"
+                            class="password-toggle"
+                            @onclick="TogglePassword">
+
+                        @(showPassword ? "🙈" : "👁️")
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@code {
+
+    private string email = "";
+
+    private string password = "";
+
+    private bool showPassword;
+
+    private string? error;
+
+    protected override void OnInitialized()
+    {
+        var uri =
+            Navigation.ToAbsoluteUri(
+                Navigation.Uri);
+
+        if (Microsoft.AspNetCore.WebUtilities
+            .QueryHelpers
+            .ParseQuery(uri.Query)
+            .TryGetValue("error", out var err))
+        {
+            error = err;
+        }
+    }
+
+    /// <summary>
+    /// Toggle password visibility
+    /// </summary>
+    private void TogglePassword()
+    {
+        showPassword = !showPassword;
+    }
+
+    /// <summary>
+    /// Generate antiforgery token
+    /// </summary>
+    private string GetAntiForgeryToken()
+    {
+        var tokens =
+            Antiforgery.GetAndStoreTokens(
+                HttpContextAccessor.HttpContext!);
+
+        return tokens.RequestToken ?? "";
+    }
+    private bool isLoading;
+
+    private bool IsInvalidInput =>
+        string.IsNullOrWhiteSpace(email) ||
+        string.IsNullOrWhiteSpace(password);
+
+    private void OnLoginClick()
+    {
+        if (IsInvalidInput)
+            return;
+
+        isLoading = true;
+    }
+
+}
+
+<style>
+
+    /* =========================================
+           PAGE BACKGROUND
+        ========================================= */
+
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 30px;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(135deg, #eef4ff 0%, #dbeafe 100%);
+    }
+
+    .bg-overlay {
+        position: absolute;
+        inset: 0;
+        backdrop-filter: blur(10px);
+    }
+
+    /* =========================================
+           LOGIN CARD
+        ========================================= */
+
+    .login-card {
+        position: relative;
+        width: 100%;
+        max-width: 760px;
+        padding: 40px;
+        border-radius: 34px;
+        background: rgba(255,255,255,0.72);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.30);
+        box-shadow: 0 10px 45px rgba(0,0,0,0.12);
+    }
+
+    /* =========================================
+           HEADER
+        ========================================= */
+
+    .xlogin-header {
+        margin-bottom: 35px;
+    }
+
+    .xlogin-brand-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+    }
+
+    .xlogin-logo {
+        width: 120px;
+        object-fit: contain;
+    }
+
+    .xlogin-title {
+        margin: 0;
+        font-size: 3rem;
+        font-weight: 800;
+        color: #1e293b;
+    }
+
+    .xlogin-subtitle {
+        margin-top: 14px;
+        padding-left: 138px;
+        color: #64748b;
+        font-size: 1.4rem;
+    }
+
+    /* =========================================
+           ERROR
+        ========================================= */
+
+    .login-error {
+        margin-bottom: 24px;
+        padding: 14px 18px;
+        border-radius: 16px;
+        background: #fee2e2;
+        color: #991b1b;
+        font-weight: 600;
+    }
+
+    /* =========================================
+           BUTTONS
+        ========================================= */
+
+    .xlogin-button-row {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 35px;
+    }
+
+    .xlogin-btn {
+        min-width: 260px;
+        height: 58px;
+        border: none;
+        border-radius: 18px;
+        font-size: 1.2rem;
+        font-weight: 700;
+        cursor: pointer;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: all 0.25s ease;
+    }
+
+        .xlogin-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.95;
+        }
+
+    .login-btn {
+        background: #ff6b3d;
+    }
+
+    .guest-btn {
+        background: #2ec5c9;
+    }
+
+    /* =========================================
+           FORM GRID
+        ========================================= */
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+        .form-group label {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #334155;
+        }
+
+    .custom-input {
+        width: 100%;
+        height: 56px;
+        border-radius: 20px;
+        border: 1px solid #d1d5db;
+        padding: 0 20px;
+        font-size: 1.1rem;
+        outline: none;
+        background: white;
+    }
+
+        .custom-input:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 4px rgba(96,165,250,0.15);
+        }
+
+    /* =========================================
+           PASSWORD
+        ========================================= */
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 16px;
+        top: 16px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 1.1rem;
+    }
+
+    /* =========================================
+           MOBILE
+        ========================================= */
+
+    @@media (max-width: 768px) {
+
+        .login-card {
+            padding: 24px;
+        }
+
+        .xlogin-brand-row {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .xlogin-title {
+            font-size: 2.2rem;
+        }
+
+        .xlogin-subtitle {
+            padding-left: 0;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .xlogin-btn {
+            width: 100%;
+            min-width: unset;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+</style>

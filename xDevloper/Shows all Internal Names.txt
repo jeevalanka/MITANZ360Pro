@@ -1,0 +1,25 @@
+﻿https://mitga.sharepoint.com/sites/MITANZ360Edu/_api/web/lists/GetByTitle('Student_Profiles')/fields?$select=Title,InternalName,TypeAsString
+
+Change 'Student_Profiles' -> ('Enrollments')
+
+Group
+https://mitga.sharepoint.com/sites/MITANZ360Edu/_api/web/lists/GetByTitle('Groups')/fields?$select=Title,InternalName,TypeAsString&$orderby=Title
+
+Enrollments:
+https://mitga.sharepoint.com/sites/MITANZ360Edu/_api/web/lists/GetByTitle('Enrollments')/fields?$select=Title,InternalName,TypeAsString&$orderby=Title
+
+
+This will also show:
+
+✅ Display Name
+✅ Internal Name
+✅ Data Type
+✅ Required (Yes/No)
+✅ Choice values
+✅ Hidden
+✅ ReadOnly
+
+This is the endpoint I use when generating SharePoint models because it contains almost everything needed to map fields into your .NET/Blazor models.
+https://mitga.sharepoint.com/sites/MITANZ360Edu/_api/web/lists/GetByTitle('Groups')/fields?$select=Title,InternalName,TypeAsString,Required,Hidden,ReadOnlyField,Choices&$filter=Hidden eq false&$orderby=Title
+https://mitga.sharepoint.com/sites/MITANZ360Edu/_api/web/lists/GetByTitle('Enrollments')/fields?$select=Title,InternalName,TypeAsString,Required,Hidden,ReadOnlyField,Choices&$filter=Hidden eq false&$orderby=Title
+

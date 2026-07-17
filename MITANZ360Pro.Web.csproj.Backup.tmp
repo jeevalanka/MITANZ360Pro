@@ -1,0 +1,93 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+		<UserSecretsId>aspnet-MITANZ360Pro.Web-78388415-6545-4c4b-b4e4-29ecf26540a8</UserSecretsId>
+		<BlazorDisableHotReloadNavigationException>true</BlazorDisableHotReloadNavigationException>
+	</PropertyGroup>
+
+	<ItemGroup>
+
+		<!-- ✅ AI -->
+		<PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
+		<PackageReference Include="Azure.Identity" Version="1.21.0" />
+
+		<!-- ✅ OCR / Document Processing -->
+		<PackageReference Include="Azure.AI.FormRecognizer" Version="4.1.0" />
+		<PackageReference Include="ClosedXML" Version="0.105.0" />
+		<PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+
+		<!-- ✅ Graph (MATCHED TO AVAILABLE VERSION) -->
+		<PackageReference Include="Microsoft.Graph" Version="6.2.0" />
+
+		<!-- ❌ REMOVE THIS -->
+		<!-- <PackageReference Include="Microsoft.Kiota.Abstractions" Version="2.0.0" /> -->
+
+		<!-- ✅ Browser Automation -->
+		<PackageReference Include="Microsoft.Playwright" Version="1.60.0" />
+
+		<!-- ✅ System -->
+		<PackageReference Include="System.ClientModel" Version="1.14.0" />
+
+		<!-- ✅ Excel -->
+		<PackageReference Include="EPPlus" Version="8.6.1" />
+
+		<!-- ✅ ASP.NET / EF -->
+		<PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.9" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
+
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.9">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+
+		<!-- ✅ UI -->
+		<PackageReference Include="Radzen.Blazor" Version="10.4.9" />
+		<PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.9" />
+
+		<!-- ✅ OCR Engines -->
+		<PackageReference Include="Tesseract" Version="5.2.0" />
+		<PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
+
+		<!-- ✅ HTML -->
+		<PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
+
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="tessdata\**\*.*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="wwwroot\Files\Sample\**" />
+		<Content Remove="wwwroot\Files\Sample\**" />
+		<EmbeddedResource Remove="wwwroot\Files\Sample\**" />
+		<None Remove="wwwroot\Files\Sample\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="wwwroot\Files\01.International-Placement.html" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Components\Pages\Enrollments\" />
+		<Folder Include="Services\Workflow\Execution\" />
+		<Folder Include="Services\Workflow\Providers\" />
+		<Folder Include="wwwroot\AI-Workflow\Samples\" />
+		<Folder Include="wwwroot\AI-Workflow\Templates\" />
+		<Folder Include="wwwroot\AI-Workflow\Workflows\" />
+	</ItemGroup>
+
+</Project>

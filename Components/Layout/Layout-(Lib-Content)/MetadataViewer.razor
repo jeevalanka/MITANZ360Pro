@@ -1,0 +1,80 @@
+﻿@using System.Text.Json
+@using Radzen
+@using Radzen.Blazor
+
+<RadzenCard Style="@CardStyle">
+
+    <RadzenStack Gap="0.75rem">
+
+        <!-- HEADER -->
+        <RadzenText TextStyle="TextStyle.H5" Style="@HeaderStyle">
+            Extended Metadata
+        </RadzenText>
+
+        <!-- JSON VIEWER -->
+        <div style="@ViewerStyle">
+
+            <pre style="@PreStyle">
+@FormattedJson
+            </pre>
+
+        </div>
+
+    </RadzenStack>
+
+</RadzenCard>
+
+@code {
+
+    [Parameter] public string MetadataJson { get; set; } = string.Empty;
+
+    private string FormattedJson = "{}";
+
+    protected override void OnParametersSet()
+    {
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<object>(MetadataJson ?? "{}");
+
+            FormattedJson = JsonSerializer.Serialize(parsed, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+        catch
+        {
+            // fallback if invalid JSON
+            FormattedJson = MetadataJson ?? "";
+        }
+    }
+
+    // ✅ STYLES (match your screenshot)
+
+    private const string CardStyle = @"
+        margin-bottom:24px;
+        border-radius:24px;
+        padding:28px;
+        background: rgba(255,255,255,0.62);
+        backdrop-filter: blur(18px);
+        border:1px solid rgba(255,255,255,0.22);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);";
+
+    private const string HeaderStyle = @"
+        font-weight:700;
+        color:#004578;";
+
+    private const string ViewerStyle = @"
+        max-height:320px;
+        overflow-y:auto;
+        border-radius:16px;
+        padding:16px;
+        background: rgba(255,255,255,0.75);
+        border:1px solid rgba(0,0,0,0.08);";
+
+    private const string PreStyle = @"
+        font-family: Consolas, monospace;
+        font-size:14px;
+        line-height:1.5;
+        color:#323130;
+        white-space:pre-wrap;";
+}

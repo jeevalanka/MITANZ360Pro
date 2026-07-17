@@ -1,0 +1,383 @@
+﻿@page "/ai-ops-info"
+@layout MainLayout
+
+<link href="css/ai-ops-info.css" rel="stylesheet" />
+
+<div class="main-container">
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="banner-card">
+            <img src="/images/automation/mar-15.png" />
+            <div class="banner-overlay">
+                <h1>Solve Daily Business Problems</h1>
+                <p>Automation • Intelligence • Real-Time Insights</p>
+            </div>
+        </div>
+
+        <p class="hero-desc">
+            Solve daily business problems with automation, intelligence, and real-time insights.
+            Increase revenue. Reduce manual work. Eliminate operational chaos.
+        </p>
+
+        <button class="cta-btn">Request Demo</button>
+    </section>
+
+    <!-- PROBLEMS -->
+    <section>
+        <h2 style="color:#f97316;">🚨 Common Daily Business Issues</h2>
+
+        <div class="grid">
+            @foreach (var item in ProblemCards)
+            {
+                <div class="glass-card clickable" @onclick="() => OpenModal(item)">
+
+                    <div class="card-image">
+                        <img src="@item.Image" />
+                        <div class="img-overlay"></div>
+                    </div>
+
+                    <div class="card-content">
+                        <h3>@item.Title</h3>
+                        <p>@item.Short</p>
+                    </div>
+
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- SOLUTIONS -->
+    <section>
+        <h2 style="color:#f97316;">💡 Our AI Solutions</h2>
+
+        <div class="grid">
+            @foreach (var item in SolutionCards)
+            {
+                <div class="glass-card clickable" @onclick="() => OpenModal(item)">
+
+                    <div class="card-image">
+                        <img src="@item.Image" />
+                        <div class="img-overlay"></div>
+                    </div>
+
+                    <div class="card-content">
+                        <h3>@item.Title</h3>
+                        <p>@item.Short</p>
+                    </div>
+
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- VALUE -->
+    <section>
+        <h2 style="color:#f97316;">📈 Business Impact</h2>
+
+        <div class="grid">
+            @foreach (var item in ValueCards)
+            {
+                <div class="glass-card clickable" @onclick="() => OpenModal(item)">
+
+                    <div class="card-image">
+                        <img src="@item.Image" />
+                        <div class="img-overlay"></div>
+                    </div>
+
+                    <div class="card-content">
+                        <h3>@item.Title</h3>
+                        <p>@item.Short</p>
+                    </div>
+
+                </div>
+            }
+        </div>
+    </section>
+
+</div>
+
+<!-- MODAL -->
+@if (SelectedCard != null)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+
+        <div class="modal-card" @onclick:stopPropagation="true">
+
+            <button class="close-btn" @onclick="CloseModal">×</button>
+
+            <div class="modal-image">
+                <img src="@SelectedCard.Image" />
+            </div>
+
+            <h2>@SelectedCard.Title</h2>
+            <p class="modal-desc">@SelectedCard.Description</p>
+
+            <div class="modal-points" style="color:blue;">
+                @foreach (var p in SelectedCard.Points)
+                {
+                    <div class="point">✔ @p</div>
+                }
+            </div>
+
+            <button class="cta-btn">Request Demo</button>
+
+        </div>
+    </div>
+
+}
+
+@code {
+
+
+class CardModel
+    {
+        public string Title { get; set; } = "";
+        public string Short { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Image { get; set; } = "";
+        public List<string> Points { get; set; } = new();
+    }
+
+    CardModel? SelectedCard;
+
+    void OpenModal(CardModel item) => SelectedCard = item;
+    void CloseModal() => SelectedCard = null;
+
+    List<CardModel> ProblemCards = new()
+{
+    new() {
+        Title="⚙️ Manual Work",
+        Short="Repetitive tasks waste time",
+        Description="AI automates repetitive operations.",
+        Image="https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg",
+        Points=new(){"Save time","Reduce errors","Boost productivity"}
+    },
+    new() {
+        Title="📩 Missed Follow-Ups",
+        Short="Leads are lost",
+        Description="AI ensures instant follow-ups.",
+        Image="https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg",
+        Points=new(){"Auto replies","Lead tracking","Increase conversion"}
+    },
+    new() {
+        Title="📊 No Visibility",
+        Short="No real-time insights",
+        Description="Live dashboards and analytics.",
+        Image="https://images.pexels.com/photos/590020/pexels-photo-590020.jpeg",
+        Points=new(){"KPIs","Reports","Insights"}
+    }
+};
+
+    List<CardModel> SolutionCards = new()
+{
+    new() {
+        Title="⚙️ Automation Engine",
+        Short="Automate operations",
+        Description="AI workflow automation engine.",
+        Image="https://images.pexels.com/photos/8386434/pexels-photo-8386434.jpeg",
+        Points=new(){"Task automation","Smart triggers","Process control"}
+    },
+    new() {
+        Title="📩 AI Follow-Up",
+        Short="Never miss leads",
+        Description="Automated communication system.",
+        Image="https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg",
+        Points=new(){"Instant replies","Lead nurturing","CRM sync"}
+    },
+    new() {
+        Title="📊 AI Insights",
+        Short="Real-time analytics",
+        Description="Predictive dashboards.",
+        Image="https://images.pexels.com/photos/669615/pexels-photo-669615.jpeg",
+        Points=new(){"Forecasting","Analytics","Decision support"}
+    }
+};
+
+    List<CardModel> ValueCards = new()
+{
+    new() {
+        Title="💰 Increase Revenue",
+        Short="Improve conversions",
+        Description="AI improves sales performance.",
+        Image="https://images.pexels.com/photos/3184306/pexels-photo-3184306.jpeg",
+        Points=new(){"Better leads","Higher conversion","Growth"}
+    },
+    new() {
+        Title="⏱ Save Time",
+        Short="Reduce manual work",
+        Description="Automation saves hours daily.",
+        Image="https://images.pexels.com/photos/3756679/pexels-photo-3756679.jpeg",
+        Points=new(){"Efficiency","Speed","Automation"}
+    },
+    new() {
+        Title="📉 Reduce Costs",
+        Short="Lower expenses",
+        Description="Reduce operational costs.",
+        Image="https://images.pexels.com/photos/669619/pexels-photo-669619.jpeg",
+        Points=new(){"Less manpower","Automation","Savings"}
+    }
+};
+
+}
+
+
+<style>
+    /* MAIN */
+    .main-container {
+        font-family: 'Segoe UI', sans-serif;
+        padding: 20px;
+        max-width: 1200px;
+        margin: auto;
+    }
+
+    /* HERO */
+    .hero {
+        text-align: center;
+    }
+
+    .hero-desc {
+        margin-top: 10px;
+        color: #555;
+    }
+
+    /* BANNER */
+    .banner-card {
+        border-radius: 20px;
+        overflow: hidden;
+        position: relative;
+    }
+
+        .banner-card img {
+            width: 100%;
+        }
+
+    .banner-overlay {
+        position: absolute;
+        bottom: 0;
+        padding: 20px;
+        width: 100%;
+        background: linear-gradient(to top, rgba(255,255,255,0.95), transparent);
+    }
+
+    /* GRID */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 25px;
+    }
+
+    /* GLASS CARD */
+    .glass-card {
+        border-radius: 30px;
+        overflow: hidden;
+        backdrop-filter: blur(12px);
+        background: rgba(255,255,255,0.6);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        transition: 0.3s;
+    }
+
+        .glass-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+    /* IMAGE */
+    .card-image {
+        width: 100%;
+        aspect-ratio: 16/9;
+        position: relative;
+    }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    /* OVERLAY */
+    .img-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+    }
+
+    /* CONTENT */
+    .card-content {
+        padding: 15px;
+    }
+
+        .card-content p {
+            font-size: 13px;
+            color:forestgreen;
+        }
+
+    /* MODAL */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(6px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* MODAL CARD */
+    .modal-card {
+        background: white;
+        width: 90%;
+        max-width: 420px;
+        border-radius: 20px;
+        padding: 18px;
+        position: relative;
+        text-align: center;
+    }
+
+    /* IMAGE */
+    .modal-image {
+        width: 100%;
+        max-height: 220px;
+        overflow: hidden;
+        border-radius: 20px;
+    }
+
+        .modal-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    /* TEXT */
+    .modal-desc {
+        font-size: 13px;
+        color: #555;
+    }
+
+    /* CLOSE */
+    .close-btn {
+        position: absolute;
+        right: 10px;
+        top: 8px;
+        border: none;
+        background: transparent;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    /* POINT */
+    .point {
+        margin: 6px 0;
+    }
+
+    /* BUTTON */
+    .cta-btn {
+        margin-top: 12px;
+        padding: 8px 18px;
+        border-radius: 18px;
+        border: none;
+        background: linear-gradient(135deg,#6366f1,#8b5cf6);
+        color: white;
+    }
+
+</style>

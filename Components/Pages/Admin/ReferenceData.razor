@@ -1,0 +1,503 @@
+﻿@page "/reference-data/{Module}"
+@layout MainLayout_NoRightPan
+@attribute [Authorize(Roles = "Admin,SysAdmin")]
+
+@using MITANZ360Pro.Web.Services
+@using Radzen
+@using Radzen.Blazor
+
+@inject SharePointService SharePointService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<PageTitle>Reference Data</PageTitle>
+
+<div class="rd-container">
+
+    <!-- HEADER -->
+    <div class="Main-header">
+        <h2>Reference Data • @Module</h2>
+    </div>
+
+    <!-- SEARCH -->
+    <RadzenTextBox @bind-Value="SearchText"
+                   Placeholder="Search Title / Code / Description"
+                   Style="width:100%"
+                   @oninput="OnSearchInput" />
+
+    <div class="rd-grid">
+
+        <!-- LEFT: CATEGORY -->
+        <div class="rd-categories">
+
+            <div class="panel-title">Categories</div>
+
+            @if (IsLoading)
+            {
+                <p>Loading...</p>
+            }
+            else
+            {
+                @foreach (var cat in Categories)
+                {
+                    <div class="cat-item @(cat == SelectedCategory ? "active" : "")"
+                         @onclick="() => SelectCategory(cat)">
+                        @cat
+                    </div>
+                }
+            }
+
+        </div>
+
+        <!-- RIGHT -->
+        <div class="rd-content">
+
+            <!-- ✅ LIST SECTION -->
+            <div class="rd-section">
+
+                <div class="section-header">
+                    Reference Items
+                </div>
+
+                <div class="rd-list">
+
+                    <RadzenDataGrid @ref="grid"
+                                    TItem="ReferenceDataItem"
+                                    Data="@PagedItems"
+                                    Count="@TotalCount"
+                                    LoadData="@LoadPagedData"
+                                    RowSelect="@SelectItem"
+                                    AllowPaging="true"
+                                    PageSize="10"
+                                    AllowSorting="true"
+                                    Style="width:100%; min-height:220px;">
+
+                        <Columns>
+
+                            <RadzenDataGridColumn Property="Title" Title="Title" />
+                            <RadzenDataGridColumn Property="Code" Title="Code" Width="120px" />
+                            <RadzenDataGridColumn Property="Category" Title="Category" Width="150px" />
+
+                            <RadzenDataGridColumn Title="Description">
+                                <Template Context="item">
+                                    @(string.IsNullOrWhiteSpace(item.Description)
+                                        ? ""
+                                        : item.Description.Length > 50
+                                            ? item.Description.Substring(0, 50) + "..."
+                                            : item.Description)
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn Property="SortOrder" Title="Sort" Width="80px" />
+
+                            <RadzenDataGridColumn Title="Status">
+                                <Template Context="item">
+                                    <span class="status-badge @(item.IsActive ? "active" : "inactive")">
+                                        @(item.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn Title="Default">
+                                <Template Context="item">
+                                    @(item.IsDefault ? "Yes" : "No")
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                        </Columns>
+
+                    </RadzenDataGrid>
+
+                </div>
+
+            </div>
+
+            <!-- ✅ EDITOR SECTION -->
+            <div class="rd-section">
+
+                <div class="section-header">
+                    @(CurrentItem.Id == 0 ? "New Item" : "Edit Item")
+                </div>
+
+                <div class="rd-editor">
+
+                    <div class="form-grid">
+
+                        <!-- ROW 1 -->
+                        <RadzenTextBox @bind-Value="CurrentItem.Title" Placeholder="Title" Style="width:100%" />
+                        <RadzenTextBox @bind-Value="CurrentItem.Code" Placeholder="Code" Style="width:100%" />
+                        <RadzenTextBox @bind-Value="CurrentItem.Category" Placeholder="Category" Style="width:100%" />
+
+                        <!-- ROW 2 FULL -->
+                        <RadzenTextArea @bind-Value="CurrentItem.Description"
+                                        Placeholder="Description"
+                                        Style="width:100%"
+                                        class="full-width" />
+
+                        <!-- ROW 3 -->
+                        <RadzenTextBox @bind-Value="CurrentItem.Icon" Placeholder="Icon" Style="width:100%" />
+                        <RadzenTextBox @bind-Value="CurrentItem.Color" Placeholder="Color" Style="width:100%" />
+                        <RadzenNumeric @bind-Value="CurrentItem.SortOrder" Style="width:100%" />
+
+                        <!-- ROW 4 -->
+                        <div class="checkbox-group full-width">
+                            <label>
+                                <RadzenCheckBox @bind-Value="CurrentItem.IsActive" /> Active
+                            </label>
+                            <label>
+                                <RadzenCheckBox @bind-Value="CurrentItem.IsDefault" /> Default
+                            </label>
+                        </div>
+
+                    </div>
+
+                    <div class="rd-actions">
+                        <RadzenButton Text="New" Click="NewItem" />
+                        <RadzenButton Text="Save" Click="SaveItem" ButtonStyle="ButtonStyle.Primary" />
+                        <RadzenButton Text="Delete" Click="DeleteItem"
+                                      ButtonStyle="ButtonStyle.Danger"
+                                      Disabled="@(CurrentItem.Id == 0 || CurrentItem.IsActive)" />
+                        <RadzenButton Text="Refresh" Click="LoadData" />
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+        
+    </div>
+
+</div>
+
+@code {
+
+    [Parameter] public string Module { get; set; } = "";
+
+    private RadzenDataGrid<ReferenceDataItem>? grid;
+
+    private List<string> Categories = new();
+    private List<ReferenceDataItem> Items = new();
+    private List<ReferenceDataItem> FilteredItems = new();
+
+    private IEnumerable<ReferenceDataItem> PagedItems = new List<ReferenceDataItem>();
+    private int TotalCount;
+
+    private ReferenceDataItem CurrentItem = new();
+
+    private string SelectedCategory = "";
+    private string SearchText = "";
+
+    private bool IsLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            IsLoading = true;
+
+            Categories = await SharePointService.GetReferenceCategoriesAsync(Module);
+
+            if (Categories.Any())
+            {
+                await SelectCategory(Categories.First());
+            }
+
+            CurrentItem = new ReferenceDataItem();
+        }
+        catch (Exception ex)
+        {
+            NotifyError(ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SelectCategory(string category)
+    {
+        SelectedCategory = category;
+
+        Items = await SharePointService
+            .GetReferenceDataByCategoryAsync(Module, category);
+
+        await ApplySearch();
+    }
+
+    private async Task ApplySearch()
+    {
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            FilteredItems = Items.ToList();
+        }
+        else
+        {
+            var search = SearchText.ToLower();
+
+            FilteredItems = Items.Where(x =>
+                (x.Title ?? "").ToLower().Contains(search) ||
+                (x.Code ?? "").ToLower().Contains(search) ||
+                (x.Description ?? "").ToLower().Contains(search)
+            ).ToList();
+        }
+
+        if (grid != null)
+        {
+            await grid.FirstPage(true);
+        }
+    }
+
+    private async void OnSearchInput(ChangeEventArgs e)
+    {
+        SearchText = e.Value?.ToString() ?? "";
+        await ApplySearch();
+    }
+
+    private void LoadPagedData(LoadDataArgs args)
+    {
+        var query = FilteredItems.AsQueryable();
+
+        TotalCount = query.Count();
+
+        if (!string.IsNullOrEmpty(args.OrderBy))
+        {
+            query = query.OrderBy(args.OrderBy);
+        }
+
+        if (args.Skip.HasValue && args.Top.HasValue)
+        {
+            query = query.Skip(args.Skip.Value).Take(args.Top.Value);
+        }
+
+        PagedItems = query.ToList();
+    }
+
+    private void SelectItem(ReferenceDataItem item)
+    {
+        CurrentItem = new ReferenceDataItem
+        {
+            Id = item.Id,
+            Title = item.Title,
+            Code = item.Code,
+            Category = item.Category,
+            Description = item.Description,
+            Icon = item.Icon,
+            Color = item.Color,
+            SortOrder = item.SortOrder,
+            IsActive = item.IsActive,
+            IsDefault = item.IsDefault
+        };
+    }
+
+    private void NewItem()
+    {
+        CurrentItem = new ReferenceDataItem
+        {
+            Category = SelectedCategory,
+            IsActive = true
+        };
+    }
+
+    private async Task SaveItem()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentItem.Title))
+        {
+            NotifyWarning("Title required");
+            return;
+        }
+
+        if (CurrentItem.Id == 0)
+        {
+            await SharePointService.CreateReferenceDataAsync(Module, CurrentItem);
+            NotifySuccess("Created");
+        }
+        else
+        {
+            await SharePointService.UpdateReferenceDataAsync(Module, CurrentItem);
+            NotifySuccess("Updated");
+        }
+
+        await LoadData();
+    }
+
+    private async Task DeleteItem()
+    {
+        if (CurrentItem.Id == 0) return;
+
+        if (CurrentItem.IsActive)
+        {
+            NotifyWarning("Deactivate before delete");
+            return;
+        }
+
+        bool? confirm = await DialogService.Confirm("Delete item?", "Confirm");
+
+        if (confirm != true) return;
+
+        await SharePointService.DeleteReferenceDataAsync(Module, CurrentItem.Id);
+
+        NotifySuccess("Deleted");
+
+        await LoadData();
+    }
+
+    private void NotifySuccess(string msg) =>
+        NotificationService.Notify(NotificationSeverity.Success, "Success", msg);
+
+    private void NotifyError(string msg) =>
+        NotificationService.Notify(NotificationSeverity.Error, "Error", msg);
+
+    private void NotifyWarning(string msg) =>
+        NotificationService.Notify(NotificationSeverity.Warning, "Warning", msg);
+}
+
+<style>
+
+    /* ✅ ROOT CONTAINER */
+    .rd-container {
+        font-family: Segoe UI;
+        padding: 16px;
+        background: #F3F2F1;
+    }
+
+    /* ✅ MAIN GRID (Categories + Content) */
+    .rd-grid {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 16px;
+    }
+
+    /* ✅ RIGHT PANEL STACK (Grid + Editor) */
+    .rd-content {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* ✅ SECTION PANEL (Grid + Editor shared style) */
+    .rd-section {
+        background: white;
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    }
+
+    /* ✅ SECTION HEADER */
+    .section-header {
+        font-weight: 600;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #E1DFDD;
+        padding-bottom: 6px;
+        color:orangered;
+    }
+
+    .Main-header {
+        font-weight: 500;
+        margin-bottom: 5px;
+        border-bottom: 1px solid #E1DFDD;
+        padding-bottom: 5px;
+        color:blueviolet;
+    }
+
+    /* ✅ CATEGORY PANEL */
+    .rd-categories {
+        background:ash;
+        padding: 16px;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    }
+
+    .cat-item {
+        padding: 8px;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: 0.2s;
+    }
+
+        .cat-item:hover {
+            background: #eee;
+        }
+
+        .cat-item.active {
+            background: #0078D4;
+            color: white;
+        }
+
+    /* ✅ GRID CONTAINER FIX */
+    .rd-list {
+        min-height: 220px; /* prevent collapse */
+        width: 100%;
+    }
+
+    /* ✅ STATUS BADGE */
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+        .status-badge.active {
+            background: #dff6dd;
+            color: #107c10;
+        }
+
+        .status-badge.inactive {
+            background: #fde7e9;
+            color: #a80000;
+        }
+
+    /* ✅ EDITOR PANEL */
+    .rd-editor {
+        width: 100%;
+    }
+
+    /* ✅ FORM GRID ALIGNMENT (IMPORTANT FIX) */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    /* ✅ FULL WIDTH FIELDS */
+    .full-width {
+        grid-column: span 3;
+    }
+
+    /* ✅ CHECKBOX ALIGNMENT */
+    .checkbox-row,
+    .checkbox-group {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+    }
+
+    /* ✅ ACTION BUTTONS */
+    .rd-actions {
+        margin-top: 12px;
+        display: flex;
+        gap: 10px;
+    }
+
+    /* ✅ RESPONSIVE (FIXED SYNTAX) */
+    @@media (max-width: 768px) {
+
+        .rd-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .full-width {
+            grid-column: span 1;
+        }
+    }
+
+</style>

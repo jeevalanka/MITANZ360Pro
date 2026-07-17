@@ -1,0 +1,57 @@
+﻿# ==========================================================
+# MITANZ360Edu - Source Code ZIP Package Creator
+# Excludes build artifacts and temporary folders
+# Output: MITANZ360EDU_Source.zip
+# ==========================================================
+
+# Source project folder
+$source = "D:\MITANZ360EDU-System\GitHub\mitanz360edu"
+
+# Final ZIP file (OUTPUT)
+$zipFile = "D:\MITANZ360EDU-System\GitHub\MITANZ360EDU_Source.zip"
+
+# Temporary working folder
+$tempFolder = Join-Path $env:TEMP ("MITANZ360EDU_" + [Guid]::NewGuid())
+
+New-Item -ItemType Directory -Path $tempFolder -Force | Out-Null
+
+# Copy project files excluding build folders
+Get-ChildItem -Path $source -Recurse -File |
+Where-Object {
+    $_.FullName -notmatch '\\bin\\|\\obj\\|\\\.vs\\|\\TestResults\\|\\\.git\\|\\node_modules\\|\\packages\\|\\publish\\'
+} |
+ForEach-Object {
+
+    $relativePath = $_.FullName.Substring($source.Length).TrimStart('\')
+    $destination = Join-Path $tempFolder $relativePath
+
+    New-Item -ItemType Directory -Path (Split-Path $destination) -Force | Out-Null
+    Copy-Item $_.FullName -Destination $destination -Force
+}
+
+# Remove existing ZIP if present
+if (Test-Path $zipFile) {
+    Remove-Item $zipFile -Force
+}
+
+# Create ZIP archive
+Compress-Archive `
+    -Path "$tempFolder\*" `
+    -DestinationPath $zipFile `
+    -CompressionLevel Optimal
+
+# Clean up temporary folder
+Remove-Item $tempFolder -Recurse -Force
+
+# Display result
+Write-Host ""
+Write-Host "===============================================" -ForegroundColor Green
+Write-Host " MITANZ360Edu Source Package Created Successfully" -ForegroundColor Green
+Write-Host "-----------------------------------------------"
+Write-Host " File :" -NoNewline
+Write-Host " $zipFile" -ForegroundColor Yellow
+Write-Host "===============================================" -ForegroundColor Green
+Write-Host ""
+
+# Open File Explorer and select the ZIP
+explorer.exe "/select,$zipFile"

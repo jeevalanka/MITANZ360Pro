@@ -1,0 +1,194 @@
+﻿@page "/delete-user"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin,SysAdmin")]
+
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using Radzen
+@using Radzen.Blazor
+@using MITANZ360Pro.Web.Data
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<PageTitle>Raw User Delete</PageTitle>
+
+<div class="container mt-4">
+
+    <!-- HEADER -->
+    <RadzenCard class="mb-3">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h3 style="color:#dc2626;">⚠️ Raw User Delete (DB Direct)</h3>
+                <div style="color:#6b7280;">
+                    Direct database delete without Identity services
+                </div>
+            </div>
+
+            <RadzenTextBox @bind-Value="search"
+                           Placeholder="Search user..."
+                           Style="width:280px;"
+                           Change="@(_ => ApplyFilter())" />
+        </div>
+    </RadzenCard>
+
+    <!-- GRID -->
+    <RadzenCard>
+        <RadzenDataGrid Data="@filteredUsers"
+                        TItem="ApplicationUser"
+                        AllowPaging="true"
+                        PageSize="10"
+                        AllowSorting="true"
+                        AllowFiltering="true">
+
+            <Columns>
+
+                <RadzenDataGridColumn TItem="ApplicationUser" Property="UserName" Title="Username" />
+                <RadzenDataGridColumn TItem="ApplicationUser" Property="Email" Title="Email" />
+
+                <RadzenDataGridColumn TItem="ApplicationUser" Title="Action">
+                    <Template Context="u">
+                        <RadzenButton Icon="delete"
+                                      ButtonStyle="ButtonStyle.Danger"
+                                      Size="ButtonSize.Small"
+                                      Click="@(() => ConfirmDelete(u))" />
+                    </Template>
+                </RadzenDataGridColumn>
+
+            </Columns>
+
+        </RadzenDataGrid>
+    </RadzenCard>
+
+</div>
+
+@code {
+
+    private List<ApplicationUser> users = new();
+    private List<ApplicationUser> filteredUsers = new();
+    private string search = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    // ===============================
+    // LOAD USERS
+    // ===============================
+    private async Task LoadUsers()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        users = await db.Users
+            .AsNoTracking()
+            .OrderBy(x => x.UserName)
+            .ToListAsync();
+
+        filteredUsers = users.ToList();
+    }
+
+    // ===============================
+    // FILTER
+    // ===============================
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            filteredUsers = users.ToList();
+        }
+        else
+        {
+            var s = search.ToLower();
+
+            filteredUsers = users.Where(u =>
+                (u.UserName ?? "").ToLower().Contains(s) ||
+                (u.Email ?? "").ToLower().Contains(s)
+            ).ToList();
+        }
+    }
+
+    // ===============================
+    // CONFIRM DELETE
+    // ===============================
+    private async Task ConfirmDelete(ApplicationUser user)
+    {
+        var confirm = await DialogService.Confirm(
+            $"DELETE user '{user.UserName}' permanently?",
+            "Danger Zone",
+            new ConfirmOptions
+            {
+                OkButtonText = "YES DELETE",
+                CancelButtonText = "Cancel"
+            });
+
+        if (confirm == true)
+        {
+            await DeleteUserRaw(user.Id);
+        }
+    }
+
+    // ===============================
+    // 🔥 RAW DELETE (NO IDENTITY)
+    // ===============================
+    private async Task DeleteUserRaw(string userId)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var user = await db.Users.FindAsync(userId);
+
+            if (user == null)
+            {
+                Notify("User not found", NotificationSeverity.Warning);
+                return;
+            }
+
+            // 🔐 SAFETY
+            if (user.UserName?.ToLower() == "admin")
+            {
+                Notify("Cannot delete admin user", NotificationSeverity.Warning);
+                return;
+            }
+
+            // 🔥 REMOVE RELATED DATA (CRITICAL)
+            var roles = db.UserRoles.Where(x => x.UserId == userId);
+            var claims = db.UserClaims.Where(x => x.UserId == userId);
+            var logins = db.UserLogins.Where(x => x.UserId == userId);
+            var tokens = db.UserTokens.Where(x => x.UserId == userId);
+
+            db.UserRoles.RemoveRange(roles);
+            db.UserClaims.RemoveRange(claims);
+            db.UserLogins.RemoveRange(logins);
+            db.UserTokens.RemoveRange(tokens);
+
+            // 🔥 DELETE USER
+            db.Users.Remove(user);
+
+            await db.SaveChangesAsync();
+
+            Notify("User deleted from DB");
+
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            Notify(ex.Message, NotificationSeverity.Error);
+        }
+    }
+
+    // ===============================
+    // NOTIFY
+    // ===============================
+    private void Notify(string msg, NotificationSeverity severity = NotificationSeverity.Success)
+    {
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = severity,
+            Summary = msg,
+            Duration = 3000
+        });
+    }
+}

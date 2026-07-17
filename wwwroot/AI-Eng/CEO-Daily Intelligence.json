@@ -1,0 +1,204 @@
+{
+  "_lock": {
+    "locked": true,
+    "allowStructureChange": true,
+    "allowedOverrides": [
+      "task",
+      "instruction",
+      "input",
+      "output.schema",
+      "actions",
+      "aiConfig",
+      "execution",
+      "orchestration"
+    ]
+  },
+
+  "meta": {
+    "version": "4.1",
+    "templateName": "CEO Daily Intelligence",
+    "description": "Executive-level global market intelligence analysis",
+    "namingConvention": "camelCase"
+  },
+
+  "task": {
+    "id": "ceo-intel",
+    "name": "market-analysis",
+    "type": "analysis",
+    "priority": "high"
+  },
+
+  "system": {
+    "mode": "deterministic",
+    "rules": [
+      "Do NOT hallucinate",
+      "Use ONLY provided input",
+      "Return ONLY valid JSON",
+      "Include current date and time in ISO format in the field 'generatedAt'",
+      "Follow schema strictly",
+      "Do NOT add extra fields"
+    ],
+    "guardrails": {
+      "strictSchema": true,
+      "rejectUnknownFields": true,
+      "allowPartial": false,
+      "maxRetries": 2
+    }
+  },
+
+  "instruction": {
+    "objective": "Analyze all input sources and produce executive insights.",
+    "analysis": {
+      "depth": "high",
+      "focus": [
+        "macro trends",
+        "risk signals",
+        "strategic impact",
+        "source comparison",
+        "source-level analysis"
+      ],
+      "requirements": [
+        "Perform analysis per individual source",
+        "Identify key insights from each source",
+        "Compare differences between sources",
+        "Highlight conflicting signals between sources",
+        "Aggregate findings into a final summary",
+        "Use sourcesUsed list for traceability"
+      ]
+    }
+  },
+
+  "input": {
+    "mode": "multi-source",
+    "sources": [
+      {
+        "id": "web-source",
+        "type": "web",
+        "enabled": true,
+        "config": {
+          "urls": [
+            "https://feeds.reuters.com/reuters/businessNews",
+            "https://www.cnbc.com/id/10001147/device/rss/rss.html",
+            "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"
+          ],
+          "maxArticles": 5
+        }
+      },
+
+      {
+        "id": "local-file",
+        "type": "local.file",
+        "enabled": false,
+        "config": {
+          "path": "wwwroot/Temp-Files/ceo-daily.txt"
+        }
+      },
+
+      {
+        "id": "sharepoint-source",
+        "type": "sharepoint.file",
+        "enabled": false,
+        "config": {
+          "url": "https://mitga.sharepoint.com/sites/management/Management/ceo-report.pdf"
+        }
+      }
+    ]
+  },
+
+  "aiConfig": {
+    "provider": "azureOpenAI",
+    "deployment": "gpt-4o-mini",
+    "temperature": 0.2,
+    "maxTokens": 1800,
+    "topP": 1.0,
+    "responseFormat": "json"
+  },
+
+  "orchestration": {
+    "mode": "sequential",
+    "steps": [
+      {
+        "name": "analysis",
+        "type": "analysis",
+        "input": "input",
+        "output": "analysisResult",
+        "schema": {
+          "generatedAt": "string",
+          "summary": "string",
+          "insights": "string",
+          "risks": "string",
+          "recommendations": "string"
+        }
+      }
+    ],
+    "contracts": {
+      "analysisResult": {
+        "requiredFields": [ "summary" ]
+      }
+    }
+  },
+
+  "output": {
+    "format": "json",
+    "schema": {
+      "generatedAt": "string",
+      "summary": "string",
+      "insights": "string",
+      "risks": "string",
+      "recommendations": "string"
+    },
+    "validation": {
+      "strict": true,
+      "requiredFields": [
+        "generatedAt",
+        "summary",
+        "insights",
+        "risks",
+        "recommendations"
+      ],
+      "rejectExtraFields": true
+    }
+  },
+
+  "actions": [
+    {
+      "id": "sp-upsert",
+      "type": "sharepoint.upsert",
+      "enabled": true,
+      "target": {
+        "listName": "AuditLog"
+      },
+      "mapping": {
+        "Title": "output.summary",
+        "Insights": "output.insights",
+        "Risks": "output.risks",
+        "Recommendations": "output.recommendations"
+      }
+    }
+  ],
+
+  "execution": {
+    "retryPolicy": {
+      "enabled": true,
+      "maxRetries": 2,
+      "strategy": "fix_json"
+    },
+    "timeoutSeconds": 120,
+    "parallelExecution": false
+  },
+
+  "security": {
+    "sanitizeInput": true,
+    "validateMappings": true,
+    "allowExternalCalls": true,
+    "dataClassification": "internal"
+  },
+
+  "monitoring": {
+    "logging": true,
+    "logLevel": "information",
+    "trackTokenUsage": true,
+    "trackExecutionTime": true,
+    "auditTrail": true
+  }
+}

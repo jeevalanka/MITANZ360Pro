@@ -1,0 +1,8 @@
+﻿✅ BEST TYPES FOR ENTERPRISE APPS
+SharePoint Type	Blazor Support	Recommendation
+Single line text	✅ Perfect	BEST
+Number	✅ Perfect	BEST
+Yes/No	✅ Perfect	BEST
+Choice	✅ Excellent	BEST
+DateTime	✅ Excellent	BEST
+Multiple lines text	✅ Excellent	BEST

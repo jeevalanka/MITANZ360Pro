@@ -1,0 +1,943 @@
+﻿@page "/sysdashboard"
+@layout MainLayout_NoRightPan
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "SysAdmin")]
+
+@using Radzen
+@using Radzen.Blazor
+@using System.Globalization
+
+@inject NotificationService Notifications
+@inject DialogService Dialogs
+
+<PageTitle>System Administrator Dashboard</PageTitle>
+
+<style>
+    /* High-end SysAdmin palette (dark, professional) */
+    :root{
+        --bg0:#0B1220;         /* page bg */
+        --bg1:#0F172A;         /* card bg */
+        --bg2:#111C33;         /* elevated */
+        --stroke:#1F2A44;      /* borders */
+        --text:#E5E7EB;        /* primary text */
+        --muted:#94A3B8;       /* secondary */
+        --blue:#2563EB;        /* action */
+        --cyan:#22D3EE;        /* info */
+        --green:#22C55E;       /* success */
+        --amber:#F59E0B;       /* warning */
+        --red:#EF4444;         /* critical */
+        --violet:#8B5CF6;      /* accent */
+        --shadow: 0 18px 50px rgba(0,0,0,.35);
+        --radius: 16px;
+    }
+
+    .sys-wrap{
+        min-height: calc(100vh - 120px);
+        background: radial-gradient(1200px 600px at 15% -10%, rgba(37,99,235,.25), transparent 60%),
+                    radial-gradient(900px 500px at 80% 10%, rgba(34,211,238,.14), transparent 60%),
+                    radial-gradient(900px 500px at 50% 110%, rgba(139,92,246,.14), transparent 60%),
+                    var(--bg0);
+        padding: 18px;
+        border-radius: var(--radius);
+    }
+
+    .hdr{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .hdr-left{
+        display:flex;
+        gap: 12px;
+        align-items:center;
+    }
+
+    .title{
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: .2px;
+        margin: 0;
+    }
+
+    .sub{
+        color: var(--muted);
+        font-size: 12.5px;
+        margin: 2px 0 0 0;
+    }
+
+    .pill{
+        display:flex;
+        align-items:center;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--stroke);
+        border-radius: 999px;
+        background: rgba(15,23,42,.65);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    .kpi-card{
+        background: linear-gradient(180deg, rgba(17,28,51,.9), rgba(15,23,42,.9));
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .kpi-card:before{
+        content:"";
+        position:absolute;
+        inset:-1px;
+        background: radial-gradient(600px 220px at 25% -10%, rgba(37,99,235,.25), transparent 60%);
+        pointer-events:none;
+    }
+
+    .kpi-body{ position:relative; padding: 14px 14px 12px 14px; }
+
+    .kpi-top{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+
+    .kpi-name{ color: var(--muted); font-size: 12px; letter-spacing:.25px; }
+    .kpi-value{ color: var(--text); font-size: 22px; font-weight: 800; margin-top: 2px; }
+    .kpi-foot{ display:flex; gap: 8px; align-items:center; margin-top: 10px; }
+    .muted{ color: var(--muted); }
+
+    .panel{
+        background: rgba(15,23,42,.78);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+    }
+
+    .panel-h{
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--stroke);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap: 10px;
+    }
+
+    .panel-t{ color: var(--text); font-weight: 700; font-size: 13.5px; margin:0; }
+    .panel-b{ padding: 12px 14px; }
+
+    .chip{
+        border: 1px solid var(--stroke);
+        border-radius: 999px;
+        padding: 6px 10px;
+        color: var(--muted);
+        font-size: 12px;
+        background: rgba(17,28,51,.55);
+    }
+
+    .grid-tight :deep(.rz-datatable){
+        background: transparent;
+    }
+    .grid-tight :deep(.rz-datatable-thead th){
+        background: rgba(17,28,51,.55);
+        color: var(--text);
+        border-color: var(--stroke);
+    }
+    .grid-tight :deep(.rz-datatable-data td){
+        border-color: var(--stroke);
+        color: var(--text);
+    }
+    .grid-tight :deep(.rz-datatable-data tr:hover){
+        background: rgba(37,99,235,.08);
+    }
+
+    .soft{
+        background: rgba(17,28,51,.55);
+        border: 1px solid var(--stroke);
+        border-radius: 14px;
+        padding: 10px 12px;
+    }
+
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+</style>
+
+<div class="sys-wrap">
+    <!-- HEADER -->
+    <div class="hdr">
+        <div class="hdr-left">
+            <RadzenAvatar Size="40" Style="background: linear-gradient(135deg, var(--blue), var(--violet)); box-shadow: var(--shadow);" Text="SA" />
+            <div>
+                <div class="title">System Administrator Dashboard</div>
+                <div class="sub">
+                    Monitor identity, security posture, infrastructure health, jobs, and audit stream
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <div class="pill">
+                <RadzenIcon Icon="schedule" Style="color: var(--cyan);" />
+                <span class="muted">Last refresh:</span>
+                <span class="mono" style="color: var(--text); font-size: 12.5px;">@LastRefreshed.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)</span>
+            </div>
+
+            <RadzenButton Icon="refresh" Text="Refresh" ButtonStyle="ButtonStyle.Primary"
+                          Style="background: var(--blue); border-radius: 12px; box-shadow: var(--shadow);"
+                          Click="@Refresh" />
+
+            <RadzenButton Icon="security" Text="Run Security Check" ButtonStyle="ButtonStyle.Secondary"
+                          Style="border-radius: 12px; border-color: var(--stroke); background: rgba(17,28,51,.55); color: var(--text);"
+                          Click="@RunSecurityCheck" />
+        </div>
+    </div>
+
+    <!-- KPI ROW -->
+    <RadzenRow Gap="12px">
+        <RadzenColumn Size="12" Medium="6" Large="3">
+            <RadzenCard class="kpi-card">
+                <div class="kpi-body">
+                    <div class="kpi-top">
+                        <div class="kpi-name">System Health</div>
+                        <RadzenBadge Text="@($"{HealthScore}%")" Style="@BadgeStyle(HealthScore)" />
+                    </div>
+                    <div class="kpi-value">@($"{HealthScore}%")</div>
+                    <div class="kpi-foot">
+                        <RadzenProgressBar Value="@HealthScore" ShowValue="false" Style="width:100%; height:10px; background:#0B1020;" />
+                    </div>
+                    <div class="kpi-foot">
+                        <RadzenIcon Icon="check_circle" Style="color: var(--green);" />
+                        <span class="muted">Uptime:</span>
+                        <span style="color:var(--text); font-weight:700;">@UptimeText</span>
+                    </div>
+                </div>
+            </RadzenCard>
+        </RadzenColumn>
+
+        <RadzenColumn Size="12" Medium="6" Large="3">
+            <RadzenCard class="kpi-card">
+                <div class="kpi-body">
+                    <div class="kpi-top">
+                        <div class="kpi-name">Security Alerts (24h)</div>
+                        <RadzenIcon Icon="report" Style="color: var(--amber);" />
+                    </div>
+                    <div class="kpi-value">@Alerts24h</div>
+                    <div class="kpi-foot">
+                        <RadzenBadge Text="@($"{CriticalAlerts} Critical")" Style="background: rgba(239,68,68,.15); color: var(--red); border:1px solid rgba(239,68,68,.35);" />
+                        <RadzenBadge Text="@($"{WarningAlerts} Warning")" Style="background: rgba(245,158,11,.15); color: var(--amber); border:1px solid rgba(245,158,11,.35);" />
+                    </div>
+                    <div class="kpi-foot">
+                        <span class="muted">Top source:</span>
+                        <span style="color:var(--text); font-weight:700;">@TopAlertSource</span>
+                    </div>
+                </div>
+            </RadzenCard>
+        </RadzenColumn>
+
+        <RadzenColumn Size="12" Medium="6" Large="3">
+            <RadzenCard class="kpi-card">
+                <div class="kpi-body">
+                    <div class="kpi-top">
+                        <div class="kpi-name">Identity / RBAC</div>
+                        <RadzenIcon Icon="admin_panel_settings" Style="color: var(--cyan);" />
+                    </div>
+                    <div class="kpi-value">@TotalUsers</div>
+                    <div class="kpi-foot">
+                        <RadzenBadge Text="@($"{Admins} Admins")" Style="background: rgba(37,99,235,.14); color: var(--blue); border:1px solid rgba(37,99,235,.35);" />
+                        <RadzenBadge Text="@($"{LockedOut} Locked")" Style="background: rgba(239,68,68,.12); color: var(--red); border:1px solid rgba(239,68,68,.30);" />
+                    </div>
+                    <div class="kpi-foot">
+                        <span class="muted">2FA coverage:</span>
+                        <span style="color:var(--text); font-weight:700;">@($"{TwoFactorCoverage}%")</span>
+                    </div>
+                </div>
+            </RadzenCard>
+        </RadzenColumn>
+
+        <RadzenColumn Size="12" Medium="6" Large="3">
+            <RadzenCard class="kpi-card">
+                <div class="kpi-body">
+                    <div class="kpi-top">
+                        <div class="kpi-name">Jobs / Automation</div>
+                        <RadzenIcon Icon="sync" Style="color: var(--violet);" />
+                    </div>
+                    <div class="kpi-value">@JobsRunning</div>
+                    <div class="kpi-foot">
+                        <RadzenBadge Text="@($"{JobsQueued} Queued")" Style="background: rgba(139,92,246,.14); color: var(--violet); border:1px solid rgba(139,92,246,.35);" />
+                        <RadzenBadge Text="@($"{JobsFailed} Failed")" Style="background: rgba(239,68,68,.12); color: var(--red); border:1px solid rgba(239,68,68,.30);" />
+                    </div>
+                    <div class="kpi-foot">
+                        <span class="muted">Next backup:</span>
+                        <span style="color:var(--text); font-weight:700;">@NextBackup</span>
+                    </div>
+                </div>
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+
+    <div style="height:12px;"></div>
+
+    <!-- MAIN PANELS -->
+    <RadzenRow Gap="12px">
+        <!-- LEFT: TELEMETRY / CHARTS -->
+        <RadzenColumn Size="12" Large="8">
+            <div class="panel">
+                <div class="panel-h">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <RadzenIcon Icon="analytics" Style="color: var(--cyan);" />
+                        <h4 class="panel-t">Infrastructure & Telemetry</h4>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <span class="chip">CPU @($"{CpuNow}%")</span>
+                        <span class="chip">RAM @($"{RamNow}%")</span>
+                        <span class="chip">DB Latency @($"{DbLatencyMs}ms")</span>
+                        <span class="chip">Requests/min @ReqPerMin</span>
+                    </div>
+                </div>
+
+                <div class="panel-b">
+                    <RadzenTabs Style="background: transparent;">
+                        <Tabs>
+                            <RadzenTabItem Text="CPU & Memory">
+                                <RadzenRow Gap="12px">
+                                    <RadzenColumn Size="12" Medium="6">
+                                        <div class="soft">
+                                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                <b style="color:var(--text);">CPU (last 60 min)</b>
+                                                <RadzenBadge Text="@($"{CpuNow}%")" Style="@SmallBadge(CpuNow, 80, 95)" />
+                                            </div>
+                                            <div style="height:10px;"></div>
+
+                                            <RadzenChart Style="height: 220px;">
+                                                <RadzenLineSeries Data="@CpuSeries" CategoryProperty="TimeLabel" ValueProperty="Value" Title="CPU %" LineType="LineType.Dotted" />
+                                                <RadzenCategoryAxis Padding="10" />
+                                                <RadzenValueAxis Min="0" Max="100" />
+                                            </RadzenChart>
+                                        </div>
+                                    </RadzenColumn>
+
+                                    <RadzenColumn Size="12" Medium="6">
+                                        <div class="soft">
+                                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                <b style="color:var(--text);">Memory (last 60 min)</b>
+                                                <RadzenBadge Text="@($"{RamNow}%")" Style="@SmallBadge(RamNow, 75, 90)" />
+                                            </div>
+                                            <div style="height:10px;"></div>
+
+                                            <RadzenChart Style="height: 220px;">
+                                                <RadzenLineSeries Data="@RamSeries" CategoryProperty="TimeLabel" ValueProperty="Value" Title="RAM %" LineType="LineType.Dashed" />
+                                                <RadzenCategoryAxis Padding="10" />
+                                                <RadzenValueAxis Min="0" Max="100" />
+                                            </RadzenChart>
+                                        </div>
+                                    </RadzenColumn>
+                                </RadzenRow>
+                            </RadzenTabItem>
+
+                            <RadzenTabItem Text="Traffic & Errors">
+                                <RadzenRow Gap="12px">
+                                    <RadzenColumn Size="12" Medium="7">
+                                        <div class="soft">
+                                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                <b style="color:var(--text);">Requests per minute</b>
+                                                <span class="muted">Peak @PeakRpm</span>
+                                            </div>
+                                            <div style="height:10px;"></div>
+
+                                            <RadzenChart Style="height: 240px;">
+                                                <RadzenColumnSeries Data="@TrafficSeries" CategoryProperty="TimeLabel" ValueProperty="Value" Title="RPM" />
+                                                <RadzenCategoryAxis Padding="10" />
+                                                <RadzenValueAxis Min="0" />
+                                            </RadzenChart>
+                                        </div>
+                                    </RadzenColumn>
+
+                                    <RadzenColumn Size="12" Medium="5">
+                                        <div class="soft">
+                                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                <b style="color:var(--text);">Error Budget (24h)</b>
+                                                <span class="muted">@($"{ErrorRate24h:0.00}%")</span>
+                                            </div>
+                                            <div style="height:10px;"></div>
+
+                                            <RadzenChart Style="height: 240px;">
+                                                <RadzenPieSeries Data="@ErrorMix" CategoryProperty="Name" ValueProperty="Value" />
+                                            </RadzenChart>
+
+                                            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                                                @foreach (var e in ErrorMix)
+                                                {
+                                                    <span class="chip">@e.Name: @e.Value</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </RadzenColumn>
+                                </RadzenRow>
+                            </RadzenTabItem>
+
+                            <RadzenTabItem Text="Database">
+                                <RadzenRow Gap="12px">
+                                    <RadzenColumn Size="12" Medium="6">
+                                        <div class="soft">
+                                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                <b style="color:var(--text);">DB Latency (ms)</b>
+                                                <RadzenBadge Text="@($"{DbLatencyMs}ms")" Style="@SmallBadge(DbLatencyMs, 120, 250, isMs:true)" />
+                                            </div>
+                                            <div style="height:10px;"></div>
+
+                                            <RadzenChart Style="height: 230px;">
+                                                <RadzenLineSeries Data="@DbLatencySeries" CategoryProperty="TimeLabel" ValueProperty="Value" Title="Latency ms" LineType="LineType.Solid" />
+                                                <RadzenCategoryAxis Padding="10" />
+                                                <RadzenValueAxis Min="0" />
+                                            </RadzenChart>
+                                        </div>
+                                    </RadzenColumn>
+
+                                    <RadzenColumn Size="12" Medium="6">
+                                        <div class="soft">
+                                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                                <b style="color:var(--text);">DB Health</b>
+                                                <RadzenBadge Text="@DbHealth" Style="@DbHealthBadge(DbHealth)" />
+                                            </div>
+                                            <div style="height:10px;"></div>
+
+                                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                                <div>
+                                                    <div class="muted">Connection pool</div>
+                                                    <RadzenProgressBar Value="@DbPoolHealth" ShowValue="true" Unit="%" />
+                                                </div>
+                                                <div>
+                                                    <div class="muted">Index fragmentation (est.)</div>
+                                                    <RadzenProgressBar Value="@IndexFragmentation" ShowValue="true" Unit="%" />
+                                                </div>
+                                                <div>
+                                                    <div class="muted">Storage usage</div>
+                                                    <RadzenProgressBar Value="@StorageUsage" ShowValue="true" Unit="%" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </RadzenColumn>
+                                </RadzenRow>
+                            </RadzenTabItem>
+                        </Tabs>
+                    </RadzenTabs>
+                </div>
+            </div>
+
+            <div style="height:12px;"></div>
+
+            <!-- Alerts / Audit Stream -->
+            <div class="panel">
+                <div class="panel-h">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <RadzenIcon Icon="notifications_active" Style="color: var(--amber);" />
+                        <h4 class="panel-t">Security Alerts & Audit Stream</h4>
+                    </div>
+
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <RadzenDropDown @bind-Value="AlertFilter" Data="@AlertFilterOptions" Style="min-width:170px"
+                                        Change="@(_ => ApplyFilter())" />
+                        <RadzenTextBox Placeholder="Search (user / action / IP)" Style="min-width:220px"
+                                       @bind-Value="SearchText" Change="@(_ => ApplyFilter())" />
+                        <RadzenButton Icon="download" Text="Export (demo)" ButtonStyle="ButtonStyle.Light"
+                                      Style="border-radius: 12px; background: rgba(17,28,51,.55); color: var(--text); border-color: var(--stroke);"
+                                      Click="@ExportDemo" />
+                    </div>
+                </div>
+
+                <div class="panel-b grid-tight">
+                    <RadzenDataGrid Data="@FilteredAlerts" TItem="SecurityAlert" AllowPaging="true" PageSize="8"
+                                    AllowSorting="true" AllowFiltering="false" Responsive="true">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="SecurityAlert" Property="Time" Title="Time" Width="160px">
+                                <Template Context="a">@a.Time.ToString("yyyy-MM-dd HH:mm")</Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="SecurityAlert" Property="Severity" Title="Severity" Width="120px">
+                                <Template Context="a">
+                                    <RadzenBadge Text="@a.Severity" Style="@SeverityBadge(a.Severity)" />
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="SecurityAlert" Property="Category" Title="Category" Width="140px" />
+                            <RadzenDataGridColumn TItem="SecurityAlert" Property="User" Title="User" Width="210px" />
+
+                            <RadzenDataGridColumn TItem="SecurityAlert" Property="Message" Title="Event">
+                                <Template Context="a">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <RadzenIcon Icon="info" Style="color: var(--cyan);" />
+                                        <span>@a.Message</span>
+                                    </div>
+                                </Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="SecurityAlert" Property="SourceIp" Title="IP" Width="140px">
+                                <Template Context="a"><span class="mono">@a.SourceIp</span></Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="SecurityAlert" Title="Actions" Width="120px">
+                                <Template Context="a">
+                                    <RadzenButton Icon="visibility" Size="ButtonSize.Small"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  Style="border-radius: 10px; background: rgba(17,28,51,.55); border-color: var(--stroke); color: var(--text);"
+                                                  Click="@(() => ViewAlert(a))" />
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                </div>
+            </div>
+        </RadzenColumn>
+
+        <!-- RIGHT: OPERATIONS / CONTROL -->
+        <RadzenColumn Size="12" Large="4">
+            <div class="panel">
+                <div class="panel-h">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <RadzenIcon Icon="settings_suggest" Style="color: var(--violet);" />
+                        <h4 class="panel-t">Operations Control</h4>
+                    </div>
+                    <RadzenBadge Text="Live" Style="background: rgba(34,197,94,.12); color: var(--green); border:1px solid rgba(34,197,94,.25);" />
+                </div>
+
+                <div class="panel-b">
+                    <div class="soft" style="margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <b style="color:var(--text);">Maintenance Mode</b>
+                                <RadzenSwitch @bind-Value="MaintenanceMode" />
+                                </div>
+                        <div style="margin-top:6px;" class="muted">
+                            When enabled, non-admin users are redirected to a maintenance page.
+                        </div>
+                    </div>
+
+                    <div class="soft" style="margin-bottom:12px;">
+                        <b style="color:var(--text);">Quick Actions</b>
+                        <div style="height:10px;"></div>
+
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="10px">
+                            <RadzenButton Icon="backup" Text="Trigger Backup (demo)"
+                                          ButtonStyle="ButtonStyle.Primary"
+                                          Style="background: linear-gradient(135deg, var(--blue), var(--violet)); border-radius: 12px;"
+                                          Click="@TriggerBackup" />
+
+                            <RadzenButton Icon="policy" Text="Rotate Keys (demo)"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Style="border-radius: 12px; background: rgba(17,28,51,.55); color: var(--text); border-color: var(--stroke);"
+                                          Click="@RotateKeys" />
+
+                            <RadzenButton Icon="tune" Text="Clear Cache (demo)"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Style="border-radius: 12px; background: rgba(17,28,51,.55); color: var(--text); border-color: var(--stroke);"
+                                          Click="@ClearCache" />
+                        </RadzenStack>
+                    </div>
+
+                    <div class="soft">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <b style="color:var(--text);">Service Status</b>
+                            <span class="muted">updated @LastRefreshed.ToString("HH:mm:ss")</span>
+                        </div>
+                        <div style="height:10px;"></div>
+
+                        <RadzenDataList Data="@Services" TItem="ServiceStatus" WrapItems="false">
+                            <Template Context="s">
+                                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--stroke);">
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <RadzenIcon Icon="@s.Icon" Style="@($"color:{s.Color};")" />                                        <div>
+                                            <div style="color:var(--text); font-weight:700;">@s.Name</div>
+                                            <div class="muted" style="font-size:12px;">@s.Detail</div>
+                                        </div>
+                                    </div>
+                                    <RadzenBadge Text="@s.State" Style="@ServiceBadge(s.State)" />
+                                </div>
+                            </Template>
+                        </RadzenDataList>
+                    </div>
+                </div>
+            </div>
+
+            <div style="height:12px;"></div>
+
+            <div class="panel">
+                <div class="panel-h">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <RadzenIcon Icon="task_alt" Style="color: var(--green);" />
+                        <h4 class="panel-t">Jobs & Queues</h4>
+                    </div>
+                    <RadzenBadge Text="@($"{JobsRunning} running")" Style="background: rgba(34,197,94,.12); color: var(--green); border:1px solid rgba(34,197,94,.25);" />
+                </div>
+
+                <div class="panel-b grid-tight">
+                    <RadzenDataGrid Data="@Jobs" TItem="JobItem" AllowPaging="true" PageSize="6" Responsive="true">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="JobItem" Property="Name" Title="Job" />
+                            <RadzenDataGridColumn TItem="JobItem" Property="Status" Title="Status" Width="120px">
+                                <Template Context="j">
+                                    <RadzenBadge Text="@j.Status" Style="@JobBadge(j.Status)" />
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="JobItem" Property="Runtime" Title="Runtime" Width="120px">
+                                <Template Context="j"><span class="mono">@j.Runtime</span></Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                </div>
+            </div>
+        </RadzenColumn>
+    </RadzenRow>
+</div>
+
+@code {
+    // ---- View state ----
+    DateTime LastRefreshed = DateTime.Now;
+
+    int HealthScore;
+    string UptimeText = "—";
+    int Alerts24h;
+    int CriticalAlerts;
+    int WarningAlerts;
+    string TopAlertSource = "—";
+
+    int TotalUsers;
+    int Admins;
+    int LockedOut;
+    int TwoFactorCoverage;
+
+    int JobsRunning;
+    int JobsQueued;
+    int JobsFailed;
+    string NextBackup = "—";
+
+    int CpuNow;
+    int RamNow;
+    int DbLatencyMs;
+    int ReqPerMin;
+    int PeakRpm;
+    double ErrorRate24h;
+
+    string DbHealth = "OK";
+    int DbPoolHealth;
+    int IndexFragmentation;
+    int StorageUsage;
+
+    bool MaintenanceMode;
+
+    // Filters
+    string AlertFilter = "All";
+    List<string> AlertFilterOptions = new() { "All", "Critical", "Warning", "Info" };
+    string? SearchText;
+
+    // ---- Sample data ----
+    List<MetricPoint> CpuSeries = new();
+    List<MetricPoint> RamSeries = new();
+    List<MetricPoint> DbLatencySeries = new();
+    List<MetricPoint> TrafficSeries = new();
+
+    List<PieSlice> ErrorMix = new();
+    List<SecurityAlert> Alerts = new();
+    List<SecurityAlert> FilteredAlerts = new();
+
+    List<ServiceStatus> Services = new();
+    List<JobItem> Jobs = new();
+
+    protected override void OnInitialized()
+    {
+        SeedDemo();
+        ApplyFilter();
+    }
+
+    void SeedDemo()
+    {
+        var rnd = new Random();
+
+        LastRefreshed = DateTime.Now;
+
+        // KPI
+        HealthScore = rnd.Next(92, 100);
+        UptimeText = $"{rnd.Next(12, 42)}d {rnd.Next(0, 23)}h";
+
+        CriticalAlerts = rnd.Next(0, 6);
+        WarningAlerts = rnd.Next(2, 14);
+        Alerts24h = CriticalAlerts + WarningAlerts + rnd.Next(6, 20);
+        TopAlertSource = new[] { "Identity", "Firewall", "Audit", "API Gateway", "DB" }[rnd.Next(0, 5)];
+
+        TotalUsers = rnd.Next(120, 560);
+        Admins = rnd.Next(2, 10);
+        LockedOut = rnd.Next(0, 4);
+        TwoFactorCoverage = rnd.Next(65, 98);
+
+        JobsRunning = rnd.Next(1, 6);
+        JobsQueued = rnd.Next(0, 12);
+        JobsFailed = rnd.Next(0, 3);
+        NextBackup = DateTime.Now.AddHours(rnd.Next(1, 12)).ToString("HH:mm");
+
+        CpuNow = rnd.Next(10, 85);
+        RamNow = rnd.Next(20, 90);
+        DbLatencyMs = rnd.Next(20, 280);
+        ReqPerMin = rnd.Next(240, 1800);
+
+        // Timeseries (12 points)
+        CpuSeries = BuildSeries(rnd, 12, 10, 95);
+        RamSeries = BuildSeries(rnd, 12, 15, 95);
+        DbLatencySeries = BuildSeries(rnd, 12, 10, 320);
+        TrafficSeries = BuildSeries(rnd, 12, 120, 2200);
+
+        PeakRpm = TrafficSeries.Max(x => x.Value);
+        ErrorRate24h = Math.Round(rnd.NextDouble() * 0.35, 2);
+
+        ErrorMix = new List<PieSlice>
+        {
+            new("4xx", rnd.Next(8, 28)),
+            new("5xx", rnd.Next(1, 8)),
+            new("Timeout", rnd.Next(1, 10)),
+            new("Auth", rnd.Next(1, 6))
+        };
+
+        DbHealth = DbLatencyMs < 150 ? "OK" : DbLatencyMs < 250 ? "Degraded" : "Critical";
+        DbPoolHealth = rnd.Next(70, 100);
+        IndexFragmentation = rnd.Next(2, 35);
+        StorageUsage = rnd.Next(30, 88);
+
+        // Alerts stream
+        Alerts = BuildAlerts(rnd);
+        FilteredAlerts = Alerts.ToList();
+
+        // Services
+        Services = new List<ServiceStatus>
+        {
+            new("Identity", "admin_panel_settings", "Healthy", "Token + cookie auth OK", "Healthy", "#22C55E"),
+            new("Database", "database", DbHealth, $"Latency {DbLatencyMs}ms", DbHealth, DbHealth == "OK" ? "#22C55E" : DbHealth == "Degraded" ? "#F59E0B" : "#EF4444"),
+            new("Notifications", "notifications", "Healthy", "Email + in-app OK", "Healthy", "#22C55E"),
+            new("Jobs Runner", "sync", JobsFailed > 0 ? "Degraded" : "Healthy", $"{JobsRunning} running / {JobsQueued} queued", JobsFailed > 0 ? "Degraded" : "Healthy", JobsFailed > 0 ? "#F59E0B" : "#22C55E"),
+            new("Audit", "policy", "Healthy", "Events streaming", "Healthy", "#22C55E"),
+        };
+
+        // Jobs
+        Jobs = new List<JobItem>
+        {
+            new("DB Backup", JobsFailed > 0 ? "Failed" : "Running", $"{rnd.Next(0,12)}m"),
+            new("Cleanup Temp", "Queued", "—"),
+            new("Reindex", DbHealth == "OK" ? "Running" : "Queued", $"{rnd.Next(1,30)}m"),
+            new("Email Digest", "Queued", "—"),
+            new("Audit Export", "Running", $"{rnd.Next(0,8)}m"),
+            new("Cache Warmup", "Completed", $"{rnd.Next(1,5)}m"),
+        };
+    }
+
+    List<MetricPoint> BuildSeries(Random rnd, int count, int min, int max)
+    {
+        var now = DateTime.Now;
+        var points = new List<MetricPoint>();
+        for (int i = count - 1; i >= 0; i--)
+        {
+            var t = now.AddMinutes(-i * 5);
+            points.Add(new MetricPoint(t.ToString("HH:mm"), rnd.Next(min, max)));
+        }
+        return points;
+    }
+
+    List<SecurityAlert> BuildAlerts(Random rnd)
+    {
+        var now = DateTime.Now;
+        var severities = new[] { "Info", "Warning", "Critical" };
+        var cats = new[] { "Identity", "RBAC", "Firewall", "Data", "Audit", "API" };
+        var msgs = new[]
+        {
+            "Failed sign-in attempts exceeded threshold",
+            "New admin role assignment",
+            "Suspicious IP detected",
+            "Audit export requested",
+            "Policy updated",
+            "Rate limit triggered",
+            "Password reset initiated"
+        };
+
+        var list = new List<SecurityAlert>();
+        for (int i = 0; i < 18; i++)
+        {
+            var sev = severities[rnd.Next(0, severities.Length)];
+            list.Add(new SecurityAlert
+            {
+                Time = now.AddMinutes(-rnd.Next(5, 720)),
+                Severity = sev,
+                Category = cats[rnd.Next(0, cats.Length)],
+                User = rnd.NextDouble() > 0.2 ? $"user{rnd.Next(1,120)}@mitanz.local" : "sysadmin@mitanz.local",
+                Message = msgs[rnd.Next(0, msgs.Length)],
+                SourceIp = $"{rnd.Next(10, 223)}.{rnd.Next(0, 255)}.{rnd.Next(0, 255)}.{rnd.Next(1, 254)}"
+            });
+        }
+        return list.OrderByDescending(x => x.Time).ToList();
+    }
+
+    void ApplyFilter()
+    {
+        IEnumerable<SecurityAlert> q = Alerts;
+
+        if (AlertFilter != "All")
+            q = q.Where(a => a.Severity.Equals(AlertFilter, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            var s = SearchText.Trim();
+            q = q.Where(a =>
+                (a.User?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (a.Message?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (a.SourceIp?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (a.Category?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        FilteredAlerts = q.ToList();
+    }
+
+    void Refresh()
+    {
+        SeedDemo();
+        ApplyFilter();
+        Notifications.Notify(NotificationSeverity.Info, "Dashboard refreshed", "Sample data regenerated.");
+    }
+
+    async Task RunSecurityCheck()
+    {
+        await Task.Delay(150); // demo only
+        Notifications.Notify(NotificationSeverity.Success, "Security check", "All baseline controls passed (demo).");
+    }
+
+    async Task ToggleMaintenance(object _)
+    {
+        await Task.Delay(50); // demo only
+        Notifications.Notify(NotificationSeverity.Warning, "Maintenance mode",
+            MaintenanceMode ? "Enabled (demo)" : "Disabled (demo)");
+    }
+
+    async Task TriggerBackup()
+    {
+        await Task.Delay(150); // demo only
+        Notifications.Notify(NotificationSeverity.Success, "Backup queued", "Backup job added to queue (demo).");
+    }
+
+    async Task RotateKeys()
+    {
+        await Task.Delay(120); // demo only
+        Notifications.Notify(NotificationSeverity.Info, "Key rotation", "Key rotation initiated (demo).");
+    }
+
+    async Task ClearCache()
+    {
+        await Task.Delay(120); // demo only
+        Notifications.Notify(NotificationSeverity.Success, "Cache cleared", "Application cache cleared (demo).");
+    }
+
+    async Task ExportDemo()
+    {
+        await Task.Delay(120); // demo only
+        Notifications.Notify(NotificationSeverity.Info, "Export", "Export started (demo).");
+    }
+
+    async Task ViewAlert(SecurityAlert a)
+    {
+        var msg =
+$@"Time: {a.Time:yyyy-MM-dd HH:mm}
+Severity: {a.Severity}
+Category: {a.Category}
+User: {a.User}
+IP: {a.SourceIp}
+
+Event: {a.Message}";
+        await Dialogs.Alert(msg, "Alert Details");
+    }
+
+    // ---- UI helpers ----
+    string BadgeStyle(int score)
+    {
+        if (score >= 97) return "background: rgba(34,197,94,.12); color: var(--green); border:1px solid rgba(34,197,94,.25);";
+        if (score >= 93) return "background: rgba(245,158,11,.12); color: var(--amber); border:1px solid rgba(245,158,11,.25);";
+        return "background: rgba(239,68,68,.12); color: var(--red); border:1px solid rgba(239,68,68,.25);";
+    }
+
+    string SeverityBadge(string s) => s switch
+    {
+        "Critical" => "background: rgba(239,68,68,.12); color: var(--red); border:1px solid rgba(239,68,68,.30);",
+        "Warning"  => "background: rgba(245,158,11,.12); color: var(--amber); border:1px solid rgba(245,158,11,.30);",
+        _          => "background: rgba(34,211,238,.12); color: var(--cyan); border:1px solid rgba(34,211,238,.30);",
+    };
+
+    string ServiceBadge(string state) => state switch
+    {
+        "Healthy"  => "background: rgba(34,197,94,.12); color: var(--green); border:1px solid rgba(34,197,94,.25);",
+        "Degraded" => "background: rgba(245,158,11,.12); color: var(--amber); border:1px solid rgba(245,158,11,.25);",
+        _          => "background: rgba(239,68,68,.12); color: var(--red); border:1px solid rgba(239,68,68,.25);",
+    };
+
+    string DbHealthBadge(string state) => state switch
+    {
+        "OK"       => "background: rgba(34,197,94,.12); color: var(--green); border:1px solid rgba(34,197,94,.25);",
+        "Degraded" => "background: rgba(245,158,11,.12); color: var(--amber); border:1px solid rgba(245,158,11,.25);",
+        _          => "background: rgba(239,68,68,.12); color: var(--red); border:1px solid rgba(239,68,68,.25);",
+    };
+
+    string JobBadge(string status) => status switch
+    {
+        "Running"   => "background: rgba(37,99,235,.14); color: var(--blue); border:1px solid rgba(37,99,235,.35);",
+        "Queued"    => "background: rgba(139,92,246,.14); color: var(--violet); border:1px solid rgba(139,92,246,.35);",
+        "Completed" => "background: rgba(34,197,94,.12); color: var(--green); border:1px solid rgba(34,197,94,.25);",
+        "Failed"    => "background: rgba(239,68,68,.12); color: var(--red); border:1px solid rgba(239,68,68,.25);",
+        _           => "background: rgba(148,163,184,.10); color: var(--muted); border:1px solid rgba(148,163,184,.25);",
+    };
+
+    string SmallBadge(int val, int warn, int crit, bool isMs = false)
+    {
+        // warn/crit thresholds
+        if (val >= crit) return "background: rgba(239,68,68,.12); color: var(--red); border:1px solid rgba(239,68,68,.25);";
+        if (val >= warn) return "background: rgba(245,158,11,.12); color: var(--amber); border:1px solid rgba(245,158,11,.25);";
+        return "background: rgba(34,197,94,.12); color: var(--green); border:1px solid rgba(34,197,94,.25);";
+    }
+
+    // ---- Models ----
+    class MetricPoint
+    {
+        public MetricPoint(string timeLabel, int value) { TimeLabel = timeLabel; Value = value; }
+        public string TimeLabel { get; set; } = "";
+        public int Value { get; set; }
+    }
+
+    class PieSlice
+    {
+        public PieSlice(string name, int value) { Name = name; Value = value; }
+        public string Name { get; set; } = "";
+        public int Value { get; set; }
+    }
+
+    class SecurityAlert
+    {
+        public DateTime Time { get; set; }
+        public string Severity { get; set; } = "Info";
+        public string Category { get; set; } = "";
+        public string User { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string SourceIp { get; set; } = "";
+    }
+
+    class ServiceStatus
+    {
+        public ServiceStatus(string name, string icon, string state, string detail, string state2, string color)
+        { Name = name; Icon = icon; State = state2; Detail = detail; Color = color; }
+        public string Name { get; set; } = "";
+        public string Icon { get; set; } = "info";
+        public string State { get; set; } = "Healthy";
+        public string Detail { get; set; } = "";
+        public string Color { get; set; } = "#22C55E";
+    }
+
+    class JobItem
+    {
+        public JobItem(string name, string status, string runtime) { Name = name; Status = status; Runtime = runtime; }
+        public string Name { get; set; } = "";
+        public string Status { get; set; } = "";
+        public string Runtime { get; set; } = "";
+    }
+}

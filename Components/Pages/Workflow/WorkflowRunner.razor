@@ -1,0 +1,118 @@
+﻿@page "/workflow-runner"
+
+@using MITANZ360Pro.Web.Models.Workflow
+@using MITANZ360Pro.Web.Services.Workflow.Engine
+@using MITANZ360Pro.Web.Services.Workflow.Repository
+@using MITANZ360Pro.Web.Services.Workflow.Validation
+
+@inject WorkflowExecutionService WorkflowService
+@inject WorkflowValidator Validator
+
+<PageTitle>Workflow Runner</PageTitle>
+
+<h3>Workflow Runner</h3>
+
+<div class="row">
+
+    <div class="col-md-4">
+
+        <label class="form-label">Workflow</label>
+
+        <select class="form-select" @bind="SelectedWorkflow">
+
+            <option value="">-- Select --</option>
+
+            @foreach (var item in Workflows)
+            {
+                <option value="@item">@item</option>
+            }
+
+        </select>
+
+        <button class="btn btn-primary mt-3 w-100"
+                @onclick="RunWorkflow">
+            Execute
+        </button>
+
+    </div>
+
+    <div class="col-md-8">
+
+        @if (Errors.Any())
+        {
+            <div class="alert alert-danger">
+
+                <ul class="mb-0">
+
+                    @foreach (var error in Errors)
+                    {
+                        <li>@error</li>
+                    }
+
+                </ul>
+
+            </div>
+        }
+
+        @if (Result is not null)
+        {
+            <div class="card">
+
+                <div class="card-header">
+                    Workflow Result
+                </div>
+
+                <div class="card-body">
+
+                    <pre>@System.Text.Json.JsonSerializer.Serialize(
+                        Result.Variables,
+                        new System.Text.Json.JsonSerializerOptions
+                        {
+                            WriteIndented = true
+                        })</pre>
+
+                </div>
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@code
+{
+    private List<string> Workflows = [];
+
+    private string SelectedWorkflow = string.Empty;
+
+    private WorkflowContext? Result;
+
+    private List<string> Errors = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        Workflows = await WorkflowService.GetWorkflowsAsync();
+    }
+
+    private async Task RunWorkflow()
+    {
+        Errors.Clear();
+        Result = null;
+
+        if (string.IsNullOrWhiteSpace(SelectedWorkflow))
+            return;
+
+        var workflow = await WorkflowService.LoadAsync(SelectedWorkflow);
+
+        if (workflow is null)
+            return;
+
+        Errors = Validator.Validate(workflow).ToList();
+
+        if (Errors.Count > 0)
+            return;
+
+        Result = await WorkflowService.ExecuteAsync(workflow);
+    }
+}

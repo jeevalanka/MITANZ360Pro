@@ -1,0 +1,476 @@
+﻿
+@page "/admin/system-settings"
+@layout MainLayout_NoRightPan
+@attribute [Authorize(Roles = "Admin,SysAdmin")]
+
+@using Microsoft.AspNetCore.Components.Forms
+@using MITANZ360Pro.Web.Services
+@using SettingsConfig = MITANZ360Pro.Web.Models.SystemSettings
+
+@inject ISystemSettingsService SettingsService
+
+<PageTitle>System Settings</PageTitle>
+
+<div class="container-fluid py-4">
+
+    <!-- HEADER -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h1 class="fw-bold display-6 mb-1 text-dark">
+                ⚙️ System Settings
+            </h1>
+
+            <p class="text-muted fs-5 mb-0">
+                Enterprise configuration management
+            </p>
+        </div>
+
+    </div>
+
+    <!-- LOADING -->
+
+    @if (isLoading)
+    {
+        <div class="alert alert-info shadow-sm border-0 rounded-4">
+            Loading system settings...
+        </div>
+    }
+
+    <!-- ERROR -->
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger shadow-sm border-0 rounded-4">
+            @errorMessage
+        </div>
+    }
+
+    <!-- FORM -->
+
+    <EditForm Model="@config"
+              OnValidSubmit="@SaveSettingsAsync">
+
+        <DataAnnotationsValidator />
+
+        <ValidationSummary />
+
+        <!-- APPLICATION SETTINGS -->
+
+        <div class="card border-0 shadow-lg rounded-4 mb-4 bg-dark text-white">
+
+            <div class="card-header border-0 fs-4 fw-bold bg-secondary rounded-top-4">
+                🏢 Application Settings
+            </div>
+
+            <div class="card-body p-4">
+
+                <div class="row g-4">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Application Name</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Application.Name" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Short Name</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Application.ShortName" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Version</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Application.Version" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Environment</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Application.Environment" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Company</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Application.Company" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Website</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Application.Website" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Support Email</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Application.SupportEmail" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Support Phone</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Application.SupportPhone" />
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- BRANDING -->
+
+        <div class="card border-0 shadow-lg rounded-4 mb-4 bg-dark text-white">
+
+            <div class="card-header border-0 fs-4 fw-bold bg-warning text-dark rounded-top-4">
+                🎨 Branding Settings
+            </div>
+
+            <div class="card-body p-4">
+
+                <div class="row g-4">
+
+                    <div class="col-md-6">
+                        <label class="form-label">Logo URL</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Branding.LogoUrl" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Small Logo URL</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Branding.LogoSmallUrl" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Primary Color</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Branding.PrimaryColor" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Secondary Color</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Branding.SecondaryColor" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Accent Color</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Branding.AccentColor" />
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- FEATURE FLAGS -->
+
+        <div class="card border-0 shadow-lg rounded-4 mb-4 bg-dark text-white">
+
+            <div class="card-header border-0 fs-4 fw-bold bg-primary rounded-top-4">
+                🚀 Feature Flags
+            </div>
+
+            <div class="card-body p-4">
+
+                <div class="row">
+
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check form-switch fs-5">
+                            <InputCheckbox class="form-check-input"
+                                           @bind-Value="config.Features.EnableAI" />
+                            <label class="form-check-label ms-2">Enable AI</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check form-switch fs-5">
+                            <InputCheckbox class="form-check-input"
+                                           @bind-Value="config.Features.EnableAudit" />
+                            <label class="form-check-label ms-2">Enable Audit</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check form-switch fs-5">
+                            <InputCheckbox class="form-check-input"
+                                           @bind-Value="config.Features.EnableCourseManagement" />
+                            <label class="form-check-label ms-2">Course Management</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check form-switch fs-5">
+                            <InputCheckbox class="form-check-input"
+                                           @bind-Value="config.Features.EnableStudentPortal" />
+                            <label class="form-check-label ms-2">Student Portal</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check form-switch fs-5">
+                            <InputCheckbox class="form-check-input"
+                                           @bind-Value="config.Features.EnableTeacherPortal" />
+                            <label class="form-check-label ms-2">Teacher Portal</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check form-switch fs-5">
+                            <InputCheckbox class="form-check-input"
+                                           @bind-Value="config.Features.EnableSharePointIntegration" />
+                            <label class="form-check-label ms-2">SharePoint Integration</label>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- AI SETTINGS -->
+
+        <div class="card border-0 shadow-lg rounded-4 mb-4 bg-dark text-white">
+
+            <div class="card-header border-0 fs-4 fw-bold bg-info text-dark rounded-top-4">
+                🤖 AI Settings
+            </div>
+
+            <div class="card-body p-4">
+
+                <div class="row g-4">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Provider</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.AI.Provider" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Model</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.AI.Model" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Temperature</label>
+                        <InputNumber TValue="double"
+                                     class="form-control form-control-lg"
+                                     @bind-Value="config.AI.Temperature" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Max Tokens</label>
+                        <InputNumber TValue="int"
+                                     class="form-control form-control-lg"
+                                     @bind-Value="config.AI.MaxTokens" />
+                    </div>
+
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="form-check form-switch fs-5">
+                            <InputCheckbox class="form-check-input"
+                                           @bind-Value="config.AI.EnableEducationalAnalysis" />
+                            <label class="form-check-label ms-2">
+                                Educational Analysis
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- CLIENT SETTINGS -->
+
+        <div class="card border-0 shadow-lg rounded-4 mb-4 bg-dark text-white">
+
+            <div class="card-header border-0 fs-4 fw-bold bg-secondary rounded-top-4">
+                🌍 Client Settings
+            </div>
+
+            <div class="card-body p-4">
+
+                <div class="row g-4">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Client Name</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Client.ClientName" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Client Code</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Client.ClientCode" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Region</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.Client.Region" />
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- EMAIL SETTINGS -->
+
+        <div class="card border-0 shadow-lg rounded-4 mb-4 bg-dark text-white">
+
+            <div class="card-header border-0 fs-4 fw-bold bg-success rounded-top-4">
+                📧 MS-Graph Email Settings
+            </div>
+
+            <div class="card-body p-4">
+
+                <div class="row g-4">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Provider</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.EmailSettings.Provider" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Sender Name</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.EmailSettings.SenderName" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Sender Email</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.EmailSettings.SenderEmail" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Admin Email</label>
+                        <InputText class="form-control form-control-lg"
+                                   @bind-Value="config.EmailSettings.AdminEmail" />
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- SAVE BUTTON -->
+
+        <div class="d-flex justify-content-end mb-5">
+
+            <button type="submit"
+                    class="btn btn-warning btn-lg px-5 fw-bold"
+                    disabled="@isSaving">
+
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    <span>Saving...</span>
+                }
+                else
+                {
+                    <span>💾 Save Settings</span>
+                }
+
+            </button>
+
+        </div>
+
+        <!-- SUCCESS -->
+
+        @if (!string.IsNullOrWhiteSpace(successMessage))
+        {
+            <div class="alert alert-success shadow-sm border-0 rounded-4 mb-4">
+                @successMessage
+            </div>
+        }
+
+    </EditForm>
+
+</div>
+
+@code {
+
+    private SettingsConfig config = new();
+
+    private bool isLoading = true;
+
+    private bool isSaving;
+
+    private bool showPassword;
+
+    private string? successMessage;
+
+    private string? errorMessage;
+
+    private string PasswordInputType =>
+        showPassword ? "text" : "password";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var loadedSettings =
+                await SettingsService.GetSettingsAsync();
+
+            if (loadedSettings != null)
+            {
+                config = loadedSettings;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Failed to load settings: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        try
+        {
+            isSaving = true;
+
+            successMessage = null;
+
+            errorMessage = null;
+
+            await SettingsService.SaveSettingsAsync(config);
+
+            successMessage =
+                "System settings saved successfully.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Failed to save settings: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void TogglePassword()
+    {
+        showPassword = !showPassword;
+    }
+}

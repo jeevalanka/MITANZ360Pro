@@ -1,0 +1,177 @@
+{
+  "_lock": {
+    "locked": true,
+    "allowStructureChange": false,
+    "allowedOverrides": [
+      "task",
+      "instruction",
+      "input",
+      "output.schema",
+      "actions",
+      "aiConfig",
+      "execution",
+      "orchestration"
+    ]
+  },
+
+  "meta": {
+    "version": "4.3",
+    "templateName": "Bank Reconciliation (Local File Enabled)",
+    "description": "Uses local file paths as input sources",
+    "namingConvention": "camelCase"
+  },
+
+  "task": {
+    "id": "bank-reconciliation",
+    "name": "financial-reconciliation",
+    "type": "analysis",
+    "subType": "finance",
+    "priority": "high"
+  },
+
+  "system": {
+    "mode": "deterministic",
+    "rules": [
+      "Do NOT hallucinate",
+      "Use ONLY provided input",
+      "Return ONLY valid JSON",
+      "Follow schema strictly",
+      "Do NOT add extra fields",
+      "Include current date and time in ISO format in field 'generatedAt'",
+      "Include list of input sources used in field 'sourcesUsed'"
+    ],
+    "guardrails": {
+      "strictSchema": true,
+      "rejectUnknownFields": true,
+      "allowPartial": false,
+      "maxRetries": 2
+    }
+  },
+
+  "instruction": {
+    "objective": "Reconcile bank statement with internal ledger using provided files and identify discrepancies",
+    "rules": [
+      "Return ONLY JSON",
+      "No explanation",
+      "Match transactions by date and amount",
+      "Calculate variance",
+      "Determine risk level",
+      "Provide recommendations"
+    ]
+  },
+
+  "input": {
+    "mode": "multi-source",
+    "sources": [
+      {
+        "id": "bank-statement",
+        "type": "local.file",
+        "enabled": true,
+        "config": {
+          "path": "Temp-Files/Bank_Statement_April_2026.pdf"
+        }
+      },
+      {
+        "id": "ledger",
+        "type": "local.file",
+        "enabled": true,
+        "config": {
+          "path": "Temp-Files/Ledger_April_2026.pdf"
+        }
+      }
+    ]
+  },
+
+  "aiConfig": {
+    "provider": "azureOpenAI",
+    "deployment": "gpt-4o-mini",
+    "temperature": 0.1,
+    "maxTokens": 1800,
+    "responseFormat": "json"
+  },
+
+  "orchestration": {
+    "mode": "sequential",
+    "steps": [
+      {
+        "name": "reconciliation-analysis",
+        "type": "analysis",
+        "input": "input",
+        "output": "analysisResult",
+        "schema": {
+          "generatedAt": "string",
+          "sourcesUsed": "array",
+          "summary": "string",
+          "insights": "string",
+          "risks": "string",
+          "recommendations": "string"
+        }
+      }
+    ]
+  },
+
+  "output": {
+    "format": "json",
+    "schema": {
+      "generatedAt": "string",
+      "sourcesUsed": "array",
+      "summary": "string",
+      "insights": "string",
+      "risks": "string",
+      "recommendations": "string"
+    },
+    "validation": {
+      "strict": true,
+      "requiredFields": [
+        "generatedAt",
+        "sourcesUsed",
+        "summary",
+        "insights",
+        "risks",
+        "recommendations"
+      ],
+      "rejectExtraFields": true
+    }
+  },
+
+  "actions": [
+    {
+      "id": "sp-upsert",
+      "type": "sharepoint.upsert",
+      "enabled": false,
+      "target": {
+        "listName": "ReconciliationLog"
+      },
+      "mapping": {
+        "Title": "output.summary",
+        "Insights": "output.insights",
+        "Risks": "output.risks"
+      }
+    }
+  ],
+
+  "execution": {
+    "retryPolicy": {
+      "enabled": true,
+      "maxRetries": 2,
+      "strategy": "fix_json"
+    },
+    "timeoutSeconds": 120,
+    "parallelExecution": false
+  },
+
+  "security": {
+    "sanitizeInput": true,
+    "validateMappings": true,
+    "allowExternalCalls": false,
+    "dataClassification": "internal"
+  },
+
+  "monitoring": {
+    "logging": true,
+    "logLevel": "information",
+    "trackTokenUsage": true,
+    "trackExecutionTime": true,
+    "auditTrail": true
+  }
+}

@@ -1,0 +1,454 @@
+﻿@using MITANZ360Pro.Web.Models
+@using MITANZ360Pro.Web.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Radzen
+@using Radzen.Blazor
+@using Microsoft.JSInterop
+
+@inject SharePointService SharePointService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+
+<!-- =====================================================
+     RIGHT PANEL
+===================================================== -->
+
+<div class="right-panel">
+
+    <div class="rp-grid">
+
+        @if (NavigationCards.Any())
+        {
+            @foreach (var card in NavigationCards)
+            {
+                <RadzenCard class=@($@"
+                                                rp-card
+                                                {card.CardColor}
+                                                {(SelectedUrl == card.Url
+                                                                        ? "rp-active"
+                                                                        : "")}
+                                            ")>
+
+                    <div class="rp-content"
+                         @onclick="() => OpenCard(card)">
+
+                        <!-- =====================================================
+                             IMAGE / ICON
+                        ====================================================== -->
+                        @if (!string.IsNullOrWhiteSpace(card.ImageUrl))
+                        {
+                            <img src="@card.ImageUrl"
+                                 class="rp-image"
+                                 alt="@card.Title" />
+                        }
+                        else
+                        {
+                            <RadzenIcon Icon="@card.Icon"
+                                        class="rp-icon" />
+                        }
+
+                        <!-- =====================================================
+                             TITLE
+                        ====================================================== -->
+
+                        <div class="rp-title">
+
+                            @card.Title
+
+                        </div>
+
+                        <!-- =====================================================
+                             SUBTITLE
+                        ====================================================== -->
+
+                        <div class="rp-sub">
+
+                            @card.Subtitle
+                        </div>
+
+                    </div>
+
+                </RadzenCard>
+            }
+        }
+        else
+        {
+            <div class="rp-empty">
+
+                No navigation cards available
+                for your assigned roles.
+
+            </div>
+        }
+
+    </div>
+
+</div>
+
+@code {
+
+    // =====================================================
+    // DATA
+    // =====================================================
+
+    private List<NavigationCardModel>
+        NavigationCards = [];
+
+    // =====================================================
+    // CURRENT USER ROLES
+    // =====================================================
+
+    private List<string>
+        CurrentUserRoles = [];
+
+    // =====================================================
+    // ACTIVE CARD
+    // =====================================================
+
+    private string SelectedUrl = "";
+
+    // =====================================================
+    // INIT
+    // =====================================================
+
+    protected override async Task
+        OnInitializedAsync()
+    {
+        SelectedUrl =
+            Navigation.Uri;
+
+        await LoadNavigationCardsAsync();
+    }
+
+    // =====================================================
+    // LOAD NAVIGATION CARDS
+    // =====================================================
+
+    private async Task
+        LoadNavigationCardsAsync()
+    {
+        try
+        {
+            // =====================================================
+            // AUTH STATE
+            // =====================================================
+
+            var authState =
+                await AuthenticationStateProvider
+                    .GetAuthenticationStateAsync();
+
+            var user =
+                authState.User;
+
+            // =====================================================
+            // CURRENT USER ROLES
+            // =====================================================
+
+            CurrentUserRoles =
+                user.Claims
+
+                    .Where(x =>
+                        x.Type ==
+                        ClaimTypes.Role)
+
+                    .Select(x =>
+                        x.Value
+                            .Trim()
+                            .ToLower())
+
+                    .Distinct()
+
+                    .ToList();
+
+            Console.WriteLine(
+                $"USER ROLES: {string.Join(",", CurrentUserRoles)}");
+
+            // =====================================================
+            // LOAD ALL CARDS
+            // =====================================================
+
+            var allCards =
+                await SharePointService
+                    .GetNavigationCardsAsync();
+
+            // =====================================================
+            // FILTER CARDS
+            // =====================================================
+
+            NavigationCards =
+                allCards
+                    .Where(card =>
+                    {
+                        // =====================================================
+                        // ENABLED ONLY
+                        // =====================================================
+
+                        if (!card.IsEnabled)
+                        {
+                            return false;
+                        }
+
+                        // =====================================================
+                        // PUBLIC CARD
+                        // =====================================================
+
+                        if (string.IsNullOrWhiteSpace(
+                            card.Role))
+                        {
+                            return true;
+                        }
+
+                        // =====================================================
+                        // CARD ROLES
+                        // =====================================================
+
+                        var cardRoles =
+                            (card.Role ?? "")
+
+                                .Replace("\n", "")
+                                .Replace("\r", "")
+
+                                .Split(
+                                    new[] { ',', ';' },
+                                    StringSplitOptions
+                                        .RemoveEmptyEntries)
+
+                                .Select(x =>
+                                    x.Trim().ToLower())
+
+                                .Distinct()
+
+                                .ToList();
+
+                        Console.WriteLine(
+                            $"CARD: {card.Title} | ROLES: {string.Join(",", cardRoles)}");
+
+                        // =====================================================
+                        // GUEST
+                        // GUEST = ANY AUTHENTICATED USER
+                        // =====================================================
+
+                        if (cardRoles.Contains("guest"))
+                        {
+                            return true;
+                        }
+
+                        // =====================================================
+                        // MATCH ANY ROLE
+                        // =====================================================
+
+                        return CurrentUserRoles
+                            .Intersect(cardRoles)
+                            .Any();
+                    })
+
+                    .OrderBy(x =>
+                        x.SortOrder)
+
+                    .ToList();
+
+            Console.WriteLine(
+                $"VISIBLE CARDS: {NavigationCards.Count}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"Navigation card error: {ex.Message}");
+
+            Console.WriteLine(ex);
+        }
+    }
+
+    // =====================================================
+    // OPEN CARD
+    // =====================================================
+
+    private async Task
+        OpenCard(
+            NavigationCardModel card)
+    {
+        // =====================================================
+        // ACTIVE CARD
+        // =====================================================
+
+        SelectedUrl =
+            card.Url ?? "";
+
+        StateHasChanged();
+
+        // =====================================================
+        // URL CHECK
+        // =====================================================
+
+        if (string.IsNullOrWhiteSpace(
+            card.Url))
+        {
+            return;
+        }
+
+        // =====================================================
+        // EXTERNAL URL
+        // OPEN NEW TAB
+        // =====================================================
+
+        if ((card.OpenType ?? "")
+            .Equals(
+                "External",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            await JS.InvokeVoidAsync(
+                "open",
+                card.Url,
+                "_blank");
+
+            return;
+        }
+
+        // =====================================================
+        // INTERNAL URL
+        // =====================================================
+
+        Navigation.NavigateTo(
+            card.Url);
+    }
+}
+
+<style>
+
+    /* =====================================================
+           RIGHT PANEL
+        ===================================================== */
+
+    .right-panel {
+        width: 100%;
+        height: 100%;
+        padding: 8px;
+        overflow-y: auto;
+        background: #ffffff;
+    }
+
+    /* =====================================================
+           GRID
+        ===================================================== */
+
+    .rp-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        width: 100%;
+    }
+
+    /* =====================================================
+           CARD
+        ===================================================== */
+
+    .rp-card {
+        border-radius: 16px !important;
+        padding: 6px;
+        cursor: pointer;
+        background: rgba(255,255,255,0.78) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.6);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+        transition: all 0.25s ease;
+        height: 118px;
+        min-height: 118px;
+        max-height: 118px;
+        overflow: hidden;
+    }
+
+    /* =====================================================
+           ACTIVE CARD
+        ===================================================== */
+
+    .rp-active {
+        border: 2px solid #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        transform: scale(1.02);
+    }
+
+    /* =====================================================
+           HOVER
+        ===================================================== */
+
+    .rp-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.10);
+    }
+
+    /* =====================================================
+           CONTENT
+        ===================================================== */
+
+    .rp-content {
+        text-align: center;
+        padding: 6px 4px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+    }
+
+    /* =====================================================
+           IMAGE
+        ===================================================== */
+
+    .rp-image {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+        margin-bottom: 6px;
+    }
+
+    /* =====================================================
+           ICON
+        ===================================================== */
+
+    .rp-icon {
+        font-size: 28px !important;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+
+    /* =====================================================
+           TITLE
+        ===================================================== */
+
+    .rp-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #111827;
+        margin-bottom: 2px;
+        line-height: 1.1;
+        text-align: center;
+    }
+
+    /* =====================================================
+           SUBTITLE
+        ===================================================== */
+
+    .rp-sub {
+        font-size: 10px;
+        color: #6b7280;
+        line-height: 1.1;
+        text-align: center;
+    }
+
+    /* =====================================================
+           EMPTY
+        ===================================================== */
+
+    .rp-empty {
+        grid-column: span 2;
+        text-align: center;
+        padding: 30px 10px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+</style>

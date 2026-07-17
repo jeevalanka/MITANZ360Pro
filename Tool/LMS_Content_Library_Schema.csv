@@ -1,0 +1,52 @@
+﻿DisplayName,InternalName,Type,Required,Indexed,Choices
+Content ID,LMS_CORE_ContentId,Text,Yes,Yes,
+Content Title,LMS_CORE_ContentTitle,Text,Yes,Yes,
+Content Code,LMS_CORE_ContentCode,Text,No,Yes,
+Content Type,LMS_CORE_ContentType,Choice,Yes,Yes,Lab|Video|PDF|ZIP|Link|PowerPoint|Image|Assignment|Quiz|SCORM|TutorGuide|Assessment|Word
+Description,LMS_CORE_Description,Note,No,No,
+AI Keywords,LMS_AI_Keywords,Note,No,No,
+AI Search Tags,LMS_AI_SearchTags,Note,No,No,
+Course Code,LMS_CRS_CourseCode,Text,Yes,Yes,
+Course Name,LMS_CRS_CourseName,Text,Yes,Yes,
+Module Code,LMS_CRS_ModuleCode,Text,No,Yes,
+Module Name,LMS_CRS_ModuleName,Text,No,No,
+Unit Code,LMS_CRS_UnitCode,Text,No,Yes,
+Intake Code,LMS_CRS_IntakeCode,Text,No,Yes,
+Academic Year,LMS_CRS_AcademicYear,Number,Yes,Yes,
+Academic Term,LMS_CRS_AcademicTerm,Choice,Yes,Yes,T1|T2|T3|T4
+NZQA Level,LMS_CRS_NZQALevel,Choice,Yes,Yes,Level 3|Level 4|Level 5|Level 6|Level 7
+Country,LMS_ORG_Country,Choice,Yes,Yes,NZ|AU|LK|NP|MV
+Faculty,LMS_ORG_Faculty,Text,Yes,Yes,
+Branch,LMS_ORG_Branch,Text,No,Yes,
+Delivery Mode,LMS_ORG_DeliveryMode,Choice,Yes,Yes,Online|Hybrid|Physical|SelfPaced
+Audience Type,LMS_ORG_AudienceType,Choice,Yes,Yes,Admin|Tutor|Student|Assessor
+Release Date,LMS_REL_ReleaseDate,DateTime,Yes,Yes,
+Expiry Date,LMS_REL_ExpiryDate,DateTime,No,Yes,
+Is Published,LMS_REL_IsPublished,Boolean,Yes,Yes,
+Is Archived,LMS_ARC_IsArchived,Boolean,Yes,Yes,
+Is Mandatory,LMS_REL_IsMandatory,Boolean,No,No,
+Tutor Only,LMS_REL_TutorOnly,Boolean,No,No,
+Requires Approval,LMS_REL_RequiresApproval,Boolean,No,No,
+Approval Status,LMS_GOV_ApprovalStatus,Choice,Yes,Yes,Draft|Pending|Approved|Rejected|Archived
+Visibility Rule,LMS_REL_VisibilityRule,Choice,No,No,Immediate|Scheduled|TutorRelease|CompletionBased
+Assessment Type,LMS_ASM_AssessmentType,Choice,No,No,Quiz|Assignment|FinalExam|PeerReview|Practical|Viva|Observation
+Engagement Required,LMS_ENG_EngagementRequired,Boolean,No,No,
+Completion Required,LMS_ENG_CompletionRequired,Boolean,No,No,
+Pass Mark,LMS_ASM_PassMark,Number,No,No,
+Estimated Minutes,LMS_ENG_EstimatedMinutes,Number,No,No,
+Max Attempts,LMS_ASM_MaxAttempts,Number,No,No,
+Weight Percentage,LMS_ASM_WeightPercentage,Number,No,No,
+Tutor Email,LMS_GOV_TutorEmail,Text,No,No,
+Assessor Email,LMS_GOV_AssessorEmail,Text,No,No,
+Compliance Tag,LMS_GOV_ComplianceTag,Choice,No,Yes,NZQA|AQF|Evidence|Audit|Internal
+Retention Category,LMS_GOV_RetentionCategory,Choice,No,Yes,1Year|3Years|5Years|7Years|Permanent
+Version Number,LMS_GOV_VersionNumber,Number,Yes,No,
+AI Indexed,LMS_AI_Indexed,Boolean,Yes,Yes,
+External URL,LMS_FIL_ExternalUrl,Text,No,No,
+Media Duration (Seconds),LMS_FIL_MediaDuration,Number,No,No,
+File Size (MB),LMS_FIL_FileSizeMB,Number,No,No,
+Archive Status,LMS_ARC_ArchiveStatus,Choice,No,Yes,Active|Archived|Retired
+Archive Date,LMS_ARC_ArchiveDate,DateTime,No,Yes,
+Archived By,LMS_ARC_ArchivedBy,Text,No,No,
+Previous Intake,LMS_ARC_PreviousIntake,Text,No,No,
+Historical Copy,LMS_ARC_HistoricalCopy,Boolean,No,No

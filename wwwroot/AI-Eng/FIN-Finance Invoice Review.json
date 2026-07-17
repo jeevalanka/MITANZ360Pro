@@ -1,0 +1,69 @@
+{
+  "_comments": {
+    "description": "Finance Invoice Review"
+  },
+
+  "taskName": "Invoice Review",
+
+  "dataSources": [],
+
+  "instruction": {
+    "objective": "Review invoice details and highlight issues or actions required",
+
+    "pipeline": [
+      "validate",
+      "analyze",
+      "summarize"
+    ],
+
+    "tasks": [
+      "Check payment status",
+      "Identify overdue invoices",
+      "Highlight financial risks"
+    ],
+
+    "rules": [
+      "No assumptions",
+      "Use given data only"
+    ],
+
+    "analysis": {
+      "depth": "medium",
+      "focus": [ "payment status", "risk" ]
+    },
+
+    "output": {
+      "style": "summary",
+      "tone": "professional",
+      "format": "structured"
+    }
+  },
+
+  "input": {
+    "invoiceId": "INV-2026-1001",
+    "amount": 2500,
+    "status": "Overdue",
+    "dueDate": "2026-04-10"
+  },
+
+  "outputSchema": {
+    "summary": "string",
+    "actionRequired": "string"
+  },
+
+  "settings": {
+    "temperature": 0.2,
+    "maxTokens": 900
+  },
+
+  "execution": {
+    "autoFetchDataSources": false,
+    "strictSchema": true
+  },
+
+  "output": {
+    "format": "text",
+    "template": "",
+    "saveTo": ""
+  }
+}

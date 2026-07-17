@@ -1,0 +1,53 @@
+@* ═══════════════════════════════════════════════════════════════════
+   StatusBar.razor  (new)
+   Deliberately minimal for Phase 1: selection count + current
+   drive/folder + a static "Connected" indicator. Graph/SharePoint
+   health, background jobs, and version info from the original
+   master-prompt spec are Phase 3 items (see architecture doc §4/§5) —
+   there's no health-check or job-queue service yet to wire this to.
+═══════════════════════════════════════════════════════════════════ *@
+@using MITANZ360Pro.Web.Services
+
+<div class="lib-statusbar">
+    <span>@SelectedCount selected</span>
+    <span class="sep">|</span>
+    <span>@FolderLabel</span>
+    <span class="sep">|</span>
+    <span class="status-dot"></span>
+    <span>SharePoint connected</span>
+</div>
+
+@code {
+    [Parameter] public int SelectedCount { get; set; }
+    [Parameter] public LibraryItem? CurrentFolder { get; set; }
+
+    private string FolderLabel => CurrentFolder == null
+        ? "Library root"
+        : (string.IsNullOrWhiteSpace(CurrentFolder.Title) ? CurrentFolder.Name : CurrentFolder.Title);
+}
+
+<style>
+    .lib-statusbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 30px;
+        padding: 0 14px;
+        background: #0F172A;
+        color: #cbd5e1;
+        font-size: 0.72rem;
+        flex-shrink: 0;
+    }
+
+    .sep {
+        color: #475569;
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+        display: inline-block;
+    }
+</style>

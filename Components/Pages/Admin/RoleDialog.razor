@@ -1,0 +1,97 @@
+﻿@namespace MITANZ360Pro.Web.Components.Pages.Admin
+
+@using MITANZ360Pro.Web.Models
+@using Radzen
+@using Radzen.Blazor
+
+@inject DialogService DialogService
+
+<RadzenTemplateForm TItem="AppRoleModel"
+                    Data="@Model"
+                    Submit="@OnSubmit">
+
+    <RadzenStack Gap="15px">
+
+        <!-- =====================================================
+             ROLE NAME
+        ===================================================== -->
+
+        <RadzenTextBox @bind-Value="Model.Title"
+                       Placeholder="Role Name"
+                       Style="width:100%;" />
+
+        <!-- =====================================================
+             DESCRIPTION
+        ===================================================== -->
+
+        <RadzenTextBox @bind-Value="Model.Description"
+                       Placeholder="Description"
+                       Style="width:100%;" />
+
+        <!-- =====================================================
+             ACTIVE
+        ===================================================== -->
+
+        <div style="display:flex;align-items:center;gap:10px;">
+
+            <RadzenCheckBox @bind-Value="Model.IsActive" />
+
+            <span>
+
+                Active
+
+            </span>
+
+        </div>
+
+        <!-- =====================================================
+             BUTTONS
+        ===================================================== -->
+
+        <div style="display:flex;gap:10px;">
+
+            <RadzenButton Text="Save"
+                          Icon="save"
+                          ButtonType="ButtonType.Submit"
+                          ButtonStyle="ButtonStyle.Primary" />
+
+            <RadzenButton Text="Cancel"
+                          Icon="close"
+                          ButtonStyle="ButtonStyle.Light"
+                          Click="@Cancel" />
+
+        </div>
+
+    </RadzenStack>
+
+</RadzenTemplateForm>
+
+@code {
+
+    // =====================================================
+    // MODEL
+    // =====================================================
+
+    [Parameter]
+    public AppRoleModel Model { get; set; }
+        = new();
+
+    // =====================================================
+    // SUBMIT
+    // =====================================================
+
+    private void OnSubmit(
+        AppRoleModel model)
+    {
+        DialogService.Close(Model);
+    }
+
+    // =====================================================
+    // CANCEL
+    // =====================================================
+
+    private void Cancel()
+    {
+        DialogService.Close(null);
+    }
+}

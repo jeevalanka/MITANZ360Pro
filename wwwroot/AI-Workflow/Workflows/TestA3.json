@@ -1,0 +1,106 @@
+{
+  "$schema": "1.0",
+  "Id": "6de4f1fa-761d-4e28-bc52-e0bffe67cfd5",
+  "Name": "TestA3",
+  "Description": "Details",
+  "Metadata": {
+    "Author": "",
+    "Department": "",
+    "Category": "",
+    "Tags": [],
+    "Version": "1.0.0",
+    "CreatedOn": "2026-06-16T15:29:22.4434974Z",
+    "ModifiedOn": "2026-06-16T15:29:22.4434978Z",
+    "IsEnabled": true
+  },
+  "DataSources": [
+    {
+      "Id": "fe35e274-c13e-4468-8818-eb7791059bf9",
+      "Name": "scrape step",
+      "Type": "scrape",
+      "Enabled": false,
+      "Order": 0,
+      "ContinueOnError": false,
+      "Inputs": [],
+      "Output": "scrapeOutput",
+      "Settings": {}
+    },
+    {
+      "Id": "9040a230-45c3-4d2a-93e2-098cca5b8894",
+      "Name": "http step",
+      "Type": "http",
+      "Enabled": true,
+      "Order": 2,
+      "ContinueOnError": false,
+      "Inputs": [],
+      "Output": "httpOutput",
+      "Settings": {}
+    },
+    {
+      "Id": "04a1edbb-4441-4686-a7da-ef9e4be14f67",
+      "Name": "sql step",
+      "Type": "sql",
+      "Enabled": true,
+      "Order": 3,
+      "ContinueOnError": false,
+      "Inputs": [],
+      "Output": "sqlOutput",
+      "Settings": {}
+    },
+    {
+      "Id": "8fb7627a-688c-449b-b6e0-0161640f5ba9",
+      "Name": "sharepoint step",
+      "Type": "sharepoint",
+      "Enabled": true,
+      "Order": 4,
+      "ContinueOnError": false,
+      "Inputs": [],
+      "Output": "sharepointOutput",
+      "Settings": {}
+    },
+    {
+      "Id": "8f29f9b1-9ef5-41d0-9f89-0adf6fb2bc12",
+      "Name": "sharepoint step",
+      "Type": "sharepoint",
+      "Enabled": true,
+      "Order": 5,
+      "ContinueOnError": false,
+      "Inputs": [],
+      "Output": "sharepointOutput",
+      "Settings": {}
+    },
+    {
+      "Id": "ccd6240a-131e-4562-a591-b0df024e083e",
+      "Name": "email step",
+      "Type": "email",
+      "Enabled": true,
+      "Order": 2,
+      "ContinueOnError": false,
+      "Inputs": [],
+      "Output": "emailOutput",
+      "Settings": {}
+    },
+    {
+      "Id": "89eabd1c-b758-432a-bd4d-f5d33af7e2ad",
+      "Name": "ai step",
+      "Type": "ai",
+      "Enabled": true,
+      "Order": 7,
+      "ContinueOnError": false,
+      "Inputs": [],
+      "Output": "aiOutput",
+      "Settings": {}
+    }
+  ],
+  "AiSteps": [],
+  "Output": {
+    "Name": "result",
+    "Format": "Json",
+    "Template": "",
+    "SaveToFile": false,
+    "FileName": "",
+    "Directory": "",
+    "ReturnToClient": true
+  },
+  "Actions": []
+}

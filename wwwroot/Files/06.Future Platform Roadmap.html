@@ -1,0 +1,231 @@
+﻿
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MITANZ360Edu Proposed System Architecture</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter',sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top right,#dbeafe,transparent 25%), radial-gradient(circle at bottom left,#ede9fe,transparent 25%), linear-gradient(to bottom,#ffffff,#f8fafc);
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: auto;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(420px,1fr));
+            gap: 30px;
+        }
+
+        .module-card {
+            position: relative;
+            text-decoration: none;
+            color: #0f172a;
+            padding: 35px;
+            border-radius: 32px;
+            background: rgba(255,255,255,.75);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,.6);
+            box-shadow: 0 10px 40px rgba(0,0,0,.06);
+            overflow: hidden;
+            transition: .35s;
+        }
+
+            .module-card:hover {
+                transform: translateY(-10px);
+                box-shadow: 0 25px 60px rgba(37,99,235,.15);
+            }
+
+            .module-card::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 5px;
+                background: linear-gradient( 90deg, #2563eb, #06b6d4, #7c3aed);
+            }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .module-card h3 {
+            font-size: 1.6rem;
+            margin-bottom: 15px;
+            font-weight: 800;
+        }
+
+        .module-card p {
+            color: #64748b;
+            line-height: 1.9;
+            margin-bottom: 20px;
+        }
+
+        .module-card ul {
+            padding-left: 20px;
+        }
+
+        .module-card li {
+            margin-bottom: 10px;
+            color: #334155;
+        }
+
+        .module-footer {
+            margin-top: 25px;
+            font-weight: 700;
+            color: #2563eb;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="cards">
+
+            <!-- SMS -->
+
+            <a href="/sms-system" class="module-card">
+
+                <div class="icon">
+                    🧠 🎓 🏆
+                </div>
+
+                <h3>
+                    AI-Powered Student Management System
+                </h3>
+
+                <p>
+
+                    A next-generation student lifecycle management platform supporting learners from enquiry through graduation and alumni engagement.
+
+                    Artificial Intelligence enhances admissions, enrolments, attendance tracking, communications, learner engagement and student success initiatives.
+
+                </p>
+
+                <ul>
+
+                    <li>✓ AI Student Success Intelligence</li>
+                    <li>✓ Predictive Risk Analytics</li>
+                    <li>✓ Attendance Monitoring</li>
+                    <li>✓ Academic Progress Tracking</li>
+                    <li>✓ Student Communications Hub</li>
+                    <li>✓ AI Recommendations</li>
+
+                </ul>
+
+                <div class="module-footer">
+
+                    Launch SMS →
+
+                </div>
+
+            </a>
+
+
+
+            <!-- HELPDESK -->
+
+            <a href="/help-desk" class="module-card">
+
+                <div class="icon">
+                    🎫 🤖 ⚡
+                </div>
+
+                <h3>
+                    AI-Powered Education HelpDesk
+                </h3>
+
+                <p>
+
+                    Intelligent support ecosystem designed specifically for education providers, students, academic staff and administration teams.
+
+                    Reduce response times and improve service quality through AI automation and self-service support.
+
+                </p>
+
+                <ul>
+
+                    <li>✓ AI Ticket Classification</li>
+                    <li>✓ Intelligent Ticket Routing</li>
+                    <li>✓ Virtual Support Assistants</li>
+                    <li>✓ Knowledge Base Automation</li>
+                    <li>✓ SLA Management</li>
+                    <li>✓ Service Analytics</li>
+
+                </ul>
+
+                <div class="module-footer">
+
+                    Launch HelpDesk →
+
+                </div>
+
+            </a>
+
+
+
+            <!-- ANALYTICS -->
+
+            <a href="/" class="module-card">
+
+                <div class="icon">
+                    📊 🚀 🏆
+                </div>
+
+                <h3>
+                    Analytics & Executive Intelligence
+                </h3>
+
+                <p>
+
+                    Transform institutional data into actionable intelligence through executive dashboards, predictive analytics and AI-powered insights.
+
+                </p>
+
+                <ul>
+
+                    <li>✓ Executive KPI Dashboards</li>
+                    <li>✓ Student Success Analytics</li>
+                    <li>✓ Predictive Intelligence</li>
+                    <li>✓ Academic Performance Monitoring</li>
+                    <li>✓ Compliance Reporting</li>
+                    <li>✓ AI Decision Support</li>
+
+                </ul>
+
+                <div class="module-footer">
+
+
+                </div>
+
+            </a>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,363 @@
+﻿@page "/admin/ai-configuration"
+@layout MainLayout_NoRightPan
+@attribute [Authorize(Roles = "Admin,SysAdmin")]
+
+@using Microsoft.AspNetCore.Components.Rendering
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using Radzen
+
+@inject IWebHostEnvironment Environment
+@inject NotificationService NotificationService
+
+<PageTitle>AI Configuration Center</PageTitle>
+
+<div class="ai-shell">
+
+    <RadzenRow Gap="20px">
+
+        <!-- LEFT PANEL -->
+
+        <RadzenColumn Size="12" SizeMD="4">
+
+            <RadzenCard class="glass-card">
+
+                <div class="page-title">
+                    AI Configuration Center
+                </div>
+
+                <RadzenTextBox Placeholder="Search configuration..."
+                               Style="width:100%"
+                               @bind-Value="searchText" />
+
+                <div class="file-list">
+
+                    @foreach (var file in FilteredFiles)
+                    {
+                        <div class="file-card"
+                             @onclick="() => OpenFile(file)">
+
+                            <strong>
+                                📄 @Path.GetFileNameWithoutExtension(file)
+                            </strong>
+
+                        </div>
+                    }
+
+                </div>
+
+            </RadzenCard>
+
+        </RadzenColumn>
+
+        <!-- RIGHT PANEL -->
+
+        <RadzenColumn Size="12" SizeMD="8">
+
+            @if (RootNode != null)
+            {
+                <RadzenCard class="glass-card">
+
+                    <div class="toolbar">
+
+                        <h3>@SelectedFileName</h3>
+
+                        <RadzenButton Icon="save"
+                                      Text="Save"
+                                      ButtonStyle="ButtonStyle.Success"
+                                      Click="SaveFile" />
+
+                    </div>
+
+                    @if (RootNode is JsonObject obj)
+                    {
+                        @foreach (var property in obj)
+                        {
+                            @RenderProperty(property.Key, property.Value)
+                        }
+                    }
+
+                </RadzenCard>
+            }
+
+        </RadzenColumn>
+
+    </RadzenRow>
+
+</div>
+
+@code
+{
+    private List<string> Files = [];
+
+    private string searchText = "";
+
+    private string? SelectedFile;
+
+    private string? SelectedFileName;
+
+    private JsonNode? RootNode;
+
+    private IEnumerable<string> FilteredFiles =>
+        Files.Where(x =>
+            string.IsNullOrWhiteSpace(searchText)
+            || Path.GetFileNameWithoutExtension(x)
+                .Contains(
+                    searchText,
+                    StringComparison.OrdinalIgnoreCase));
+
+    protected override void OnInitialized()
+    {
+        var folder =
+            Path.Combine(
+                Environment.WebRootPath,
+                "AI-Eng");
+
+        if (!Directory.Exists(folder))
+        {
+            Directory.CreateDirectory(folder);
+        }
+
+        Files = Directory
+            .GetFiles(
+                folder,
+                "*.json",
+                SearchOption.TopDirectoryOnly)
+            .OrderBy(Path.GetFileNameWithoutExtension)
+            .ToList();
+    }
+
+    private async Task OpenFile(string file)
+    {
+        SelectedFile = file;
+
+        SelectedFileName =
+            Path.GetFileNameWithoutExtension(file);
+
+        var json =
+            await File.ReadAllTextAsync(file);
+
+        RootNode =
+            JsonNode.Parse(json);
+
+        StateHasChanged();
+    }
+
+    private async Task SaveFile()
+    {
+        if (RootNode is null ||
+            string.IsNullOrWhiteSpace(SelectedFile))
+        {
+            return;
+        }
+
+        var json =
+            RootNode.ToJsonString(
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+        await File.WriteAllTextAsync(
+            SelectedFile,
+            json);
+
+        NotificationService.Notify(
+            NotificationSeverity.Success,
+            "Saved",
+            "JSON updated successfully");
+    }
+
+    private RenderFragment RenderProperty(
+        string key,
+        JsonNode? node) => builder =>
+    {
+        var seq = 0;
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "field-container");
+
+        builder.OpenElement(seq++, "label");
+        builder.AddContent(seq++, SplitWords(key));
+        builder.CloseElement();
+
+        if (node is JsonValue value)
+        {
+            var raw = value.ToJsonString();
+
+            if (bool.TryParse(raw, out var boolValue))
+            {
+                builder.OpenComponent<RadzenCheckBox<bool>>(seq++);
+                builder.AddAttribute(seq++, "Value", boolValue);
+                builder.AddAttribute(
+                    seq++,
+                    "ValueChanged",
+                    EventCallback.Factory.Create<bool>(
+                        this,
+                        v =>
+                        {
+                            node.ReplaceWith(
+                                JsonValue.Create(v));
+                        }));
+
+                builder.CloseComponent();
+            }
+            else
+            {
+                var text =
+                    raw.Trim('"');
+
+                builder.OpenComponent<RadzenTextBox>(seq++);
+                builder.AddAttribute(
+                    seq++,
+                    "Style",
+                    "width:100%");
+                builder.AddAttribute(
+                    seq++,
+                    "Value",
+                    text);
+                builder.AddAttribute(
+                    seq++,
+                    "Change",
+                    EventCallback.Factory.Create<string>(
+                        this,
+                        v =>
+                        {
+                            node.ReplaceWith(
+                                JsonValue.Create(v));
+                        }));
+
+                builder.CloseComponent();
+            }
+        }
+        else if (node is JsonObject childObject)
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(
+                seq++,
+                "class",
+                "nested-card");
+
+            foreach (var child in childObject)
+            {
+                builder.AddContent(
+                    seq++,
+                    RenderProperty(
+                        child.Key,
+                        child.Value));
+            }
+
+            builder.CloseElement();
+        }
+        else if (node is JsonArray array)
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(
+                seq++,
+                "class",
+                "nested-card");
+
+            builder.AddContent(
+                seq++,
+                $"Array Items: {array.Count}");
+
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    };
+
+    private static string SplitWords(string text)
+    {
+        return System.Text.RegularExpressions.Regex
+            .Replace(
+                text,
+                "([a-z])([A-Z])",
+                "$1 $2");
+    }
+}
+
+<style>
+
+    .ai-shell {
+        padding: 1rem;
+    }
+
+    .glass-card {
+        border-radius: 20px;
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        background: rgba(255,255,255,0.75);
+        border: 1px solid rgba(255,255,255,0.25);
+        box-shadow: 0 10px 30px rgba(0,0,0,.12);
+        padding: 20px;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+
+    .file-list {
+        margin-top: 15px;
+        max-height: 75vh;
+        overflow-y: auto;
+    }
+
+    .file-card {
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        transition: all .2s ease;
+    }
+
+        .file-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,.08);
+        }
+
+    .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .field-container {
+        margin-bottom: 15px;
+    }
+
+        .field-container label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #334155;
+        }
+
+    .nested-card {
+        margin-top: 10px;
+        padding: 15px;
+        border-radius: 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+    }
+
+    @@media (max-width: 768px) {
+
+        .toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+            .toolbar h3 {
+                margin: 0;
+            }
+    }
+
+</style>

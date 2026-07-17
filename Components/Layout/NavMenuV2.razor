@@ -1,0 +1,310 @@
+﻿@namespace MITANZ360Pro.Web.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+
+<AuthorizeView>
+
+    <Authorized>
+
+        <div class="nav-container @RoleCssClass">
+
+            <div class="nav flex-column">
+
+                @if (IsSysAdmin)
+                {
+                    @MenuGroup("System", "sys", new[]
+                    {   
+                        NavItem("/sysdashboard","bi-speedometer2","Dashboard"),
+                        NavItem("/admin/system-settings","bi-gear-wide-connected","System Values"),
+                        NavItem("/system-doctor","bi-heart-pulse","Sys Doctor"),
+                        NavItem("/admin/ai-configuration","bi-cpu","AI-Workflow"),
+                        NavItem("/reference-data/LMS","bi-cpu","Referance List"),
+                        NavItem("/app-nav-cards","bi-grid-1x2-fill","Infomation Cards"),                        
+
+                    })
+                }
+
+                @if (IsAdmin)
+                {
+                    @MenuGroup("Admin", "admin", new[]
+                    {
+                        NavItem("/lms-dashboard", "bi-speedometer", "Dashboard"),
+                        NavItem("/users", "bi-people", "Users"),
+                        NavItem("/delete-user", "bi-person-dash", "User Removal"),
+                        NavItem("/admin/roles", "bi-shield-lock", "Roles & Per..."),
+                        NavItem("/lms-library", "bi-book", "Doc-Lib (Admin)"),
+                        NavItem("/ai-workflow-studio", "bi-diagram-3", "AI Workflows"),
+                    })
+                }
+
+                @if (IsUser)
+                {
+                    @MenuGroup("User", "user", new[]
+                    {
+                        NavItem("/lms-dashboard","bi-speedometer2","Dashboard")
+                    })
+                }
+
+                @if (IsMarketing)
+                {
+                    @MenuGroup("Marketing", "marketing", new[]
+                    {
+                        NavItem("/marketing-dashboard","bi-speedometer2","Dashboard"),
+                        NavItem("/mark-about","bi-info-circle-fill","About Us"),
+                        NavItem("/azure-intro","bi-cloud-check-fill","Azure Path"),
+                        NavItem("/video-player","bi-collection-play-fill","Video Library"),
+                        NavItem("/ai-ops-info","bi-cpu-fill","Automation")
+                    })
+                }
+
+                @if (true)
+                {
+                    @MenuGroup("Tools", "tools", new[]
+                    {
+                        NavItem("/help-documents","bi-journal-text","Help Docs"),
+                        NavItem("/","bi-bell-fill","Notifications"),
+                        NavItem("/","bi-bar-chart-fill","Reports"),
+                        NavItem("/admin/system-settings","bi-gear-fill","Settings"),
+                        NavItem("/","bi-life-preserver","Support"),
+                     })
+                }
+
+                <!-- LOGOUT -->
+                <button class="nav-link logout" @onclick="Logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="menu-text">Logout</span>
+                </button>
+
+            </div>
+
+        </div>
+
+    </Authorized>
+
+    <NotAuthorized>
+
+        <div class="nav-container role-guest">
+
+            @MenuGroup("Guest", "guest", new[]
+            {
+                NavItem("/","bi-house-door-fill","Home"),
+                NavItem("/App-Info-viewer-all","bi-file-earmark-text","Infomation"),
+                NavItem("/contact","bi-envelope-fill","Contact"),
+                NavItem("/student-self-register","bi-person-badge","Student Self Registration"),
+                NavItem("/xlogin","bi-box-arrow-in-right","Login"),
+            })
+
+        </div>
+
+    </NotAuthorized>
+
+</AuthorizeView>
+
+@code {
+
+    private readonly List<string> UserRoles = new();
+    private string RoleCssClass = "role-guest";
+
+    private Dictionary<string, bool> groupState = new();
+
+    private bool IsSysAdmin => UserRoles.Contains("SysAdmin");
+    private bool IsAdmin => UserRoles.Contains("Admin");
+    private bool IsUser => UserRoles.Contains("User");
+    private bool IsStudent => UserRoles.Contains("Student");
+    private bool IsTrainer => UserRoles.Contains("Trainer");
+    private bool IsMarketing => UserRoles.Contains("Marketing");
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            UserRoles.AddRange(
+                user.Claims
+                    .Where(c => c.Type == ClaimTypes.Role)
+                    .Select(c => c.Value)
+            );
+
+            if (IsSysAdmin) RoleCssClass = "role-sysadmin";
+            else if (IsAdmin) RoleCssClass = "role-admin";
+            else if (IsUser) RoleCssClass = "role-user";
+            else if (IsMarketing) RoleCssClass = "role-marketing";
+            else if (IsStudent) RoleCssClass = "role-student";
+            else if (IsTrainer) RoleCssClass = "role-trainer";
+        }
+    }
+
+    private void ToggleGroup(string key)
+    {
+        if (!groupState.ContainsKey(key))
+            groupState[key] = true;
+
+        groupState[key] = !groupState[key];
+    }
+
+    private bool IsGroupOpen(string key)
+    {
+        return !groupState.ContainsKey(key) || groupState[key];
+    }
+
+    private void Logout() => Navigation.NavigateTo("xlogin", true);
+
+    private RenderFragment MenuGroup(string title, string key, IEnumerable<(string href, string icon, string text)> items) => builder =>
+    {
+        int seq = 0;
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "menu-group");
+
+        // HEADER
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "menu-title clickable");
+        builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ToggleGroup(key)));
+        builder.AddContent(seq++, $"{title} {(IsGroupOpen(key) ? "▾" : "▸")}");
+        builder.CloseElement();
+
+        if (IsGroupOpen(key))
+        {
+            foreach (var item in items)
+            {
+                builder.OpenComponent<NavLink>(seq++);
+                builder.AddAttribute(seq++, "href", item.href);
+                builder.AddAttribute(seq++, "class", "nav-link");
+
+                builder.AddAttribute(seq++, "ChildContent", (RenderFragment)(b =>
+                {
+                    b.OpenElement(0, "i");
+                    b.AddAttribute(1, "class", $"bi {item.icon}");
+                    b.CloseElement();
+
+                    b.OpenElement(2, "span");
+                    b.AddAttribute(3, "class", "menu-text");
+                    b.AddContent(4, item.text);
+                    b.CloseElement();
+                }));
+
+                builder.CloseComponent();
+            }
+        }
+
+        builder.CloseElement();
+    };
+
+    private (string, string, string) NavItem(string href, string icon, string text)
+        => (href, icon, text);
+}
+
+<style>
+
+/* CONTAINER */
+.nav-container {
+    padding: 8px;
+    margin: 8px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(10px);
+}
+
+/* GROUP */
+.menu-group {
+    margin-bottom: 6px;
+    padding: 6px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+}
+
+/* TITLE */
+.menu-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffa500;
+    margin-bottom: 4px;
+}
+
+/* CLICKABLE */
+.clickable {
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.clickable:hover {
+    background: rgba(255,165,0,0.15);
+}
+
+/* LINKS */
+.nav-link {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 8px;
+    border-radius:8px;
+    font-size:14px;
+}
+
+.nav-link:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+/* ICON */
+.nav-link i {
+    font-size:16px;
+}
+
+/* COLLAPSE MODE */
+.sidebar.collapsed .menu-text {
+    display:none;
+}
+
+.sidebar.collapsed .menu-title {
+    display:none;
+}
+
+.sidebar.collapsed .nav-link {
+    justify-content:center;
+}
+
+/* ROLE COLORS */
+.role-sysadmin .nav-link { color:#ff4d4d !important; }
+.role-admin .nav-link { color:#4da3ff !important; }
+.role-user .nav-link { color:#4dff88 !important; }
+.role-marketing .nav-link { color:#c084fc !important; }
+
+.nav-link.active {
+    color:#ffffff !important;
+}
+
+/* LOGOUT */
+.logout {
+    color:red !important;
+}
+
+/* ===============================
+   🔥 LEFT SIDEBAR SCROLL FIX
+=============================== */
+.sidebar {
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Smooth scrollbar (modern UI) */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255,165,0,0.6);
+    border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+</style>

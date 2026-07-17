@@ -1,0 +1,93 @@
+﻿@page "/register"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+
+@using Radzen
+@using Radzen.Blazor
+
+@inject NavigationManager Navigation
+
+<RadzenCard Style="max-width:520px;margin:auto;margin-top:60px;padding:35px;">
+
+    <h3 style="text-align:center">New User Registration</h3>
+
+    <div style="text-align:center;margin-bottom:20px;font-size:12px;color:#777;">
+        Create your MITANZ360Pro account
+    </div>
+
+    <!-- ✅ REGISTRATION FORM -->
+    <form method="post" action="/api/register">
+
+        <AntiforgeryToken />
+
+        <RadzenFieldset Text="Personal Information">
+
+            <RadzenLabel Text="Full Name" />
+            <RadzenTextBox Name="FullName"
+                           Style="width:100%"
+                           Placeholder="John Doe" />
+
+            <br /><br />
+
+            <RadzenLabel Text="Email Address" />
+            <RadzenTextBox Name="Email"
+                           Style="width:100%"
+                           Placeholder="user@domain.com" />
+
+        </RadzenFieldset>
+
+        <br />
+
+        <RadzenFieldset Text="Security">
+
+            <RadzenLabel Text="Password" />
+            <RadzenPassword Name="Password"
+                            Style="width:100%" />
+
+            <br /><br />
+
+            <RadzenLabel Text="Confirm Password" />
+            <RadzenPassword Name="ConfirmPassword"
+                            Style="width:100%" />
+
+        </RadzenFieldset>
+
+        <br />
+
+        <RadzenFieldset Text="Terms">
+
+            <!-- ✅ FIXED BOOLEAN BINDING -->
+            <div style="display:flex;align-items:center;">
+                <input type="checkbox" name="AcceptTerms" value="true" />
+                <label style="margin-left:8px;">
+                    I agree to the Terms & Conditions
+                </label>
+            </div>
+
+        </RadzenFieldset>
+
+        <br />
+
+        <RadzenButton Text="Create Account"
+                      Style="width:100%;margin-bottom:10px"
+                      ButtonType="ButtonType.Submit"
+                      Icon="person_add" />
+
+    </form>
+
+    <div style="text-align:center;margin:15px 0;color:#999;">
+        — OR —
+    </div>
+
+    <RadzenButton Text="Back to Login"
+                  Style="width:100%"
+                  ButtonStyle="ButtonStyle.Secondary"
+                  Click="@GoLogin" />
+
+</RadzenCard>
+
+@code {
+    private void GoLogin()
+    {
+        Navigation.NavigateTo("/xlogin");
+    }
+}

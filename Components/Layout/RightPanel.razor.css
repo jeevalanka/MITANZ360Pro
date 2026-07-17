@@ -1,0 +1,78 @@
+﻿/* RIGHT PANEL CONTAINER */
+.right-panel {
+    width: 300px;
+    max-width: 300px;
+    padding: 10px;
+}
+
+/* CARD STYLE */
+.rp-card {
+    margin-bottom: 12px;
+    background: #121212;
+    color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #2a2a2a;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* HEADER */
+.rp-header {
+    font-weight: 600;
+    font-size: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a2a2a;
+    color: #ffa500;
+}
+
+/* CONTENT */
+.rp-content {
+    padding-top: 8px;
+    font-size: 13px;
+}
+
+/* ROW (SUMMARY) */
+.rp-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+/* STATUS COLORS */
+.rp-success {
+    color: #4caf50;
+}
+
+.rp-warning {
+    color: #ff9800;
+}
+
+.rp-danger {
+    color: #f44336;
+}
+
+/* LIST */
+.rp-list {
+    padding-left: 15px;
+    margin: 0;
+}
+
+    .rp-list li {
+        margin-bottom: 5px;
+    }
+
+/* BUTTON AREA */
+.rp-actions {
+    margin-top: 10px;
+}
+
+/* BUTTON OVERRIDE */
+.rz-button {
+    background-color: #ffa500 !important;
+    border: none !important;
+    color: black !important;
+}
+
+    .rz-button.rz-light {
+        background-color: #2a2a2a !important;
+        color: white !important;
+    }

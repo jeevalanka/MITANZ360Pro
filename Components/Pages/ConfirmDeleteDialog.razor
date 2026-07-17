@@ -1,0 +1,42 @@
+﻿@using Radzen
+
+<div>
+    <p>
+        You are about to permanently delete
+        <strong>@Title</strong>.
+    </p>
+
+    <p style="color:#b91c1c; font-weight:600;">
+        Type <code>DELETE</code> to confirm.
+    </p>
+
+    <RadzenTextBox @bind-Value="Input"
+                   Placeholder="Type DELETE"
+                   Style="width:100%; margin-top:10px" />
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <RadzenButton Text="Cancel"
+                      ButtonStyle="ButtonStyle.Light"
+                      Click="@(() => DialogService.Close(false))" />
+
+        <RadzenButton Text="Delete"
+                      ButtonStyle="ButtonStyle.Danger"
+                      Disabled="@IsDisabled"
+                      Click="@(() => DialogService.Close(true))" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "this item";
+
+    private string Input = string.Empty;
+
+    private bool IsDisabled =>
+        !string.Equals(
+            Input?.Trim(),
+            "DELETE",
+            StringComparison.OrdinalIgnoreCase
+        );
+
+    [Inject] DialogService DialogService { get; set; } = default!;
+}

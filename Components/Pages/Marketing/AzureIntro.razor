@@ -1,0 +1,206 @@
+﻿@page "/azure-intro"
+@layout MainLayout
+
+@attribute [Authorize(Roles = "Marketing, SysAdmin")]
+
+<PageTitle>Azure Cloud Introduction</PageTitle>
+
+<style>
+    .azure-container {
+        padding: 20px;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #020617, #0f172a, #1e293b);
+        color: white;
+    }
+
+    .hero-card {
+        display: flex;
+        flex-wrap: wrap;
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 25px;
+        background: linear-gradient(135deg, #2563eb, #7c3aed, #06b6d4);
+    }
+
+    .hero-content { flex: 1; }
+
+    .hero-image {
+        width: 100%;
+        max-width: 500px;
+        border-radius: 16px;
+        margin-top: 20px;
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .info-card {
+        padding: 20px;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .info-card:hover {
+        transform: scale(1.05);
+    }
+
+    .c1 { background: linear-gradient(135deg, #0ea5e9, #2563eb); }
+    .c2 { background: linear-gradient(135deg, #7c3aed, #9333ea); }
+    .c3 { background: linear-gradient(135deg, #059669, #10b981); }
+    .c4 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 60px;
+        z-index: 1000;
+    }
+
+    .modal-card {
+        background: white;
+        color: black;
+        border-radius: 20px;
+        padding: 20px;
+        max-width: 600px;
+        width: 90%;
+        text-align: center;
+        position: relative;
+        animation: slideDown 0.3s ease;
+    }
+
+    @@keyframes slideDown {
+        from { transform: translateY(-50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-card img {
+        width: 100%;
+        border-radius: 10px;
+    }
+
+    .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: red;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+    }
+</style>
+
+<div class="azure-container">
+
+    <div class="hero-card">
+        <div class="hero-content">
+            <h1>Azure Cloud Fundamentals</h1>
+            <p>Develop industry-ready Azure cloud skills through hands-on learning, real infrastructure scenarios, and global system design. Aligned with ANZ standards, this program bridges the gap between learning and real cloud careers.</p>
+        </div>
+
+        <img src="/images/edu/mar-01.png" class="hero-image" />
+    </div>
+
+    <!-- CARDS -->
+    <div class="card-grid">
+        <div class="info-card c1" 
+             @onclick='() => OpenModal("Cloud Computing", "/images/edu/mar-03.png")'>
+            <h3>☁️ Cloud Computing</h3>
+        </div>
+
+        <div class="info-card c2" 
+             @onclick='() => OpenModal("Service Models", "/images/edu/mar-04.png")'>
+            <h3>⚙️ Service Models</h3>
+        </div>
+
+        <div class="info-card c3" 
+             @onclick='() => OpenModal("Global Reach", "/images/edu/mar-05.png")'>
+            <h3>🌍 Global Reach</h3>
+        </div>
+
+        <div class="info-card c4" 
+             @onclick='() => OpenModal("Career Opportunities", "/images/edu/mar-06.png")'>
+            <h3>🚀 Careers</h3>
+        </div>
+
+        <div class="info-card c1"
+             @onclick='() => OpenModal("Career (Salary)", "/images/edu/mar-07.png")'>
+    
+            <div class="card-icon">
+                <i class="rz-icon rz-icon-trending_up"></i>
+            </div>
+
+            <h3>Salary</h3>
+        </div>
+
+        <div class="info-card c2"
+             @onclick='() => OpenModal("Certification Roadmap", "/images/edu/mar-08.png")'>
+    
+            <div class="card-icon">
+                <i class="rz-icon rz-icon-school"></i>
+            </div>
+
+            <h3>Certification</h3>
+        </div>
+
+        <div class="info-card c3"
+             @onclick='() => OpenModal("MCT", "/images/edu/mar-10.png")'>
+    
+            <div class="card-icon">
+                <i class="rz-icon rz-icon-verified"></i>
+            </div>
+
+            <h3>MCT</h3>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    @if (showModal)
+    {
+        <div class="modal-overlay" @onclick="CloseModal">
+
+            <div class="modal-card" @onclick:stopPropagation="true">
+                <button class="close-btn" @onclick="CloseModal">X</button>
+
+                <h2>@modalTitle</h2>
+                <img src="@modalImage" />
+
+            </div>
+
+        </div>
+    }
+
+</div>
+
+@code {
+    private bool showModal = false;
+    private string modalTitle = "";
+    private string modalImage = "";
+
+    void OpenModal(string title, string image)
+    {
+        modalTitle = title;
+        modalImage = image;
+        showModal = true;
+    }
+
+    void CloseModal()
+    {
+        showModal = false;
+    }
+}

@@ -1,0 +1,242 @@
+﻿@page "/lms-lib-nav"
+
+@using System.IO
+@using System.Linq
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>LMS Documents</PageTitle>
+
+<div class="sp-page">
+
+    <!-- ================= HEADER ================= -->
+    <div class="sp-header">
+        <span class="sp-title">LMS Library</span>
+    </div>
+
+    <!-- ================= COMMAND BAR ================= -->
+    <div class="sp-commandbar">
+
+        <button class="sp-btn">←</button>
+
+        <div class="sp-breadcrumb">
+            Home / @CurrentFolder?.Name
+        </div>
+
+        <input class="sp-search" placeholder="Search documents..." />
+
+        <div class="sp-actions">
+            <button class="sp-btn primary" @onclick="OpenNewFolderDialog">New</button>
+            <button class="sp-btn" @onclick="OpenUploadDialog">Upload</button>
+            <button class="sp-btn" @onclick="RefreshAsync">Refresh</button>
+        </div>
+
+    </div>
+
+    <!-- ================= WORKSPACE ================= -->
+    <div class="sp-layout">
+
+        <!-- ================= LEFT: FOLDER TREE ================= -->
+        <div class="sp-left">
+
+            @foreach (var item in RootItems)
+            {
+                @RenderTreeItem(item, 0)
+            }
+
+        </div>
+
+        <!-- ================= RIGHT: FILE CONTENT ================= -->
+        <div class="sp-right-content">
+
+            @if (CurrentFolder == null)
+            {
+                <div class="sp-empty">Select a folder</div>
+            }
+            else if (!FolderChildren.ContainsKey(CurrentFolder.Id))
+            {
+                <div class="sp-empty">Loading...</div>
+            }
+            else
+            {
+                var items = FolderChildren[CurrentFolder.Id];
+
+                <div class="sp-file-grid">
+
+                    @foreach (var file in items.Where(x => !x.IsFolder))
+                    {
+                        <div class="sp-tile"
+                             tabindex="0"
+                             @onclick="() => SelectItemAsync(file)">
+
+                            <div class="sp-tile-icon">
+                                @((MarkupString)GetFileIconSvg(file.Name))
+                            </div>
+
+                            <div class="sp-tile-name">
+                                @file.Name
+                            </div>
+
+                        </div>
+                    }
+
+                </div>
+            }
+
+        </div>
+
+    </div>
+
+</div>
+
+@code {
+
+    // ================= STATE =================
+
+    private LibraryItem? CurrentFolder;
+
+    private List<LibraryItem> RootItems = new();
+
+    private Dictionary<string, List<LibraryItem>> FolderChildren = new();
+
+    protected override void OnInitialized()
+    {
+        LoadSampleData();
+    }
+
+    // ================= DATA =================
+
+    private void LoadSampleData()
+    {
+        var module = new LibraryItem { Name = "Module 1", IsFolder = true };
+        var course = new LibraryItem { Name = "AZ900-104", IsFolder = true };
+        var root = new LibraryItem { Name = "Courses", IsFolder = true };
+
+        RootItems.Add(root);
+
+        FolderChildren[root.Id] = new() { course };
+        FolderChildren[course.Id] = new() { module };
+
+        FolderChildren[module.Id] = new()
+        {
+            new LibraryItem { Name = "File.pdf" },
+            new LibraryItem { Name = "Notes.docx" },
+            new LibraryItem { Name = "Excel.xlsx" }
+        };
+
+        CurrentFolder = root;
+    }
+
+    // ================= ACTIONS =================
+
+    private async Task RefreshAsync()
+    {
+        await Task.Delay(50);
+    }
+
+    private async Task SelectItemAsync(LibraryItem item)
+    {
+        if (item.IsFolder)
+        {
+            CurrentFolder = item;
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private void OpenNewFolderDialog() { }
+    private void OpenUploadDialog() { }
+
+    // ================= TREE (FOLDERS ONLY) =================
+
+    private RenderFragment RenderTreeItem(LibraryItem item, int depth)
+        => builder =>
+        {
+            if (!item.IsFolder) return;
+
+            var seq = 0;
+
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "style", $"padding-left:{depth * 16}px");
+
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "sp-tree-item");
+            builder.AddAttribute(seq++, "onclick",
+                EventCallback.Factory.Create(this, () => SelectItemAsync(item)));
+
+            builder.AddContent(seq++, item.Name);
+            builder.CloseElement();
+
+            if (FolderChildren.ContainsKey(item.Id))
+            {
+                foreach (var child in FolderChildren[item.Id]
+                         .Where(x => x.IsFolder)) // ✅ CRITICAL FIX
+                {
+                    builder.AddContent(seq++, RenderTreeItem(child, depth + 1));
+                }
+            }
+
+            builder.CloseElement();
+        };
+
+    // ================= FILE ICON =================
+
+    private string GetFileIconSvg(string? name)
+    {
+        var ext = Path.GetExtension(name ?? "").ToLower();
+
+        return ext switch
+        {
+            ".pdf" => Icon.File("PDF", "#C4314B"),
+            ".docx" => Icon.File("W", "#185ABD"),
+            ".xlsx" => Icon.File("X", "#107C41"),
+            ".pptx" => Icon.File("P", "#C43E1C"),
+            _ => Icon.File("DOC", "#605E5C")
+        };
+    }
+
+    // ================= MODEL =================
+
+    public class LibraryItem
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = "";
+        public bool IsFolder { get; set; }
+    }
+
+    // ================= ICON =================
+
+    private static class Icon
+    {
+        public static string File(string text, string color)
+            => $"<div style='width:32px;height:32px;background:{color};color:white;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:6px'>{text}</div>";
+    }
+
+}
+
+<style>
+    /* ================= LAYOUT ================= */
+
+    .sp-layout {
+        display: flex;
+        height: calc(100vh - 110px);
+        background: #FFFFFF;
+    }
+
+    /* ================= LEFT ================= */
+
+    .sp-left {
+        width: 260px;
+        border-right: 1px solid #E1E1E1;
+        background: #FFFFFF;
+        padding: 8px;
+    }
+
+    /* ================= RIGHT ================= */
+
+    .sp-right-content {
+        flex: 1;
+        padding: 16px;
+    }
+
+    /* ================= TREE ================= */
+</style>

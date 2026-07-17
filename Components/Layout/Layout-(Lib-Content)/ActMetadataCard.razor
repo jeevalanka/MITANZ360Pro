@@ -1,0 +1,84 @@
+﻿@using System.Text.Json
+@using MITANZ360Pro.Web.Services
+@using Radzen
+@using Radzen.Blazor
+
+<RadzenCard Style="border-radius:24px;padding:24px;background:rgba(255,255,255,0.62);">
+
+    <RadzenStack Gap="10px">
+
+        <RadzenText TextStyle="TextStyle.H5" Style="font-weight:700;color:#004578;">
+            Activity
+        </RadzenText>
+
+        <RadzenDropDown Data="@Types"
+                        @bind-Value="Model.Type"
+                        Style="width:100%;" title="Activity Type"/>
+
+        <RadzenTextBox @bind-Value="Model.Title"
+                       Placeholder="Activity Title"
+                       Style="width:100%;" title="Activity Title" />
+
+        <RadzenTextArea @bind-Value="Model.Description"
+                        Rows="3"
+                        Style="width:100%;" title="Description" />
+
+        <RadzenTextBox @bind-Value="Model.Url"
+                       Placeholder="URL"
+                       Style="width:100%;" title="Activity URL (Int/Ex)" />
+
+        <RadzenNumeric @bind-Value="Model.DurationMinutes"
+                       Style="width:100%;" title="Duration in Minutes" />
+
+        <RadzenNumeric @bind-Value="Model.PassingScore"
+                       Style="width:100%;" title="Passing Score" />
+
+        <RadzenSwitch @bind-Value="Model.IsMandatory" title="On - Mandatory" />
+
+        <!-- ✅ ONLY SAVE BUTTON -->
+        <RadzenButton Text="Apply Activity"
+                      Icon="save"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Click="@Apply" title="Save changes" />
+
+    </RadzenStack>
+
+</RadzenCard>
+
+@code {
+
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private ActMetadata Model = new();
+
+    private List<string> Types = new()
+    {
+        "reading","video","quiz","group","lab","assignment"
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(Value))
+        {
+            try
+            {
+                Model = JsonSerializer.Deserialize<ActMetadata>(Value) ?? new();
+            }
+            catch
+            {
+                Model = new();
+            }
+        }
+    }
+
+    private async Task Apply()
+    {
+        var json = JsonSerializer.Serialize(Model, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        await ValueChanged.InvokeAsync(json);
+    }
+}

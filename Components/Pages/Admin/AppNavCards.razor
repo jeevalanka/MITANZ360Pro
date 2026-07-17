@@ -1,0 +1,457 @@
+﻿@page "/app-nav-cards"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin,SysAdmin")]
+
+@using MITANZ360Pro.Web.Models
+@using MITANZ360Pro.Web.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SysAdmin")]
+
+@using Radzen
+@using Radzen.Blazor
+
+@inject SharePointService SharePointService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>
+    App Navigation Cards
+</PageTitle>
+
+<RadzenCard class="p-4 shadow-sm rounded-4">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h3 class="mb-1">
+                Navigation Management
+            </h3>
+
+            <small class="text-muted">
+                Manage application quick-access navigation
+                cards for the left-side dashboard panel.
+            </small>
+
+        </div>
+
+        <RadzenButton Text="New-Card"
+                      Icon="add_circle"
+                      Click="@CreateCard" />
+
+        <RadzenButton Text="Icon-List"
+                      Icon="open_in_new"
+                      Click="@OpenPageInNewTab" />
+
+    </div>
+
+    <!-- =====================================================
+         GRID
+    ====================================================== -->
+
+    <RadzenDataGrid Data="@Cards.OrderBy(x => x.SortOrder).ToList()"
+                    TItem="NavigationCardModel"
+                    AllowPaging="true"
+                    AllowSorting="true"
+                    AllowFiltering="true"
+                    PageSize="10"
+                    Responsive="true">
+
+        <Columns>
+
+            <!-- =====================================================
+                 TITLE
+            ====================================================== -->
+
+            <RadzenDataGridColumn TItem="NavigationCardModel"
+                                  Property="Title"
+                                  Title="Title" Width="120px" />
+
+            <!-- =====================================================
+                 SUBTITLE
+            ====================================================== -->
+
+            <RadzenDataGridColumn TItem="NavigationCardModel"
+                                  Property="Subtitle"
+                                  Title="Subtitle" Width="100px" />
+
+            <!-- =====================================================
+                 ICON
+            ====================================================== -->
+
+            <RadzenDataGridColumn TItem="NavigationCardModel"
+                                  Property="Icon"
+                                  Title="Icon"
+                                  Width="50px">
+
+                <Template Context="item">
+
+                    <div class="d-flex align-items-center gap-2">
+
+                        <RadzenIcon Icon="@item.Icon"
+                                    Style="font-size:20px;" />
+
+                    </div>
+
+                </Template>
+
+            </RadzenDataGridColumn>
+
+            <!-- =====================================================
+                 URL
+            ====================================================== -->
+
+            <RadzenDataGridColumn TItem="NavigationCardModel"
+                                  Property="Url"
+                                  Title="URL" />
+
+            <!-- =====================================================
+                 ROLE
+            ====================================================== -->
+
+            <RadzenDataGridColumn TItem="NavigationCardModel"
+                                  Property="Role"
+                                  Title="Role">
+
+                <HeaderTemplate>
+
+                    <div style="
+                        background:#e0f2fe;
+                        padding:8px;
+                        border-radius:6px;
+                        font-weight:600;
+                        color:#0369a1;">
+
+                        Role
+
+                    </div>
+
+                </HeaderTemplate>
+
+                <!-- COLUMN -->
+
+                <Template Context="item">
+
+                    <div style="
+                        background:#f0f9ff;
+                        padding:6px 8px;
+                        border-radius:6px;
+                        color:#0369a1;
+                        font-weight:600;">
+
+                        @item.Role
+
+                    </div>
+
+                </Template>
+
+            </RadzenDataGridColumn>
+            <!-- =====================================================
+                 CAMPUS
+            ====================================================== -->
+
+            <RadzenDataGridColumn TItem="NavigationCardModel"
+                                  Property="Campus"
+                                  Title="Campus" />
+
+            <!-- =====================================================
+                 ENABLED
+            ====================================================== -->
+
+            <RadzenDataGridColumn TItem="NavigationCardModel"
+                                  Title="Enabled"
+                                  Width="100px">
+
+                <Template Context="item">
+
+                    @if (item.IsEnabled)
+                    {
+                        <span class="badge bg-success">
+                            Enabled
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">
+                            Disabled
+                        </span>
+                    }
+
+                </Template>
+
+            </RadzenDataGridColumn>
+
+            <!-- =====================================================
+                 Sort Order
+            ====================================================== -->
+            <RadzenDataGridColumn TItem="NavigationCardModel"
+                                  Property="SortOrder"
+                                  Title="Sort" />
+            <!-- =====================================================
+                 ACTIONS
+            ====================================================== -->
+
+            <RadzenDataGridColumn TItem="NavigationCardModel"
+                                  Title="Actions"
+                                  Width="150px">
+
+                <Template Context="item">
+
+                    <!-- EDIT -->
+
+                    <RadzenButton Icon="edit"
+                                  Size="ButtonSize.Small"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Click="@(args => EditCard(item))"
+                                  class="me-1" />
+
+                    <!-- DUPLICATE -->
+
+                    <RadzenButton Icon="content_copy"
+                                  Size="ButtonSize.Small"
+                                  ButtonStyle="ButtonStyle.Warning"
+                                  Click="@(args => DuplicateCard(item))"
+                                  class="me-1" />
+
+                    <!-- DELETE -->
+
+                    <RadzenButton Icon="delete"
+                                  Size="ButtonSize.Small"
+                                  ButtonStyle="ButtonStyle.Danger"
+                                  Click="@(args => DeleteCard(item))" />
+
+                </Template>
+
+            </RadzenDataGridColumn>
+
+        </Columns>
+
+    </RadzenDataGrid>
+
+</RadzenCard>
+
+@code {
+
+    // =====================================================
+    // DATA
+    // =====================================================
+
+    private List<NavigationCardModel>
+        Cards = [];
+
+    // =====================================================
+    // INIT
+    // =====================================================
+
+    protected override async Task
+        OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    // =====================================================
+    // LOAD DATA
+    // =====================================================
+
+    private async Task LoadAsync()
+    {
+        Cards =
+            await SharePointService
+                .GetNavigationCardsAsync();
+
+        StateHasChanged();
+    }
+
+    // =====================================================
+    // CREATE
+    // =====================================================
+
+    private async Task CreateCard()
+    {
+        var result =
+            await DialogService.OpenAsync
+                <NavigationCardForm>(
+                    "Create Navigation Card",
+                    null,
+                    new DialogOptions
+                    {
+                        Width = "900px",
+                        Height = "750px",
+                        Resizable = true,
+                        Draggable = true
+                    });
+
+        if (result == true)
+        {
+            await LoadAsync();
+        }
+    }
+
+    // =====================================================
+    // EDIT
+    // =====================================================
+
+    private async Task EditCard(
+        NavigationCardModel item)
+    {
+        var model =
+            new NavigationCardModel
+            {
+                Id = item.Id,
+                Title = item.Title,
+                Subtitle = item.Subtitle,
+                Icon = item.Icon,
+                ImageUrl = item.ImageUrl,
+                Url = item.Url,
+                OpenType = item.OpenType?.ToString() ?? "Internal",
+                Role = item.Role,
+                Campus = item.Campus,
+                IsEnabled = item.IsEnabled,
+                SortOrder = item.SortOrder,
+                CardColor = item.CardColor
+            };
+
+        var parameters =
+            new Dictionary<string, object>
+            {
+                {
+                    "Model",
+                    model
+                }
+            };
+
+        var result =
+            await DialogService.OpenAsync
+                <NavigationCardForm>(
+                    "Edit Navigation Card",
+                    parameters,
+                    new DialogOptions
+                    {
+                        Width = "900px",
+                        Height = "750px",
+                        Resizable = true,
+                        Draggable = true
+                    });
+
+        if (result == true)
+        {
+            await LoadAsync();
+        }
+    }
+
+    // =====================================================
+    // DUPLICATE
+    // =====================================================
+
+    private async Task DuplicateCard(
+        NavigationCardModel item)
+    {
+        // =====================================================
+        // CLONE MODEL
+        // =====================================================
+
+        var model =
+            new NavigationCardModel
+            {
+                // EMPTY ID = NEW RECORD
+
+                Id = string.Empty,
+
+                Title = $"{item.Title} Copy",
+
+                Subtitle = item.Subtitle,
+
+                Icon = item.Icon,
+
+                ImageUrl = item.ImageUrl,
+
+                Url = item.Url,
+
+                OpenType = item.OpenType,
+
+                Role = item.Role,
+
+                Campus = item.Campus,
+
+                IsEnabled = item.IsEnabled,
+
+                SortOrder = item.SortOrder,
+
+                CardColor = item.CardColor
+            };
+
+        // =====================================================
+        // OPEN FORM
+        // =====================================================
+
+        var parameters =
+            new Dictionary<string, object>
+            {
+                {
+                    "Model",
+                    model
+                }
+            };
+
+        var result =
+            await DialogService.OpenAsync
+                <NavigationCardForm>(
+                    "Duplicate Navigation Card",
+                    parameters,
+                    new DialogOptions
+                    {
+                        Width = "900px",
+                        Height = "750px",
+                        Resizable = true,
+                        Draggable = true
+                    });
+
+        if (result == true)
+        {
+            await LoadAsync();
+        }
+    }
+
+    // =====================================================
+    // DELETE
+    // =====================================================
+
+    private async Task DeleteCard(
+        NavigationCardModel item)
+    {
+        var confirm =
+            await DialogService.Confirm(
+                $"Delete '{item.Title}' ?",
+                "Confirm Delete");
+
+        if (confirm == true)
+        {
+            await SharePointService
+                .DeleteNavigationCardAsync(
+                    item.Id);
+
+            NotificationService.Notify(
+                NotificationSeverity.Success,
+                "Deleted",
+                "Navigation card deleted.");
+
+            await LoadAsync();
+        }
+    }
+
+    // =====================================================
+    // Academic Categories Icons
+    // =====================================================
+    private async Task OpenPageInNewTab()
+    {
+        await JSRuntime.InvokeVoidAsync(
+            "open",
+            "/icon-categories",
+            "_blank");
+    }
+}

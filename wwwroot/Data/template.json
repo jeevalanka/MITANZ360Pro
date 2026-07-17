@@ -1,0 +1,147 @@
+{
+  "CourseSetup": {
+    "CourseDetails": {
+      "CourseName": "Template-(Change)",
+      "CourseCode": "AI-101",
+      "Credits": 3,
+      "TotalHours": 40,
+
+      "DeliveryMode": {
+        "Value": "Blended",
+        "Options": [ "Online", "Onsite", "Blended" ]
+      },
+
+      "CourseLevel": {
+        "Value": "Level 5",
+        "Options": [ "Level 3", "Level 4", "Level 5", "Level 6" ]
+      }
+    },
+
+    "Domain": {
+      "PrimaryField": "Artificial Intelligence",
+      "KeyTopics": [
+        "Machine Learning",
+        "Neural Networks",
+        "Natural Language Processing",
+        "AI Ethics"
+      ]
+    }
+  },
+
+  "BusinessAndAudience": {
+    "BusinessContext": {
+      "BusinessProblem": "Need AI skills for workforce",
+      "ExpectedOutcome": "Practical AI knowledge"
+    },
+
+    "Audience": {
+      "TargetAudience": "Beginners and professionals",
+      "PriorKnowledge": "Basic computer literacy"
+    }
+  },
+
+  "LearningDesign": {
+    "LearningObjectives": [
+      "Understand core concepts of Artificial Intelligence",
+      "Explain machine learning principles",
+      "Apply AI tools in practical scenarios",
+      "Develop AI solutions-1",
+      "Develop AI solutions-2",
+      "Develop AI solutions-3"
+    ],
+
+    "CourseStructure": {
+      "ModuleCount": 5,
+      "LessonsPerModule": 4,
+      "HoursPerModule": 8
+    },
+
+    "CourseDesign": {
+      "LearningModel": {
+        "Value": "Outcome-Based",
+        "Options": [ "Outcome-Based", "70-20-10" ]
+      },
+
+      "InstructionalApproach": "Hands-on, scenario-based learning",
+
+      "LearningFocus": {
+        "Value": "Practical",
+        "Options": [ "Conceptual", "Balanced", "Practical" ]
+      }
+    }
+  },
+
+  "AssessmentAndLabs": {
+    "Assessment": {
+      "AssessmentType": {
+        "Value": "Mixed",
+        "Options": [ "Theory", "Practical", "Mixed" ]
+      },
+
+      "PassCriteria": "Minimum 50%"
+    },
+
+    "AssessmentDesign": {
+      "FinalExam": true,
+      "Project": true,
+      "LabAssessments": true,
+      "ContinuousAssessment": true
+    },
+
+    "LabConfiguration": {
+      "LabLevel": {
+        "Value": "Guided",
+        "Options": [ "Guided", "Semi-Guided", "Independent" ]
+      },
+
+      "HandsOnPercentage": 60
+    }
+  },
+
+  "CertificationAndCompliance": {
+    "Certification": {
+      "IsEnabled": true,
+
+      "CertificationName": "Azure AI Fundamentals",
+
+      "Vendor": {
+        "Value": "Microsoft",
+        "Options": [ "Microsoft", "AWS", "Cisco", "CompTIA", "Other" ]
+      }
+    },
+
+    "Compliance": {
+      "IsEnabled": false,
+
+      "Standard": {
+        "Value": "None",
+        "Options": [ "None", "NZQA", "AQF", "Corporate" ]
+      }
+    }
+  },
+
+  "DeliveryAndResources": {
+    "ResourceRequirements": {
+      "Platform": "Microsoft Azure",
+      "Tools": "Azure AI, Visual Studio Code",
+      "RequiresLab": true,
+      "AdditionalNotes": "Cloud-based labs recommended"
+    }
+  },
+
+  "AISettings": {
+    "AIConfiguration": {
+      "Tone": {
+        "Value": "Professional",
+        "Options": [ "Professional", "Academic", "Technical" ]
+      },
+
+      "DepthLevel": {
+        "Value": "Intermediate",
+        "Options": [ "Basic", "Intermediate", "Advanced" ]
+      },
+
+      "CustomPrompt": "Generate full course documentation including modules, labs, and assessments."
+    }
+  }
+}

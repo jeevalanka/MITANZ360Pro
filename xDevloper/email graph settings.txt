@@ -1,0 +1,383 @@
+﻿<#
+.SYNOPSIS
+  All-in-one: Configure Exchange Online RAOP ApplicationAccessPolicy for Graph app-only sendMail and test it.
+
+.DESCRIPTION
+  This script:
+   1) Connects to Exchange Online
+   2) Resolves the sender mailbox (Primary SMTP + aliases)
+   3) Ensures mail-enabled security group exists
+   4) Ensures sender mailbox is a member of the scope group
+   5) Ensures ApplicationAccessPolicy exists (RestrictAccess) for AppId + scope group (null-safe + idempotent)
+   6) Validates with Test-ApplicationAccessPolicy (supports Granted/Allowed)
+   7) Optionally gets an app-only token and calls Graph sendMail to verify end-to-end (expects HTTP 202)
+
+  Safe to run repeatedly (idempotent).
+
+.REQUIREMENTS
+  - ExchangeOnlineManagement module installed
+  - Rights to manage Distribution Groups and ApplicationAccessPolicy
+  - Entra app has Microsoft Graph Application permission: Mail.Send and admin consent granted
+  - Sender mailbox exists in Exchange Online
+
+.SECURITY
+  - Client Secret is never stored in the script.
+  - Script prompts for Client Secret securely at runtime.
+#>
+
+# =========================
+# REQUIRED VALUES (EDIT IF NEEDED)
+# =========================
+$GraphBaseUrl     = "https://graph.microsoft.com/v1.0"
+$TenantId         = "9079c019-45c8-498d-b758-c75201acf33c"
+$AppId            = "ded710dd-1bb7-42b9-88f0-92b91459aa5f"
+
+# Sender used by your application for /users/{sender}/sendMail
+$SenderMailbox    = "admin@mit-ga.com"
+
+# Recipient for the test mail
+$ToMailbox        = "info@mit-ga.com"
+
+# RAOP scope group
+$ScopeGroupName   = "MITANZ360Edu-AppMail-Senders"
+$PolicyDesc       = "Allow MITANZ360Edu Graph app-only sendMail from approved mailbox(es)"
+
+# Controls
+$SendGraphTestMail = $true   # Set to $false if you only want policy config + validation
+
+
+# =========================
+# UTILITIES
+# =========================
+function Write-Section([string]$Title) {
+    Write-Host ""
+    Write-Host ("=== {0} ===" -f $Title) -ForegroundColor Cyan
+}
+
+function Get-GuidFromText {
+    param([object]$TextObj)
+
+    if ($null -eq $TextObj) { return $null }
+
+    $Text = $TextObj.ToString()
+    if ([string]:: { return $null }
+
+    $m = [regex]:: '[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}')
+    if ($m.Success) { return $m.Value.ToLowerInvariant() }
+
+    try {
+        $g = [guid]$Text
+        return $g.ToString().ToLowerInvariant()
+    } catch {
+        return $null
+    }
+}
+
+function ConvertFrom-Base64Url {
+    param([string]$s)
+
+    if ([string]:: { return "" }
+
+    $s = $s.Replace('-', '+').Replace('_', '/')
+    switch ($s.Length % 4) {
+        2 { $s += "==" }
+        3 { $s += "=" }
+    }
+
+    return [System.Text.Encoding]::UTF8.GetString([Convert]::
+}
+
+function Show-JwtClaims {
+    param([string]$jwt)
+
+    if ([string]:: { return }
+
+    $parts = $jwt.Split('.')
+    if ($parts.Count -lt 2) { return }
+
+    $payloadJson = ConvertFrom-Base64Url $parts[1]
+    if ([string]:: { return }
+
+    $payload = $payloadJson | ConvertFrom-Json
+
+    Write-Host "JWT Claims:" -ForegroundColor Cyan
+    Write-Host ("  tid   : {0}" -f $payload.tid)
+    Write-Host ("  appid : {0}" -f $payload.appid)
+    if ($payload.roles) {
+        Write-Host ("  roles : {0}" -f ($payload.roles -join ","))
+    } else {
+        Write-Host "  roles : (none)"
+    }
+
+    if ($payload.tid -and ($payload.tid -ne $TenantId)) {
+        Write-Host ("WARNING: token tid mismatch. token={0} config={1}" -f $payload.tid, $TenantId) -ForegroundColor Yellow
+    }
+    if ($payload.appid -and ($payload.appid -ne $AppId)) {
+        Write-Host ("WARNING: token appid mismatch. token={0} config={1}" -f $payload.appid, $AppId) -ForegroundColor Yellow
+    }
+}
+
+function Read-ResponseBodySafely {
+    param($WebResponse)
+
+    try {
+        if ($null -eq $WebResponse) { return "" }
+        $stream = $WebResponse.GetResponseStream()
+        if ($null -eq $stream) { return "" }
+        $reader = New-Object System.IO.StreamReader($stream)
+        return $reader.ReadToEnd()
+    } catch {
+        return ""
+    }
+}
+
+function Require-NonEmpty([string]$Value, [string]$Name) {
+    if ([string]:: {
+        throw "Missing required input: $Name"
+    }
+}
+
+
+# =========================
+# INPUT VALIDATION
+# =========================
+Require-NonEmpty $GraphBaseUrl "GraphBaseUrl"
+Require-NonEmpty $TenantId "TenantId"
+Require-NonEmpty $AppId "AppId"
+Require-NonEmpty $SenderMailbox "SenderMailbox"
+Require-NonEmpty $ToMailbox "ToMailbox"
+Require-NonEmpty $ScopeGroupName "ScopeGroupName"
+
+
+# =========================
+# START
+# =========================
+Write-Host "MITANZ360Edu - RAOP + Graph sendMail All-in-One Script" -ForegroundColor Green
+Write-Host ("TenantId : {0}" -f $TenantId)
+Write-Host ("AppId    : {0}" -f $AppId)
+Write-Host ("Sender   : {0}" -f $SenderMailbox)
+Write-Host ("To       : {0}" -f $ToMailbox)
+Write-Host ("Group    : {0}" -f $ScopeGroupName)
+Write-Host ("GraphTest: {0}" -f $SendGraphTestMail)
+
+Write-Section "CONNECT TO EXCHANGE ONLINE"
+Connect-ExchangeOnline -ShowBanner:$false
+
+try {
+    Write-Section "RESOLVE SENDER MAILBOX (PRIMARY + ALIASES)"
+    $mbx = Get-Mailbox -Identity $SenderMailbox -ErrorAction SilentlyContinue
+    if (-not $mbx) {
+        Write-Host ("ERROR: Mailbox not found: {0}" -f $SenderMailbox) -ForegroundColor Red
+        Write-Host "Fix: Ensure EmailSettings:SenderEmail matches an actual Exchange mailbox or alias." -ForegroundColor Yellow
+        exit 1
+    }
+
+    $primarySmtp = $mbx.PrimarySmtpAddress.ToString()
+    Write-Host ("DisplayName        : {0}" -f $mbx.DisplayName)
+    Write-Host ("UserPrincipalName  : {0}" -f $mbx.UserPrincipalName)
+    Write-Host ("PrimarySmtpAddress : {0}" -f $primarySmtp)
+
+    Write-Host "EmailAddresses (aliases):" -ForegroundColor Cyan
+    $mbx.EmailAddresses | ForEach-Object { Write-Host ("  {0}" -f $_) }
+
+    Write-Section "ENSURE SCOPE GROUP EXISTS (MAIL-ENABLED SECURITY GROUP)"
+    $group = Get-DistributionGroup -Identity $ScopeGroupName -ErrorAction SilentlyContinue
+    if (-not $group) {
+        Write-Host ("Scope group not found. Creating: {0}" -f $ScopeGroupName) -ForegroundColor Yellow
+        $group = New-DistributionGroup -Name $ScopeGroupName -Type Security -ErrorAction Stop
+        Write-Host ("Created group: {0}" -f $group.Identity) -ForegroundColor Green
+    } else {
+        Write-Host ("Scope group exists: {0}" -f $group.Identity) -ForegroundColor Green
+    }
+
+    $scopeGroupObjectIdRaw = $group.ExternalDirectoryObjectId
+    $scopeGroupGuid = Get-GuidFromText $scopeGroupObjectIdRaw
+    if (-not $scopeGroupGuid) {
+        Write-Host "ERROR: Could not resolve scope group Entra ObjectId GUID." -ForegroundColor Red
+        exit 2
+    }
+
+    Write-Host ("Scope Group Entra ObjectId: {0}" -f $group.ExternalDirectoryObjectId)
+    Write-Host ("Scope Group GUID (normalized): {0}" -f $scopeGroupGuid)
+
+    Write-Section "ENSURE SENDER MAILBOX IS MEMBER OF SCOPE GROUP"
+    $members = @(Get-DistributionGroupMember -Identity $ScopeGroupName -ResultSize Unlimited -ErrorAction SilentlyContinue |
+                 Select-Object -ExpandProperty PrimarySmtpAddress)
+
+    if ($members -contains $primarySmtp) {
+        Write-Host ("Mailbox already in group: {0}" -f $primarySmtp) -ForegroundColor Green
+    } else {
+        Write-Host ("Adding mailbox to group: {0}" -f $primarySmtp) -ForegroundColor Yellow
+        try {
+            Add-DistributionGroupMember -Identity $ScopeGroupName -Member $primarySmtp -ErrorAction Stop
+            Write-Host "Added mailbox to group." -ForegroundColor Green
+        } catch {
+            if ($_.Exception.Message -match "already a member") {
+                Write-Host "Mailbox already in group (server confirms)." -ForegroundColor Green
+            } else {
+                throw
+            }
+        }
+    }
+
+    Write-Section "ENSURE APPLICATION ACCESS POLICY EXISTS (NULL-SAFE / IDEMPOTENT)"
+    $policiesForApp = @(Get-ApplicationAccessPolicy -ErrorAction SilentlyContinue | Where-Object { $_.AppId -eq $AppId })
+
+    # Find matching policy for this AppId + this scope group (GUID compare, null-safe)
+    $matching = @()
+    foreach ($p in $policiesForApp) {
+        if ($null -eq $p) { continue }
+        if ($null -eq $p.PolicyScopeGroupId) { continue }  # <-- FIXES YOUR CRASH
+        $pScopeGuid = Get-GuidFromText $p.PolicyScopeGroupId
+        if ($pScopeGuid -and ($pScopeGuid -eq $scopeGroupGuid)) {
+            $matching += $p
+        }
+    }
+
+    if ($matching.Count -gt 0) {
+        Write-Host "Matching ApplicationAccessPolicy already exists for this AppId + scope group." -ForegroundColor Green
+        $matching | Select-Object AppId,PolicyScopeGroupId,AccessRight,Description,Identity | Format-Table -AutoSize
+    } else {
+        if ($policiesForApp.Count -gt 0) {
+            Write-Host "Policies exist for this AppId, but none match this scope group. (Some policies may have null scope IDs.)" -ForegroundColor Yellow
+            $policiesForApp |
+                Select-Object AppId,PolicyScopeGroupId,AccessRight,Description,Identity |
+                Format-Table -AutoSize
+        }
+
+        Write-Host "Creating ApplicationAccessPolicy (RestrictAccess) for this scope group..." -ForegroundColor Yellow
+        try {
+            New-ApplicationAccessPolicy `
+                -AppId $AppId `
+                -PolicyScopeGroupId $group.ExternalDirectoryObjectId `
+                -AccessRight RestrictAccess `
+                -Description $PolicyDesc `
+                -ErrorAction Stop | Out-Null
+
+            Write-Host "Policy created successfully." -ForegroundColor Green
+        } catch {
+            if ($_.Exception.Message -match "Duplicate policy found") {
+                Write-Host "Policy already exists (duplicate detected). Continuing." -ForegroundColor Green
+            } else {
+                Write-Host "ERROR creating policy:" -ForegroundColor Red
+                Write-Host $_.Exception.Message -ForegroundColor Red
+                throw
+            }
+        }
+    }
+
+    Write-Section "VALIDATE POLICY WITH Test-ApplicationAccessPolicy"
+    $test = Test-ApplicationAccessPolicy -AppId $AppId -Identity $SenderMailbox
+    $test | Format-List
+
+    $successStates = @("Granted","Allowed")
+    if ($successStates -contains $test.AccessCheckResult) {
+        Write-Host ("SUCCESS: AccessCheckResult={0} for identity {1}" -f $test.AccessCheckResult, $SenderMailbox) -ForegroundColor Green
+    } else {
+        Write-Host ("FAIL: AccessCheckResult={0} for identity {1}" -f $test.AccessCheckResult, $SenderMailbox) -ForegroundColor Red
+        Write-Host "Stop here: Fix scope mismatch before testing Graph sendMail." -ForegroundColor Yellow
+        exit 3
+    }
+
+    if (-not $SendGraphTestMail) {
+        Write-Host ""
+        Write-Host "Graph sendMail test disabled. Completed policy setup + validation only." -ForegroundColor Green
+        exit 0
+    }
+
+    Write-Section "GRAPH APP-ONLY SENDMAIL TEST (END-TO-END)"
+    $ClientSecret = Read-Host "Enter Client Secret for AppId (input hidden)" -AsSecureString
+
+    # SecureString -> Plain (in memory only)
+    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)
+    $ClientSecretPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR) | Out-Null
+
+    # Get token
+    $tokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+    $tokenBody = @{
+        client_id     = $AppId
+        client_secret = $ClientSecretPlain
+        scope         = "https://graph.microsoft.com/.default"
+        grant_type    = "client_credentials"
+    }
+
+    Write-Host "Requesting app-only token..." -ForegroundColor Cyan
+    try {
+        $tokenResponse = Invoke-RestMethod -Method Post -Uri $tokenUrl -ContentType "application/x-www-form-urlencoded" -Body $tokenBody
+    } catch {
+        Write-Host "Token request failed!" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        $respBody = Read-ResponseBodySafely $_.Exception.Response
+        if ($respBody) {
+            Write-Host "Token error response body:" -ForegroundColor Yellow
+            Write-Host $respBody -ForegroundColor Yellow
+        }
+        exit 4
+    }
+
+    $accessToken = $tokenResponse.access_token
+    Show-JwtClaims $accessToken
+
+    # Build sendMail call
+    $graphUrl = "$GraphBaseUrl/users/$SenderMailbox/sendMail"
+    $clientRequestId = [guid]::
+
+    $mailPayload = @{
+        message = @{
+            subject = "MITANZ360Edu RAOP Test"
+            body = @{
+                contentType = "Text"
+                content = "If you receive this message, Graph Mail.Send + Exchange RAOP policy are correctly configured."
+            }
+            toRecipients = @(
+                @{
+                    emailAddress = @{
+                        address = $ToMailbox
+                    }
+                }
+            )
+        }
+        saveToSentItems = $true
+    } | ConvertTo-Json -Depth 6
+
+    $headers = @{
+        Authorization = "Bearer $accessToken"
+        "Content-Type" = "application/json"
+        "client-request-id" = $clientRequestId
+        "return-client-request-id" = "true"
+    }
+
+    Write-Host ("Calling Graph sendMail... sender={0} to={1} client-request-id={2}" -f $SenderMailbox, $ToMailbox, $clientRequestId) -ForegroundColor Cyan
+
+    try {
+        $resp = Invoke-WebRequest -Method Post -Uri $graphUrl -Headers $headers -Body $mailPayload
+        Write-Host ("Graph Response Status: {0}" -f $resp.StatusCode) -ForegroundColor Green
+        if ($resp.StatusCode -eq 202) {
+            Write-Host "SUCCESS: Graph sendMail returned 202 Accepted." -ForegroundColor Green
+        } else {
+            Write-Host "WARNING: Expected 202 Accepted. Check response." -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "Graph sendMail failed!" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        if ($_.Exception.Response) {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            Write-Host ("HTTP Status: {0}" -f $statusCode) -ForegroundColor Red
+            $respBody = Read-ResponseBodySafely $_.Exception.Response
+            if ($respBody) {
+                Write-Host "Response Body:" -ForegroundColor Yellow
+                Write-Host $respBody -ForegroundColor Yellow
+            }
+        }
+        exit 5
+    }
+
+    Write-Host ""
+    Write-Host "All-in-one completed successfully." -ForegroundColor Green
+}
+finally {
+    Disconnect-ExchangeOnline -Confirm:$false
+    Write-Host ""
+    Write-Host "Disconnected. Done." -ForegroundColor Cyan
+}

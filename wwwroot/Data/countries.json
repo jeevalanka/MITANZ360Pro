@@ -1,0 +1,26 @@
+[
+  {
+    "Name": "New Zealand",
+    "Code": "NZ",
+    "Currency": "NZD",
+    "Timezone": "Pacific/Auckland"
+  },
+  {
+    "Name": "Sri Lanka",
+    "Code": "LK",
+    "Currency": "LKR",
+    "Timezone": "Asia/Colombo"
+  },
+  {
+    "Name": "Australia",
+    "Code": "AU",
+    "Currency": "AUD",
+    "Timezone": "Australia/Sydney"
+  },
+  {
+    "Name": "India",
+    "Code": "IND",
+    "Currency": "Rs",
+    "Timezone": "get from AI"
+  }
+]

@@ -1,0 +1,508 @@
+@page "/lms-library"
+@layout MainLayout_No_Left_RightPan
+
+@using System.Linq
+@using MITANZ360Pro.Web.Services
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject SharePointService _spService
+@inject AuthenticationStateProvider AuthState
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Library — MITANZ360Pro</PageTitle>
+
+<div class="workspace">
+
+    <div class="workspace-main">
+
+        <!-- LEFT -->
+        <aside class="workspace-tree">
+
+            <div class="workspace-tree-scroll">
+                <LibraryTree DriveId="@DriveId"
+                             SelectedFolder="@CurrentFolder"
+                             OnDriveResolved="@(id => DriveId = id)"
+                             OnRootLoaded="@HandleRootLoaded"
+                             OnFolderSelected="@HandleFolderNavigate" />
+            </div>
+        </aside>
+
+        <!-- CENTER -->
+        <section class="workspace-center">
+
+            <div class="workspace-header d-flex align-items-center justify-content-between">
+
+                <!-- LEFT: BREADCRUMB -->
+                <div class="workspace-breadcrumb">
+                    <LibraryBreadcrumb Path="@PathStack"
+                                       OnCrumbClick="@HandleCrumbClick" />
+                </div>
+
+                <!-- RIGHT: ACTION BUTTONS -->
+                <div class="workspace-actions d-flex gap-2">
+
+                    <!-- Upload -->
+                    <label class="btn btn-outline-primary btn-sm m-0">
+                        <i class="bi bi-upload me-1"></i> Upload
+                        <InputFile OnChange="HandleFileSelected"
+                                   style="display:none"
+                                   multiple />
+                    </label>
+
+                    <!-- Refresh -->
+                    <button class="btn btn-outline-primary btn-sm"
+                            @onclick="HandleRefreshAsync">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                    </button>
+
+                </div>
+                
+            </div>
+
+            <div class="workspace-grid">
+                <ContentGrid Items="@CurrentChildren"
+                             SelectedItem="@SelectedItem"
+                             IsLoading="@IsLoadingChildren"
+                             OnItemSelected="@HandleItemSelected"
+                             OnItemOpen="@HandleItemOpen"
+                             OnEditRequested="@OpenEditor" />
+            </div>
+
+        </section>
+
+        <!-- RIGHT -->
+        <aside class="workspace-property-panel">
+            <div class="workspace-property-scroll">
+
+                @if (SelectedItem != null && !SelectedItem.IsFolder)
+                {
+                    <div class="wp-panel">
+
+                        <!-- USER INFO -->
+                        <div class="wp-group">
+                            <div class="wp-row">
+                                <span class="wp-label">User</span>
+                                <span class="wp-value">@userName</span>
+                            </div>
+
+                            <div class="wp-row">
+                                <span class="wp-label">Email</span>
+                                <span class="wp-value">@userEmail</span>
+                            </div>
+
+                            <div class="wp-row">
+                                <span class="wp-label">Roles</span>
+                                <span class="wp-value">@string.Join(", ", roles)</span>
+                            </div>
+                        </div>
+
+                        <!-- FILE -->
+                        <div class="wp-group">
+                            <div class="wp-title"><b>File</b></div>
+                            <div class="wp-value">@SelectedItem.Title</div>
+                        </div>
+
+                        <!-- COURSE -->
+                        <div class="wp-group">
+                            <div class="wp-title"><b>Course</b></div>
+                            <div class="wp-value">@SelectedItem.Name</div>
+                        </div>
+
+                        <!-- STATUS -->
+                        <div class="wp-group">
+                            <div class="wp-title"><b>Status</b></div>
+                            <div class="wp-value">
+                                @(SelectedItem.IsPublished ? "Published" : "Draft")
+                            </div>
+                        </div>
+
+                        <!-- DESCRIPTION -->
+                        <div class="wp-group">
+                            <div class="wp-title"><b>Description</b></div>
+                            <div class="wp-value">
+                                @SelectedItem.Description
+                            </div>
+                        </div>
+
+                        <!-- ACTION -->
+                        <div class="wp-actions">
+                            <button class="btn btn-primary btn-sm"
+                                    @onclick="() => OpenEditor(SelectedItem)">
+                                ✏️ Edit
+                            </button>
+                        </div>
+
+                    </div>
+                }
+                else
+                {
+                    <div class="wp-empty">
+                        Select a file to view details
+                    </div>
+                }
+
+            </div>
+        </aside>
+
+    </div>
+
+</div>
+
+@code {
+
+    private string DriveId = string.Empty;
+
+    private LibraryItem? CurrentFolder;
+    private List<LibraryItem> CurrentChildren = new();
+    private List<LibraryItem> _rootItems = new();
+    private List<LibraryItem> PathStack = new();
+
+    private LibraryItem? SelectedItem;
+    private bool IsLoadingChildren;
+    private bool IsDetailExpanded;
+
+    private string? userName;
+    private string? userEmail;
+    private List<string> roles = new();
+
+    // ✅ NEW: path cache
+    private readonly Dictionary<string, List<LibraryItem>> _pathCache = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthState.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        userName = user.Identity?.Name;
+
+        userEmail =
+            user.FindFirst("preferred_username")?.Value ??
+            user.FindFirst("upn")?.Value ??
+            user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ??
+            user.FindFirst("email")?.Value ??
+            user.Identity?.Name ??
+            "";
+
+        roles = user.Claims
+            .Where(c => c.Type == "roles" || c.Type == System.Security.Claims.ClaimTypes.Role)
+            .Select(c => c.Value)
+            .ToList();
+    }
+    private void HandleRootLoaded(List<LibraryItem> items)
+    {
+        _rootItems = items ?? new();
+        CurrentFolder = null;
+        CurrentChildren = _rootItems.ToList();
+        SelectedItem = null;
+
+        PathStack.Clear();
+        _pathCache.Clear();
+    }
+
+    private async Task HandleFolderNavigate(LibraryItem folder)
+    {
+        if (folder == null) return;
+        if (CurrentFolder?.Id == folder.Id) return;
+
+        IsLoadingChildren = true;
+
+        // ✅ clear stale selection
+        SelectedItem = null;
+        IsDetailExpanded = false;
+
+        CurrentFolder = folder;
+
+        var children = await _spService
+            .GetLibraryFolderChildrenAsync(folder.DriveId, folder.Id);
+
+        CurrentChildren = children ?? new();
+
+        // ✅ cache children paths
+        CacheChildPaths(folder, CurrentChildren);
+
+        // ✅ update breadcrumb
+        PathStack = BuildPath(folder);
+
+        IsLoadingChildren = false;
+    }
+
+    private async Task HandleCrumbClick(LibraryItem? folder)
+    {
+        if (folder == null)
+        {
+            CurrentFolder = null;
+            CurrentChildren = _rootItems.ToList();
+            SelectedItem = null;
+            PathStack.Clear();
+            return;
+        }
+
+        await HandleFolderNavigate(folder);
+    }
+
+    private Task HandleItemSelected(LibraryItem item)
+    {
+        if (item.IsFolder)
+            return Task.CompletedTask;
+
+        SelectedItem = item;
+        return Task.CompletedTask;
+    }
+
+    private void HandleItemOpen(LibraryItem item)
+    {
+        if (item.IsFolder)
+        {
+            SelectedItem = null;
+            _ = HandleFolderNavigate(item);
+            return;
+        }
+
+        SelectedItem = item;
+    }
+
+    private void OpenEditor(LibraryItem item)
+    {
+        if (item == null) return;
+
+        Nav.NavigateTo($"/library-edit/{Uri.EscapeDataString(item.Id)}");
+    }
+
+    // ✅ NEW: path builder
+    private List<LibraryItem> BuildPath(LibraryItem folder)
+    {
+        if (_pathCache.TryGetValue(folder.Id, out var cached))
+            return cached.ToList();
+
+        return new List<LibraryItem> { folder };
+    }
+
+    // ✅ NEW: path cache builder
+    private void CacheChildPaths(LibraryItem parent, IEnumerable<LibraryItem> children)
+    {
+        var parentPath = _pathCache.ContainsKey(parent.Id)
+            ? _pathCache[parent.Id]
+            : new List<LibraryItem> { parent };
+
+        foreach (var child in children.Where(x => x.IsFolder))
+        {
+            _pathCache[child.Id] = parentPath.Append(child).ToList();
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var files = e.GetMultipleFiles();
+
+        foreach (var file in files)
+        {
+            try
+            {
+                // ✅ MAX SIZE CONTROL (20MB)
+                var stream = file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+
+                // ✅ DIRECTLY PASS STREAM (IMPORTANT FIX)
+                await _spService.UploadFileAsync(
+                    DriveId,
+                    CurrentFolder?.Id ?? "root",
+                    file.Name,
+                    stream
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Upload failed: {file.Name} - {ex.Message}");
+            }
+        }
+
+        // ✅ Refresh UI
+        await HandleRefreshAsync();
+    }
+
+    private async Task HandleRefreshAsync()
+    {
+        if (string.IsNullOrEmpty(DriveId))
+            return;
+
+        IsLoadingChildren = true;
+
+        try
+        {
+            if (CurrentFolder != null)
+            {
+                var children = await _spService
+                    .GetLibraryFolderChildrenAsync(DriveId, CurrentFolder.Id);
+
+                CurrentChildren = children ?? new();
+            }
+            else
+            {
+                CurrentChildren = _rootItems.ToList();
+            }
+
+            // ✅ Clear selection (optional but recommended)
+            SelectedItem = null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Refresh failed: {ex.Message}");
+        }
+        finally
+        {
+            IsLoadingChildren = false;
+        }
+    }
+
+}
+
+
+<style>
+
+    .wp-panel {
+        padding: 12px;
+        font-size: 0.7rem; /* ✅ EXTRA SMALL */
+        color: #374151;
+    }
+
+    /* GROUP SPACING */
+    .wp-group {
+        margin-bottom: 10px;
+    }
+
+    /* ROW ALIGNMENT */
+    .wp-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 3px;
+    }
+
+    /* LABEL */
+    .wp-label {
+        width: 65px; /* tighter alignment */
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #2563EB;
+    }
+
+    /* VALUE */
+    .wp-value {
+        flex: 1;
+        font-size: 0.7rem;
+        color: #4b5563;
+        line-height: 1.35;
+    }
+
+    /* SECTION TITLE */
+    .wp-title {
+        font-size: 0.7rem; /* same size */
+        font-weight: 700; /* ✅ bold */
+        color: #2563EB;
+        margin-bottom: 2px;
+    }
+
+    /* ACTION BUTTON */
+    .wp-actions {
+        margin-top: 12px;
+    }
+
+        /* BUTTON SIZE FIX */
+        .wp-actions .btn {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            height: 28px;
+        }
+
+    .workspace-header {
+        padding: 8px 12px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #fff;
+    }
+
+    .workspace-actions .btn {
+        font-size: 0.85rem;
+        padding: 6px 12px;
+    }
+
+    .tree-collapsed {
+        width: 0 !important;
+        overflow: hidden;
+    }
+
+    .workspace-main.tree-collapsed-layout {
+        grid-template-columns: 0 1fr 360px;
+    }
+
+    .wp-label {
+        color: #2563EB; /* ✅ label color */
+        font-weight: 600;
+    }
+
+    .workspace {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .workspace-main {
+        display: grid;
+        grid-template-columns: 250px 1fr 360px;
+        height: 100%;
+        transition: grid-template-columns 0.3s ease;
+    }
+
+        .workspace-main.workspace-detail-expanded {
+            grid-template-columns: 0 0 1fr;
+        }
+
+    .workspace-tree,
+    .workspace-center {
+        transition: opacity 0.2s ease, transform 0.25s ease;
+    }
+
+    .workspace-main.workspace-detail-expanded .workspace-tree,
+    .workspace-main.workspace-detail-expanded .workspace-center {
+        opacity: 0;
+        transform: translateX(-20px);
+        pointer-events: none;
+    }
+
+    .workspace-tree {
+        border-right: 1px solid #ddd;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .workspace-center {
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .workspace-grid {
+        flex: 1;
+    }
+
+    .workspace-property-panel {
+        border-left: 1px solid #ddd;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .workspace-property-scroll {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .wp-empty {
+        padding: 20px;
+    }
+
+    .wp-meta {
+        font-size: 0.8rem;
+        color: #666;
+    }
+</style>

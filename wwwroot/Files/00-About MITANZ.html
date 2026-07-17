@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MITANZ Layout</title>
+
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+        }
+
+        /* LAYOUT */
+        .container {
+            display: flex;
+            height: 100%;
+        }
+
+        /* BOTH COLUMNS */
+        .column {
+            flex: 1;
+            display: flex;
+        }
+
+        /* FRAME (same for iframe + video) */
+        .video-frame {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+            /* IFRAME */
+            .video-frame iframe {
+                width: 100%;
+                height: 100%;
+                border: none;
+            }
+
+            /* VIDEO */
+            .video-frame video {
+                width: 100%;
+                height: 100%;
+                object-fit: cover; /* ✅ fills frame perfectly */
+                display: block;
+            }
+    </style>
+
+    <script>
+        document.addEventListener("click", function () {
+            const video = document.getElementById("aboutVideo");
+
+            if (video.muted) {
+                video.muted = false;
+                video.volume = 0.2;
+            }
+        }, { once: true });
+    </script>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- ✅ LEFT: WEBSITE -->
+        <div class="column">
+            <div class="video-frame">
+                <video id="aboutVideo" playsinline controls>
+                    <source src="/Video/AboutMITANZ.mp4" type="video/mp4">
+                </video>
+            </div>
+        </div>
+
+        <!-- ✅ RIGHT: VIDEO -->
+        <div class="column">
+            <div class="video-frame">
+                <iframe src="https://mitanz.com/?page_id=152"></iframe>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>
+

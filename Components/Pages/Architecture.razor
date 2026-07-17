@@ -1,0 +1,211 @@
+﻿@page "/architecture"
+
+<div class="arch-container">
+
+    <!-- HERO -->
+    <div class="row mb-4 g-3">
+            <img src="images/EduERP.png" class="img-fluid hero-img" />
+    </div>
+
+    <div class="text-center mb-5">
+        <h1 class="hero-title">MITANZ360Pro</h1>
+        <p class="hero-sub">
+            AI-Powered Education Operating System | Global Architecture Platform
+        </p>
+    </div>
+
+    <!-- TODAY -->
+    <div class="glass-card mb-5">
+        <h3>🚀 Today’s Platform (2025)</h3>
+        <p>
+            A unified system integrating LMS, CRM, Finance, Compliance, and AI —
+            transforming institutions into digital-first education providers.
+        </p>
+    </div>
+
+    <!-- ARCHITECTURE -->
+    <div class="glass-card mb-5 text-center">
+        <h3>🏗️ Enterprise Architecture</h3>
+        <img src="images/ArchEdu.png" class="img-fluid arch-img mt-3" />
+    </div>
+
+    <!-- MODULES -->
+    <div class="glass-card mb-5">
+        <h3>💼 Core Business Modules</h3>
+
+        <div class="row g-3">
+
+            <div class="col-md-4">
+                <div class="inner-card">
+                    <h5>🎓 LMS</h5>
+                    <p>Courses, assessments, certifications</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="inner-card">
+                    <h5>📢 CRM</h5>
+                    <p>Lead & admissions pipeline</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="inner-card">
+                    <h5>💰 Finance</h5>
+                    <p>Billing & payments</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PARTNERS -->
+    <div class="glass-card mb-5">
+        <h3>🤝 Partner Value</h3>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="flow-box">📈 Growth Enablement</div>
+            </div>
+            <div class="col-md-4">
+                <div class="flow-box">🔐 Compliance (NZQA / AQF)</div>
+            </div>
+            <div class="col-md-4">
+                <div class="flow-box">🌍 Global Expansion</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FUTURE -->
+    <div class="glass-card highlight mb-5">
+        <h2>🔮 2035 Vision — 10 Years Ahead</h2>
+
+        <ul>
+            <li>🤖 AI Tutors replacing traditional teaching</li>
+            <li>📊 Predictive analytics for student success</li>
+            <li>🌐 Virtual campuses (Metaverse learning)</li>
+            <li>💳 Automated enrollment & finance</li>
+            <li>🧠 AI personalized learning paths</li>
+            <li>🔗 Global job integration systems</li>
+        </ul>
+    </div>
+
+    <!-- CTA -->
+    <div class="text-center mt-5">
+        <a href="/contact" class="btn btn-gradient">
+            Partner With Us
+        </a>
+    </div>
+
+</div>
+
+<!-- ================= FULL STYLE ================= -->
+<style>
+
+    .arch-container {
+        padding: 25px;
+        background: radial-gradient(circle at top, #0d1117, #02040a);
+        color: white;
+    }
+
+    /* HERO */
+    .hero-title {
+        font-size: 3rem;
+        font-weight: bold;
+        background: linear-gradient(90deg,#0d6efd,#6610f2,#20c997);
+        -webkit-background-clip: text;
+        color: transparent;
+    }
+
+    .hero-sub {
+        color: #aaa;
+    }
+
+    .hero-img {
+        border-radius: 20px;
+        transition: 0.4s;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+        .hero-img:hover {
+            transform: scale(1.03);
+        }
+
+    /* GLASS */
+    .glass-card {
+        backdrop-filter: blur(18px);
+        background: rgba(255,255,255,0.05);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        margin-bottom: 20px;
+    }
+
+    /* INNER CARDS */
+    .inner-card {
+        background: rgba(255,255,255,0.08);
+        padding: 15px;
+        border-radius: 12px;
+        transition: 0.3s;
+    }
+
+        .inner-card:hover {
+            transform: translateY(-5px) scale(1.03);
+            background: rgba(255,255,255,0.12);
+        }
+
+    /* FLOW */
+    .flow-box {
+        background: rgba(255,255,255,0.08);
+        padding: 15px;
+        border-radius: 12px;
+        text-align: center;
+        transition: 0.3s;
+    }
+
+        .flow-box:hover {
+            background: rgba(13,110,253,0.2);
+        }
+
+    /* ARCH IMAGE */
+    .arch-img {
+        border-radius: 20px;
+        box-shadow: 0 25px 70px rgba(0,0,0,0.7);
+    }
+
+    /* FUTURE */
+    .highlight {
+        background: linear-gradient(135deg,#ff7a00,#ff3c00);
+        color: white;
+    }
+
+    /* BUTTON */
+    .btn-gradient {
+        background: linear-gradient(45deg,#0d6efd,#6610f2);
+        border-radius: 25px;
+        padding: 10px 25px;
+        color: white;
+        text-decoration: none;
+    }
+
+        .btn-gradient:hover {
+            transform: scale(1.05);
+        }
+
+    /* RESPONSIVE */
+    @@media (max-width: 768px) {
+
+        .hero-title {
+            font-size: 2rem;
+        }
+
+        .hero-img {
+            margin-bottom: 10px;
+        }
+
+        .glass-card {
+            padding: 15px;
+        }
+    }
+
+</style>

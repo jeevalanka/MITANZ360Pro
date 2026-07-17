@@ -1,0 +1,443 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MITANZ360Edu Help Center</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient( 135deg, #f8fafc, #eef2ff, #f0fdf4 );
+            color: #0f172a;
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .hero {
+            background: linear-gradient( 135deg, #2563eb, #06b6d4, #10b981 );
+            border-radius: 28px;
+            padding: 50px;
+            color: white;
+            margin-bottom: 30px;
+            box-shadow: 0 25px 60px rgba(37,99,235,0.25);
+        }
+
+            .hero h1 {
+                font-size: 3rem;
+                margin-bottom: 14px;
+                font-weight: 700;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+                line-height: 1.8;
+                max-width: 900px;
+                opacity: 0.95;
+            }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.80);
+            backdrop-filter: blur(14px);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.30);
+            transition: 0.3s ease;
+        }
+
+            .card:hover {
+                transform: translateY(-6px);
+            }
+
+        .card-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 18px;
+            color: white;
+        }
+
+        .blue {
+            background: linear-gradient(135deg,#2563eb,#06b6d4);
+        }
+
+        .green {
+            background: linear-gradient(135deg,#16a34a,#22c55e);
+        }
+
+        .orange {
+            background: linear-gradient(135deg,#f97316,#f59e0b);
+        }
+
+        .purple {
+            background: linear-gradient(135deg,#7c3aed,#a855f7);
+        }
+
+        .card h2 {
+            font-size: 1.35rem;
+            margin-bottom: 12px;
+            color: #0f172a;
+        }
+
+        .card p {
+            color: #475569;
+            line-height: 1.8;
+            font-size: 0.96rem;
+        }
+
+        .section {
+            background: white;
+            border-radius: 28px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.06);
+        }
+
+        .section-title {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 18px;
+            margin-top: 24px;
+        }
+
+        .feature-item {
+            padding: 18px;
+            border-radius: 18px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+            .feature-item h3 {
+                margin-bottom: 10px;
+                color: #2563eb;
+                font-size: 1rem;
+            }
+
+            .feature-item p {
+                font-size: 0.92rem;
+                line-height: 1.7;
+                color: #475569;
+            }
+
+        .lang-box {
+            margin-top: 20px;
+            padding: 24px;
+            border-radius: 20px;
+            background: linear-gradient( 135deg, #f1f5f9, #ffffff );
+            border: 1px solid #e2e8f0;
+        }
+
+            .lang-box h3 {
+                margin-bottom: 14px;
+                color: #0f172a;
+            }
+
+            .lang-box p {
+                line-height: 1.9;
+                color: #334155;
+            }
+
+        .video-frame {
+            margin-top: 30px;
+            overflow: hidden;
+            border-radius: 24px;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.12);
+        }
+
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+
+            body {
+                padding: 14px;
+            }
+
+            .hero {
+                padding: 30px;
+            }
+
+                .hero h1 {
+                    font-size: 2rem;
+                }
+
+            .section {
+                padding: 24px;
+            }
+
+            iframe {
+                height: 280px;
+            }
+        }
+    </style>
+
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="hero">
+
+            <h1>
+                🌐 MITANZ360Edu Help Center
+            </h1>
+
+            <p>
+                Welcome to the MITANZ360Edu Enterprise Help Document Center.
+                This professional support portal provides guidance for students,
+                administrators, academic coordinators, system operators,
+                trainers, and enterprise users.
+                The system supports modern ANZ-standard academic operations,
+                cloud-based education services, learning management,
+                AI-driven automation, and Microsoft technology integration.
+            </p>
+
+        </div>
+
+        <div class="grid">
+
+            <div class="card">
+
+                <div class="card-icon blue">
+                    🎓
+                </div>
+
+                <h2>
+                    Academic Services
+                </h2>
+
+                <p>
+                    Access course guidance, assessment instructions,
+                    LMS navigation, enrollment workflows,
+                    attendance tracking, certification processes,
+                    and academic support services.
+                </p>
+
+            </div>
+
+            <div class="card">
+
+                <div class="card-icon green">
+                    ☁️
+                </div>
+
+                <h2>
+                    Cloud Learning
+                </h2>
+
+                <p>
+                    Learn Microsoft Azure, AI integration,
+                    Power Platform, cybersecurity,
+                    cloud administration, and enterprise IT systems.
+                </p>
+
+            </div>
+
+            <div class="card">
+
+                <div class="card-icon orange">
+                    🛠️
+                </div>
+
+                <h2>
+                    Technical Support
+                </h2>
+
+                <p>
+                    Find troubleshooting instructions,
+                    login support, document management guidance,
+                    application usage instructions,
+                    and system recovery procedures.
+                </p>
+
+            </div>
+
+            <div class="card">
+
+                <div class="card-icon purple">
+                    🚀
+                </div>
+
+                <h2>
+                    Career Development
+                </h2>
+
+                <p>
+                    Build job-ready skills using practical training,
+                    enterprise simulation environments,
+                    cloud labs, and real-world industry workflows.
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="section">
+
+            <div class="section-title">
+                📘 Help & Support Features
+            </div>
+
+            <p>
+                The MITANZ360Edu Help Center is designed using modern enterprise UI/UX standards.
+                This portal can host HTML-based user guides, onboarding instructions,
+                technical documentation, learning support materials,
+                and AI-generated knowledge articles.
+            </p>
+
+            <div class="feature-list">
+
+                <div class="feature-item">
+                    <h3>🧠 AI Knowledge Base</h3>
+                    <p>
+                        AI-assisted learning documentation and intelligent support guidance.
+                    </p>
+                </div>
+
+                <div class="feature-item">
+                    <h3>📂 Dynamic HTML Documents</h3>
+                    <p>
+                        Upload and manage professional help documents dynamically.
+                    </p>
+                </div>
+
+                <div class="feature-item">
+                    <h3>🔐 Secure Enterprise Access</h3>
+                    <p>
+                        Enterprise-ready application architecture with secure navigation.
+                    </p>
+                </div>
+
+                <div class="feature-item">
+                    <h3>📊 Reporting & Analytics</h3>
+                    <p>
+                        Monitor learning activities and academic progress efficiently.
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="section">
+
+            <div class="section-title">
+                🌍 Multilingual Information
+            </div>
+
+            <div class="lang-box">
+
+                <h3>
+                    🇱🇰 Sinhala Information
+                </h3>
+
+                <p>
+                    MITANZ360Edu පද්ධතිය මඟින් සිසුන්ට,
+                    ගුරුවරුන්ට සහ පරිපාලකයන්ට වෘත්තීය මට්ටමේ
+                    අධ්‍යාපන සහ පද්ධති සේවාවන් ලබා දේ.
+                    මෙම පද්ධතිය Microsoft Cloud,
+                    AI Automation,
+                    සහ LMS තාක්ෂණයන් සමඟ ක්‍රියා කරයි.
+                    පරිශීලකයින්ට HTML Help Documents,
+                    Course Guides,
+                    සහ System Instructions පහසුවෙන් ප්‍රවේශ විය හැක.
+                </p>
+
+            </div>
+
+            <div class="lang-box">
+
+                <h3>
+                    🇮🇳 Tamil Information
+                </h3>
+
+                <p>
+                    MITANZ360Edu அமைப்பு மாணவர்கள்,
+                    நிர்வாகிகள் மற்றும் பயிற்சியாளர்களுக்கான
+                    தொழில்முறை கல்வி மற்றும் உதவி சேவைகளை வழங்குகிறது.
+                    இந்த தளம் Microsoft Cloud,
+                    AI தொழில்நுட்பம் மற்றும் Enterprise Learning முறைகளை ஆதரிக்கிறது.
+                    பயனர்கள் Help Documents,
+                    Learning Guides மற்றும் Application Instructions ஆகியவற்றை எளிதாக அணுக முடியும்.
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="section">
+
+            <div class="section-title">
+                🎥 System Training Video
+            </div>
+
+            <p>
+                Watch the following demonstration video to understand
+                enterprise cloud learning and digital education systems.
+            </p>
+
+            <div class="video-frame">
+
+                <iframe src="https://www.youtube.com/embed/tgbNymZ7vqY"
+                        allowfullscreen>
+                </iframe>
+
+            </div>
+
+        </div>
+
+        <div class="footer">
+
+            © 2026 MITANZ360Edu Enterprise Help Center • Professional Academic & Technology Platform
+
+        </div>
+
+    </div>
+
+</body>
+</html>

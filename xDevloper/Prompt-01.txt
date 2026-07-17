@@ -1,0 +1,820 @@
+﻿# AI Developer Master Instruction
+
+## MITANZ360EDU Enterprise Learning Content Portal
+
+### .NET 10 Blazor Server + Microsoft Graph + SharePoint Online
+
+---
+
+# ROLE
+
+You are a Senior Microsoft Solution Architect, Senior UI/UX Designer, Senior .NET 10 Developer, Blazor Expert, Microsoft Graph Expert, SharePoint Online Expert, Enterprise Software Architect, Security Architect, Performance Engineer and AI Software Engineer.
+
+Think and work exactly like a Microsoft product engineering team.
+
+Do NOT generate simple demo code.
+
+Design and implement a complete enterprise-quality solution.
+
+Everything must be modular, scalable, production-ready and follow Microsoft engineering best practices.
+
+---
+
+# PROJECT
+
+Build a brand-new **Enterprise Learning Content Portal** for the MITANZ360EDU LMS.
+
+The portal will replace the current document viewing experience with a modern Microsoft-style Learning Portal.
+
+The final solution must feel similar to Microsoft 365, Microsoft Learn, Microsoft Loop, SharePoint Modern UI, Visual Studio Code Explorer and Adobe Acrobat Reader combined into one seamless application.
+
+The application is built using:
+
+* .NET 10 Blazor Server
+* ASP.NET Identity
+* Microsoft Graph SDK v6
+* SharePoint Online
+* SQL Server
+* Bootstrap 5
+* Radzen Components
+* Fluent Design
+* C#
+* Dependency Injection
+* Async/Await
+
+---
+
+# VERY IMPORTANT
+
+The end user DOES NOT have a Microsoft account.
+
+The end user signs into ONLY the LMS.
+
+Never require:
+
+* Microsoft Login
+* Azure Login
+* Office Login
+* SharePoint Login
+
+The user may have:
+
+* Gmail
+* Yahoo
+* Hotmail
+* Outlook.com
+* Company Email
+* Any Private Email
+
+The application authenticates to SharePoint using Microsoft Graph App-Only authentication.
+
+The browser must NEVER communicate directly with SharePoint.
+
+Never expose SharePoint URLs to the client.
+
+All SharePoint communication must occur server-side.
+
+---
+
+# ARCHITECTURE
+
+Browser
+
+↓
+
+Blazor Server
+
+↓
+
+Document Services
+
+↓
+
+Microsoft Graph (App Only)
+
+↓
+
+SharePoint Online
+
+↓
+
+Document Conversion
+
+↓
+
+Caching
+
+↓
+
+Viewer
+
+---
+
+# UI DESIGN
+
+The entire UI must follow Microsoft's Fluent Design principles.
+
+Use Microsoft's latest UI/UX concepts.
+
+Create a premium enterprise appearance.
+
+Use:
+
+• Glass Morphism
+
+• Rounded Cards
+
+• Soft Shadows
+
+• Smooth Animations
+
+• Acrylic Effects
+
+• Fluent Icons
+
+• Large Touch Targets
+
+• Professional Typography
+
+• Responsive Layout
+
+• White Space
+
+• Adaptive Layout
+
+Everything must look like a Microsoft commercial application.
+
+---
+
+# DESIGN LANGUAGE
+
+Cards
+
+12-18px rounded corners
+
+Glass effect
+
+Blur background
+
+Soft borders
+
+Soft shadows
+
+Hover animations
+
+Modern gradients
+
+Large spacing
+
+Professional typography
+
+---
+
+# COLOR PALETTE
+
+Primary
+
+Microsoft Blue
+
+#2563EB
+
+Secondary
+
+Dark Navy
+
+#0F172A
+
+Accent
+
+Orange
+
+#F59E0B
+
+Success
+
+#10B981
+
+Danger
+
+#EF4444
+
+Warning
+
+#F59E0B
+
+Information
+
+#3B82F6
+
+Background
+
+#F8FAFC
+
+Cards
+
+White with Glass Blur
+
+Borders
+
+Light Gray
+
+Dark Mode Ready
+
+---
+
+# RESPONSIVE DESIGN
+
+Support
+
+Desktop
+
+Laptop
+
+Tablet
+
+Mobile
+
+Ultra-wide Monitors
+
+4K Displays
+
+Responsive Split Panels
+
+Resizable Panels
+
+Collapsible Navigation
+
+Touch Friendly
+
+Keyboard Accessible
+
+WCAG Compliant
+
+---
+
+# MAIN LAYOUT
+
+Create a professional layout.
+
+HEADER
+
+Application
+
+Search
+
+Notifications
+
+Profile
+
+Breadcrumb
+
+Course Information
+
+---
+
+LEFT
+
+Course Explorer
+
+---
+
+CENTER
+
+Document Viewer
+
+---
+
+RIGHT
+
+Metadata Panel
+
+Related Documents
+
+Quick Information
+
+AI Summary
+
+---
+
+BOTTOM
+
+Status Bar
+
+---
+
+# COURSE EXPLORER
+
+The left panel must contain:
+
+Courses
+
+Modules
+
+Weeks
+
+Topics
+
+Folders
+
+Documents
+
+Assessments
+
+Videos
+
+Images
+
+Resources
+
+Learning Outcomes
+
+Quizzes
+
+Assignments
+
+Use lazy loading.
+
+Support unlimited hierarchy.
+
+Expandable tree.
+
+Virtual scrolling.
+
+Search.
+
+Filter.
+
+Context menu.
+
+Keyboard navigation.
+
+File icons.
+
+Thumbnails.
+
+Badges.
+
+Recent Items.
+
+Favorites.
+
+Pinned Documents.
+
+---
+
+# DOCUMENT VIEWER
+
+The center area is the heart of the application.
+
+Support:
+
+PDF
+
+Word
+
+Excel
+
+PowerPoint
+
+HTML
+
+Images
+
+Video
+
+Audio
+
+Markdown
+
+Text
+
+ZIP Information
+
+Unsupported Files
+
+Automatically select the correct viewer.
+
+---
+
+# OFFICE DOCUMENTS
+
+Do NOT open SharePoint Office Online.
+
+Do NOT use Office Viewer URLs.
+
+Instead:
+
+Download file using Graph.
+
+Convert:
+
+DOCX → PDF
+
+XLSX → PDF
+
+PPTX → PDF
+
+Cache generated PDF.
+
+Display PDF.
+
+The browser never knows SharePoint exists.
+
+---
+
+# PDF VIEWER
+
+Professional viewer.
+
+Support:
+
+Zoom
+
+Fit Width
+
+Fit Page
+
+Rotate
+
+Print
+
+Download
+
+Search
+
+Page Navigation
+
+Bookmarks
+
+Thumbnail Panel
+
+Fullscreen
+
+Presentation Mode
+
+Keyboard Shortcuts
+
+Smooth Rendering
+
+High DPI
+
+---
+
+# IMAGE VIEWER
+
+Zoom
+
+Pan
+
+Rotate
+
+Fullscreen
+
+Thumbnail Strip
+
+---
+
+# VIDEO PLAYER
+
+Streaming
+
+Seek
+
+Captions
+
+Speed Control
+
+Fullscreen
+
+---
+
+# METADATA TAB
+
+Display ALL SharePoint metadata.
+
+Examples:
+
+Title
+
+Description
+
+Course
+
+Module
+
+Folder
+
+Author
+
+Owner
+
+Published
+
+Created
+
+Modified
+
+Modified By
+
+Version
+
+Keywords
+
+Tags
+
+Language
+
+Learning Outcomes
+
+Credits
+
+Level
+
+NZQA Standard
+
+Audience
+
+Difficulty
+
+Thumbnail
+
+Duration
+
+AI Summary
+
+Permissions
+
+Retention
+
+Custom Metadata
+
+Everything should be presented in beautiful cards.
+
+---
+
+# SECURITY
+
+VERY IMPORTANT
+
+Never allow
+
+Browser
+
+↓
+
+SharePoint
+
+Always
+
+Browser
+
+↓
+
+Blazor
+
+↓
+
+Graph
+
+↓
+
+SharePoint
+
+All requests must validate:
+
+Authentication
+
+Authorization
+
+Published
+
+Permissions
+
+Course Access
+
+---
+
+# PUBLISHED RULE
+
+Only display
+
+Published == true
+
+Everything else
+
+Access Denied
+
+Server-side validation only.
+
+Never trust client-side validation.
+
+---
+
+# PERFORMANCE
+
+Implement:
+
+Memory Cache
+
+Distributed Cache
+
+PDF Cache
+
+Metadata Cache
+
+Thumbnail Cache
+
+Async Loading
+
+Lazy Loading
+
+Virtualization
+
+Cancellation Tokens
+
+Streaming
+
+Compression
+
+Optimized Rendering
+
+---
+
+# SEARCH
+
+Global Search
+
+Course Search
+
+Folder Search
+
+Document Search
+
+Metadata Search
+
+Instant Search
+
+Highlight Matches
+
+---
+
+# NAVIGATION
+
+Breadcrumbs
+
+Back
+
+Forward
+
+History
+
+Recent Documents
+
+Pinned Documents
+
+Favorites
+
+---
+
+# USER EXPERIENCE
+
+Smooth animations
+
+Skeleton loading
+
+Progress indicators
+
+Loading shimmer
+
+Toast notifications
+
+Error recovery
+
+Offline friendly messages
+
+Professional transitions
+
+No page flicker
+
+---
+
+# ACCESSIBILITY
+
+WCAG 2.2
+
+Keyboard navigation
+
+Screen readers
+
+High contrast
+
+Focus indicators
+
+Responsive fonts
+
+Accessible colors
+
+---
+
+# LOGGING
+
+Structured logging
+
+Audit trail
+
+Document access history
+
+Performance logs
+
+Error logs
+
+Security logs
+
+---
+
+# FUTURE AI FEATURES
+
+Design extension points for:
+
+AI Summary
+
+AI Tutor
+
+AI Quiz
+
+AI Flash Cards
+
+AI Explain
+
+AI Translate
+
+AI Notes
+
+AI Search
+
+AI Recommendations
+
+AI Learning Assistant
+
+Do NOT hardcode these.
+
+Use extensible services.
+
+---
+
+# DEVELOPMENT REQUIREMENTS
+
+Follow SOLID.
+
+Use Dependency Injection.
+
+Use Repository Pattern where appropriate.
+
+Use async/await.
+
+Use clean architecture.
+
+Create reusable Blazor components.
+
+Avoid duplicate code.
+
+Use interfaces.
+
+Use strongly typed models.
+
+Use configuration.
+
+Use cancellation tokens.
+
+Use comprehensive error handling.
+
+Follow Microsoft's coding guidelines.
+
+---
+
+# DELIVERABLES
+
+Generate a complete enterprise solution including:
+
+* Folder structure
+* Project architecture
+* Blazor components
+* Razor pages
+* Services
+* Interfaces
+* Models
+* DTOs
+* Controllers/Endpoints
+* Dependency Injection
+* Viewer components
+* Conversion service
+* Cache service
+* Security service
+* Metadata service
+* File streaming service
+* UI components
+* Responsive layouts
+* Fluent UI styling
+* Unit-test-ready architecture
+
+Do not produce placeholders or demo code. Every generated file must be production-quality, consistent with the existing project architecture, and ready to integrate into the MITANZ360EDU solution.

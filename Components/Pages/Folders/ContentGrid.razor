@@ -1,0 +1,476 @@
+@using System.Linq
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using MITANZ360Pro.Web.Services
+@inject IJSRuntime JS
+
+<div class="content-grid-wrap">
+
+    <div class="cg-toolbar-row">
+        <div class="cg-toolbar-left">
+            <span class="cg-count">@FolderCountLabel · @FileCountLabel</span>
+        </div>
+
+        <div class="cg-toolbar-right">
+            <span class="cg-selection-count">
+                @(SelectedItem == null ? "No selection" : "1 selected")
+            </span>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="cg-empty">Loading…</div>
+    }
+    else if (!Items.Any())
+    {
+        <div class="cg-empty">This folder is empty</div>
+    }
+    else
+    {
+        <div class="cg-table-wrap">
+            <table class="cg-table" role="grid">
+                <thead>
+                    <tr>
+                        <th class="cg-col-icon"></th>
+
+                        <th class="cg-sortable" @onclick='() => Sort("name")'>
+                            Name @GetSortIndicator("name")
+                        </th>
+
+                        <th class="cg-sortable cg-col-modified" @onclick='() => Sort("modified")'>
+                            Modified @GetSortIndicator("modified")
+                        </th>
+
+                        <th class="cg-col-status">Status</th>
+
+                        <!-- ✅ NEW COLUMN -->
+                        <th style="width:120px;">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in SortedItems())
+                    {
+                        var isSelected = SelectedItem?.Id == item.Id;
+
+                        <tr class="@(isSelected ? "selected" : null)"
+                            @onclick="() => SelectAsync(item)"
+                            @ondblclick="() => OpenAsync(item)">
+
+                            <td class="cg-cell-icon">
+                                @(item.IsFolder ? "📁" : "📄")
+                            </td>
+
+                            <td>@GetDisplayName(item)</td>
+
+                            <td>
+                                @(item.LastModified?.ToString("dd MMM yyyy") ?? "—")
+                            </td>
+
+                            <td>
+                                @if (item.IsFolder)
+                                {
+                                    <span>—</span>
+                                }
+                                else if (item.IsArchived)
+                                {
+                                    <span class="cg-badge archived">Archived</span>
+                                }
+                                else if (item.IsPublished)
+                                {
+                                    <span class="cg-badge published">Published</span>
+                                }
+                                else
+                                {
+                                    <span class="cg-badge draft">Draft</span>
+                                }
+                            </td>
+
+                            <!-- ✅ ACTION BUTTON HERE (CORRECT FIX) -->
+                            <td class="cg-cell-actions">
+                                @if (!item.IsFolder)
+                                {
+                                    <button class="btn btn-sm btn-light"
+                                            @onclick:stopPropagation
+                                            @onclick="() => ViewDocument(item)">
+                                        📄 View
+                                    </button>
+
+                                        <button class="btn btn-sm btn-light"
+                                                @onclick:stopPropagation
+                                                @onclick="() => OnEditRequested.InvokeAsync(item)">
+                                            ✏️ Edit
+                                        </button>
+                                }
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter] public List<LibraryItem> Items { get; set; } = new();
+    [Parameter] public LibraryItem? SelectedItem { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+
+    [Parameter] public EventCallback<LibraryItem> OnItemSelected { get; set; }
+    [Parameter] public EventCallback<LibraryItem> OnItemOpen { get; set; }
+    [Parameter] public EventCallback<LibraryItem> OnFolderOpen { get; set; }
+
+    // ✅ ADD THIS (REQUIRED)
+    [Parameter] public EventCallback<LibraryItem> OnEditRequested { get; set; }
+
+    private string _sortField = "name";
+    private bool _sortAsc = true;
+
+    private string FolderCountLabel =>
+        $"{Items.Count(x => x.IsFolder)} folders";
+
+    private string FileCountLabel =>
+        $"{Items.Count(x => !x.IsFolder)} files";
+
+    private async Task SelectAsync(LibraryItem item)
+    {
+        await OnItemSelected.InvokeAsync(item);
+    }
+
+    private async Task OpenAsync(LibraryItem item)
+    {
+        if (item.IsFolder)
+            await OnFolderOpen.InvokeAsync(item);
+        else
+            await OnItemOpen.InvokeAsync(item);
+    }
+
+    private void Sort(string field)
+    {
+        if (_sortField == field)
+            _sortAsc = !_sortAsc;
+        else
+        {
+            _sortField = field;
+            _sortAsc = true;
+        }
+    }
+
+    private IEnumerable<LibraryItem> SortedItems()
+    {
+        var folders = Items.Where(x => x.IsFolder)
+            .OrderBy(x => x.Name);
+
+        var files = SortFiles(Items.Where(x => !x.IsFolder));
+
+        return folders.Concat(files);
+    }
+
+    private IEnumerable<LibraryItem> SortFiles(IEnumerable<LibraryItem> files)
+    {
+        var sorted = _sortField switch
+        {
+            "size" => files.OrderBy(x => x.Size),
+            "modified" => files.OrderBy(x => x.LastModified),
+            _ => files.OrderBy(x => x.Name)
+        };
+
+        return _sortAsc ? sorted : sorted.Reverse();
+    }
+
+    private string GetSortIndicator(string field)
+    {
+        if (_sortField != field) return "";
+        return _sortAsc ? "↑" : "↓";
+    }
+
+    private string GetDisplayName(LibraryItem item) =>
+        string.IsNullOrWhiteSpace(item.Name) ? "(Unnamed)" : item.Name;
+
+    private string GetTypeLabel(LibraryItem item) =>
+        item.IsFolder ? "Folder" :
+        System.IO.Path.GetExtension(item.Name)?.TrimStart('.').ToUpper() ?? "FILE";
+
+    private string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024):F2} MB";
+    }
+    private async Task ViewDocument(LibraryItem item)
+    {
+        if (item == null || item.IsFolder)
+            return;
+
+        await JS.InvokeVoidAsync("open", $"/api/files/{item.Id}", "_blank");
+    }
+
+}
+
+<style>
+    .cg-col-actions {
+        width: 170px;
+    }
+
+    .cg-cell-actions {
+        display: flex;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    .lib-tree-chevron {
+        width: 16px;
+        font-size: 1.3rem; /* ✅ increase this */
+        color: blue;
+    }
+
+    .cg-icon-img {
+        width: 20px;
+        height: 20px;
+        display: block;
+    }
+
+    .content-grid-wrap {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        width: 100%;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .cg-toolbar-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        font-size: 0.78rem;
+        color: #6b7280;
+        border-bottom: 1px solid #e2e8f0;
+        background: #fff;
+        flex-shrink: 0;
+    }
+
+    .cg-toolbar-left,
+    .cg-toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .cg-count {
+        white-space: nowrap;
+    }
+
+    .cg-selection-count {
+        color: #94a3b8;
+        white-space: nowrap;
+    }
+
+    .cg-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        min-height: 0;
+        padding: 32px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.85rem;
+    }
+
+    .cg-table-wrap {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        background: #fff;
+    }
+
+    .cg-table {
+        width: 100%;
+        min-width: 720px;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.82rem;
+        table-layout: fixed;
+    }
+
+        .cg-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+            .cg-table thead th.cg-sortable {
+                cursor: pointer;
+                user-select: none;
+            }
+
+                .cg-table thead th.cg-sortable:hover {
+                    background: #f1f5f9;
+                }
+
+    .cg-sort-indicator {
+        display: inline-block;
+        min-width: 14px;
+        margin-left: 6px;
+        color: #94a3b8;
+        font-size: 0.72rem;
+    }
+
+    .cg-table tbody td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cg-table tbody tr {
+        height: 44px;
+        cursor: default;
+        user-select: none;
+    }
+
+        .cg-table tbody tr:hover td {
+            background: #f8fafc;
+        }
+
+        .cg-table tbody tr.selected td {
+            background: #e0edff;
+        }
+
+        .cg-table tbody tr:focus {
+            outline: none;
+        }
+
+            .cg-table tbody tr:focus td {
+                box-shadow: inset 0 0 0 1px #2563eb;
+            }
+
+    .cg-col-icon {
+        width: 52px;
+    }
+
+    .cg-cell-icon {
+        width: 52px;
+        text-align: center;
+    }
+
+    .cg-col-type {
+        width: 110px;
+    }
+
+    .cg-col-size {
+        width: 110px;
+    }
+
+    .cg-col-modified {
+        width: 140px;
+    }
+
+    .cg-col-status {
+        width: 120px;
+    }
+
+    .cg-cell-name {
+        min-width: 0;
+    }
+
+    .cg-name-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .cg-name-text {
+        display: inline-block;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cg-folder-icon,
+    .cg-file-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+    }
+
+    .cg-status-muted {
+        color: #94a3b8;
+    }
+
+    .cg-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+
+        .cg-badge.published {
+            background: rgba(16, 185, 129, .15);
+            color: #059669;
+        }
+
+        .cg-badge.archived {
+            background: rgba(245, 158, 11, .15);
+            color: #b45309;
+        }
+
+        .cg-badge.draft {
+            background: rgba(100, 116, 139, .15);
+            color: #475569;
+        }
+
+    @@media (max-width: 900px) {
+        .cg-toolbar-row {
+            padding: 8px 10px;
+        }
+
+        .cg-col-size,
+        .cg-col-status,
+        .cg-table td.cg-col-size,
+        .cg-table td.cg-col-status {
+            display: none;
+        }
+
+        .cg-table {
+            min-width: 560px;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .cg-col-modified,
+        .cg-table td.cg-col-modified {
+            display: none;
+        }
+
+        .cg-table {
+            min-width: 420px;
+        }
+    }
+</style>

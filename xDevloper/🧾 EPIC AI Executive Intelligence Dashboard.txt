@@ -1,0 +1,257 @@
+﻿🧾 EPIC: AI Executive Intelligence Dashboard
+🧩 USER STORY
+🎯 Title
+
+Generate AI-Powered Executive Intelligence Report from Template
+
+👤 As a
+
+Business User (Admin / Manager / CEO)
+
+🎯 I want to
+
+Select a predefined JSON template and execute an AI engine to generate a structured executive report
+
+🎯 So that
+
+I can quickly understand insights, risks, and recommendations for decision-making without manual analysis
+
+🎯 BUSINESS VALUE
+Accelerates executive decision-making
+Standardizes reporting format
+Reduces manual workload
+Enables scalable AI-driven insights
+Supports enterprise-level UI experience
+🔁 END-TO-END USER FLOW
+User navigates to /t3 page
+System loads available JSON templates
+User selects a template
+User clicks Run AI Engine
+System shows loading indicator
+AI processes request
+System displays structured report
+If error occurs → show alert without breaking UI
+⚙️ FUNCTIONAL REQUIREMENTS
+1. Template Loading
+System must read .json files from:
+wwwroot/AI-Eng/
+Acceptance Criteria:
+
+✔ All JSON files appear in dropdown
+✔ Dropdown loads on page initialization
+✔ Empty folder handled gracefully
+
+2. Template Selection
+User must select one template before execution
+Validation:
+
+✔ If not selected → show error message
+
+3. AI Execution
+On button click:
+Read selected file
+Send JSON to AI service
+Await response
+AIService.ExecuteAsync(json);
+4. Loading State
+Show progress indicator while AI runs
+Requirements:
+
+✔ Non-blocking UI
+✔ Button disabled during execution
+
+5. Result Parsing
+
+AI response must include:
+
+{
+  "summary": "",
+  "insights": "",
+  "risks": "",
+  "recommendations": "",
+  "generatedAt": ""
+}
+6. Result Display
+
+Display output in structured sections:
+
+Summary
+Insights
+Risks
+Recommendations
+Generated timestamp
+7. Error Handling
+
+System must handle:
+
+No template selected
+File read error
+AI failure
+Invalid JSON
+UI Behavior:
+
+✔ Show alert
+✔ Do NOT crash
+✔ Preserve previous valid data (recommended)
+
+🎨 UI / UX DESIGN SPECIFICATION
+🧱 LAYOUT STRUCTURE
+Main Container
+ └── Glass Card
+      ├── Header
+      ├── Controls
+      ├── Loader
+      ├── Results Grid
+      └── Error Alert
+🧠 HEADER
+Title: 🧠 Executive Intelligence Report
+Subtitle: AI-powered insights
+🎛️ CONTROL PANEL
+Components:
+Dropdown (template selection)
+Primary button (Run AI)
+🎨 BUTTON STYLE
+Gradient: Indigo → Purple
+Rounded: 12px
+Hover: lift + glow
+🧊 GLASS UI DESIGN SYSTEM
+Card Styling
+Border radius: 16–20px
+Background: semi-transparent
+Blur effect
+Soft shadow
+📊 RESULTS SECTION
+Layout
+Desktop:
+
+2-column grid
+
+Mobile:
+
+1-column stacked
+
+Section Cards
+Section	Visual Style
+Summary	Neutral
+Insights	Blue accent
+Risks	Red accent
+Recommendations	Green accent
+📱 RESPONSIVE DESIGN
+Device	Behavior
+Desktop	Grid (2 columns)
+Tablet	Flexible grid
+Mobile	Stacked
+🎯 NAVIGATION CONTEXT
+Sidebar:
+Dashboard
+AI Engine
+Reports
+Settings
+Breadcrumb:
+Home / AI Engine / Executive Report
+🎨 PAGE-SPECIFIC STYLE IMPLEMENTATION (MANDATORY)
+📍 RULE
+
+All styles must be added inside the same .razor page
+
+📍 WHERE
+
+👉 Add <style> block at the bottom of the file
+
+🧾 FULL STYLE BLOCK
+<style>
+
+.main-body {
+    padding: 20px;
+    background: linear-gradient(135deg, #eef2ff, #f8fafc);
+    min-height: 100vh;
+}
+
+.content-container {
+    max-width: 1200px;
+    margin: auto;
+}
+
+/* Glass Card */
+.full-width-card {
+    backdrop-filter: blur(12px);
+    background: rgba(255,255,255,0.65);
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+}
+
+/* Section Cards */
+.section-box {
+    margin-top: 15px;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+/* Color Indicators */
+.section-box:nth-of-type(1) { border-left: 4px solid #4F46E5; }
+.section-box:nth-of-type(2) { border-left: 4px solid #3B82F6; }
+.section-box:nth-of-type(3) { border-left: 4px solid #EF4444; }
+.section-box:nth-of-type(4) { border-left: 4px solid #22C55E; }
+
+/* Button */
+.rz-button {
+    border-radius: 12px !important;
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    color: white;
+}
+
+/* Dropdown */
+.rz-dropdown {
+    border-radius: 12px !important;
+}
+
+</style>
+🧠 UX BEHAVIOR RULES
+
+✔ Show loader during processing
+✔ Keep UI responsive
+✔ Do NOT flicker screen
+✔ Maintain previous data on failure
+✔ Smooth transitions
+
+🧪 TEST SCENARIOS
+✅ Success
+Select template → Run → Display report
+❌ Error Cases
+No selection → error message
+Invalid JSON → error alert
+AI failure → error alert
+⚡ PERFORMANCE REQUIREMENTS
+Async execution
+Minimal UI blocking
+Fast template loading
+Optional caching (future)
+🔐 SECURITY CONSIDERATIONS
+Validate JSON before sending
+Prevent malicious input
+Avoid exposing raw AI errors
+🚀 FINAL EXPERIENCE
+
+This page must feel like:
+
+👉 A modern SaaS AI dashboard
+👉 Clean, glass-style UI
+👉 Executive-ready output
+👉 Fast, responsive, and stable
+
+🔄 NEXT STEP OPTIONS
+
+If you want, I can now:
+
+✅ Generate FULL .razor production file (Radzen + Clean Architecture aligned)
+✅ Integrate AIService with logging + retry + validation
+✅ Add export (PDF / Word)
+✅ Add history tracking dashboard
+
+Just say:
+👉 "Generate full production razor file"

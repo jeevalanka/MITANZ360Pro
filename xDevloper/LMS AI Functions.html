@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MITANZ360Edu LMS AI Functions</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+    body{
+        font-family: Arial, sans-serif;
+        margin:0;
+        background:#f4f7fb;
+        color:#1e293b;
+    }
+
+    .hero{
+        background: linear-gradient(135deg,#0f172a,#2563eb);
+        color:white;
+        padding:50px;
+        text-align:center;
+    }
+
+    .hero h1{
+        font-size:42px;
+        margin-bottom:10px;
+    }
+
+    .hero p{
+        font-size:18px;
+        opacity:0.9;
+    }
+
+    .container{
+        width:95%;
+        max-width:1400px;
+        margin:auto;
+        padding:40px 0;
+    }
+
+    .grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+        gap:25px;
+    }
+
+    .card{
+        background:white;
+        border-radius:18px;
+        padding:25px;
+        box-shadow:0 8px 25px rgba(0,0,0,0.08);
+        transition:0.3s;
+        border-top:5px solid #2563eb;
+    }
+
+    .card:hover{
+        transform:translateY(-5px);
+    }
+
+    .icon{
+        font-size:42px;
+        color:#2563eb;
+        margin-bottom:15px;
+    }
+
+    h2{
+        font-size:22px;
+        margin-bottom:10px;
+    }
+
+    .section-title{
+        font-size:32px;
+        margin-bottom:30px;
+        text-align:center;
+        color:#0f172a;
+    }
+
+    .purpose{
+        background:#eff6ff;
+        padding:12px;
+        border-radius:10px;
+        margin-top:10px;
+    }
+
+    .footer{
+        background:#0f172a;
+        color:white;
+        text-align:center;
+        padding:30px;
+        margin-top:50px;
+    }
+
+    ul{
+        padding-left:20px;
+    }
+
+    li{
+        margin-bottom:8px;
+    }
+
+    .badge{
+        display:inline-block;
+        background:#2563eb;
+        color:white;
+        padding:5px 12px;
+        border-radius:20px;
+        font-size:12px;
+        margin-top:10px;
+    }
+</style>
+</head>
+<body>
+
+<div class="hero">
+    <h1><i class="fa-solid fa-brain"></i> MITANZ360Edu LMS AI Functions</h1>
+    <p>Enterprise AI Architecture for LMS, SMS, ERP & DMS</p>
+</div>
+
+<div class="container">
+
+    <div class="section-title">
+        AI-Powered LMS Features
+    </div>
+
+    <div class="grid">
+
+        <div class="card">
+            <div class="icon"><i class="fa-solid fa-file-circle-question"></i></div>
+            <h2>Quiz Generator AI</h2>
+            <p>Automatically generates professional quizzes for LMS modules.</p>
+            <div class="purpose">
+                <strong>Features:</strong>
+                <ul>
+                    <li>MCQ generation</li>
+                    <li>Scenario questions</li>
+                    <li>Auto answers</li>
+                    <li>Difficulty levels</li>
+                </ul>
+            </div>
+            <span class="badge">GenerateQuizAsync()</span>
+        </div>
+
+        <div class="card">
+            <div class="icon"><i class="fa-solid fa-graduation-cap"></i></div>
+            <h2>AI Tutor</h2>
+            <p>Copilot-style AI tutor for students.</p>
+            <div class="purpose">
+                <strong>Features:</strong>
+                <ul>
+                    <li>Topic explanations</li>
+                    <li>Step-by-step learning</li>
+                    <li>Real-world examples</li>
+                    <li>Certification guidance</li>
+                </ul>
+            </div>
+            <span class="badge">AskTutorAsync()</span>
+        </div>
+
+        <div class="card">
+            <div class="icon"><i class="fa-solid fa-file-signature"></i></div>
+            <h2>Assignment Feedback AI</h2>
+            <p>Analyzes student submissions and generates intelligent feedback.</p>
+            <div class="purpose">
+                <strong>Features:</strong>
+                <ul>
+                    <li>Rubric analysis</li>
+                    <li>Score estimation</li>
+                    <li>Improvement suggestions</li>
+                    <li>Weakness detection</li>
+                </ul>
+            </div>
+            <span class="badge">GenerateAssignmentFeedbackAsync()</span>
+        </div>
+
+        <div class="card">
+            <div class="icon"><i class="fa-solid fa-laptop-code"></i></div>
+            <h2>Lab Scenario Generator</h2>
+            <p>Creates enterprise-level practical labs.</p>
+            <div class="purpose">
+                <strong>Features:</strong>
+                <ul>
+                    <li>Azure labs</li>
+                    <li>Networking labs</li>
+                    <li>Cybersecurity labs</li>
+                    <li>Troubleshooting tasks</li>
+                </ul>
+            </div>
+            <span class="badge">GenerateLabScenarioAsync()</span>
+        </div>
+
+        <div class="card">
+            <div class="icon"><i class="fa-solid fa-route"></i></div>
+            <h2>Learning Path AI</h2>
+            <p>Creates personalized student learning roadmaps.</p>
+            <div class="purpose">
+                <strong>Features:</strong>
+                <ul>
+                    <li>Skill analysis</li>
+                    <li>Study plans</li>
+                    <li>Certification pathways</li>
+                    <li>Milestone tracking</li>
+                </ul>
+            </div>
+            <span class="badge">GenerateLearningPathAsync()</span>
+        </div>
+
+        <div class="card">
+            <div class="icon"><i class="fa-solid fa-chart-line"></i></div>
+            <h2>Student Performance Analytics</h2>
+            <p>AI-driven academic analytics engine.</p>
+            <div class="purpose">
+                <strong>Features:</strong>
+                <ul>
+                    <li>Risk analysis</li>
+                    <li>Attendance tracking</li>
+                    <li>Performance prediction</li>
+                    <li>Weakness detection</li>
+                </ul>
+            </div>
+            <span class="badge">AnalyzeStudentPerformanceAsync()</span>
+        </div>
+
+        <div class="card">
+            <div class="icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+            <h2>Semantic Search AI</h2>
+            <p>Natural language search for LMS documents and content.</p>
+            <div class="purpose">
+                <strong>Features:</strong>
+                <ul>
+                    <li>Document search</li>
+                    <li>Knowledge retrieval</li>
+                    <li>Semantic matching</li>
+                    <li>AI recommendations</li>
+                </ul>
+            </div>
+            <span class="badge">SemanticCourseSearchAsync()</span>
+        </div>
+
+        <div class="card">
+            <div class="icon"><i class="fa-solid fa-file-lines"></i></div>
+            <h2>Course Summary AI</h2>
+            <p>Summarizes lectures, PDFs, and course materials.</p>
+            <div class="purpose">
+                <strong>Features:</strong>
+                <ul>
+                    <li>Key concepts</li>
+                    <li>Learning outcomes</li>
+                    <li>Quick summaries</li>
+                    <li>Topic extraction</li>
+                </ul>
+            </div>
+            <span class="badge">GenerateCourseSummaryAsync()</span>
+        </div>
+
+        <div class="card">
+            <div class="icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <h2>Plagiarism Insights AI</h2>
+            <p>AI-powered integrity and similarity analysis.</p>
+            <div class="purpose">
+                <strong>Features:</strong>
+                <ul>
+                    <li>Similarity detection</li>
+                    <li>AI content detection</li>
+                    <li>Integrity scoring</li>
+                    <li>Suspicious pattern analysis</li>
+                </ul>
+            </div>
+            <span class="badge">GeneratePlagiarismInsightsAsync()</span>
+        </div>
+
+    </div>
+
+</div>
+
+<div class="footer">
+    <h3>MITANZ360Edu Enterprise AI Platform</h3>
+    <p>AI-Native LMS | SMS | ERP | DMS Ecosystem</p>
+</div>
+
+</body>
+</html>

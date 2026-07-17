@@ -1,0 +1,16 @@
+﻿
+
+Welcome to OpenRouter. 
+You now have one API key that reaches 300+ models across OpenAI, Anthropic, Google, Meta, DeepSeek, 
+xAI, Mistral, and every other major provider. It is drop-in compatible with the OpenAI SDK, so the 
+integration looks identical to what you already have, and you stop maintaining a separate account and 
+a separate SDK for each provider.
+
+MITANZ360Edu
+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
+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
+
+
+Read https://openrouter.ai/skills/create-agent/SKILL.md and 
+follow the instructions to build an agent using OpenRouter.
+

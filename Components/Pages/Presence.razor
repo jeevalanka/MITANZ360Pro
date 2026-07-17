@@ -1,0 +1,235 @@
+﻿@page "/presence"
+@layout MainLayout
+<div class="presence-container">
+
+    <!-- ================= HERO IMAGE ================= -->
+    <div class="text-center mb-5">
+        <img src="images/OurPresens.png" class="img-fluid hero-img" />
+    </div>
+
+    <!-- ================= TITLE ================= -->
+    <div class="text-center mb-5">
+        <h1 class="hero-title">Our Global Presence</h1>
+        <p class="hero-sub">
+            Strategic Operations Across New Zealand & Australia — Powered by Microsoft Ecosystem
+        </p>
+    </div>
+
+    <!-- ================= OPERATIONS ================= -->
+    <div class="row g-4">
+
+        <!-- NEW ZEALAND -->
+        <div class="col-md-6">
+            <div class="glass-card card-blue">
+                <h4>🇳🇿 New Zealand Operations</h4>
+                <p>
+                    Our New Zealand division focuses on strategic planning, academic delivery,
+                    training systems, and global student support.
+                </p>
+
+                <ul>
+                    <li>🎓 Academic Program Development</li>
+                    <li>📚 Training & Certification Delivery</li>
+                    <li>🧑‍🏫 Tutor & Student Support</li>
+                    <li>📊 Compliance (NZQA Standards)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- AUSTRALIA -->
+        <div class="col-md-6">
+            <div class="glass-card card-orange">
+                <h4>🇦🇺 Australia Operations</h4>
+                <p>
+                    Australia handles deployment, infrastructure operations, and enterprise
+                    delivery aligned with scalable business models.
+                </p>
+
+                <ul>
+                    <li>⚙️ System Deployment & Delivery</li>
+                    <li>🏗️ Infrastructure & Cloud Operations</li>
+                    <li>📈 Business Expansion Support</li>
+                    <li>📊 AQF Compliance Alignment</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= CORE OPERATIONS ================= -->
+    <div class="glass-card mt-5">
+        <h3>⚙️ Core Operations Center</h3>
+        <p>
+            MITANZ operates a centralized Management & Operations Command system that ensures
+            governance, quality assurance, and delivery excellence across all regions.
+        </p>
+
+        <div class="row g-3 mt-3">
+
+            <div class="col-md-4">
+                <div class="inner-card card-green">
+                    🧠 AI Integration
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="inner-card card-purple">
+                    ☁️ Microsoft Cloud Ecosystem
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="inner-card card-cyan">
+                    🔐 Security & Compliance
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================= MICROSOFT STACK ================= -->
+    <div class="glass-card mt-5">
+        <h3>💻 Technology Ecosystem</h3>
+
+        <div class="row g-3">
+
+            <div class="col-md-3">
+                <div class="inner-card">☁️ Azure</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="inner-card">🧩 .NET Platform</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="inner-card">📁 SharePoint</div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="inner-card">📊 Microsoft 365</div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================= FUTURE EXPANSION ================= -->
+    <div class="glass-card highlight mt-5">
+        <h2>🔮 Future Expansion — Academic Industry</h2>
+
+        <p>
+            MITANZ360Pro is expanding into a global AI-powered academic ecosystem
+            targeting South Asia, Middle East, and international education markets.
+        </p>
+
+        <ul>
+            <li>🌏 Expansion to Sri Lanka, Maldives, Nepal</li>
+            <li>🎓 AI-driven Academic Platforms</li>
+            <li>📦 SaaS-based Education Systems</li>
+            <li>🤝 Global University Partnerships</li>
+            <li>💼 Industry-integrated learning models</li>
+        </ul>
+    </div>
+
+    <!-- ================= CTA ================= -->
+    <div class="text-center mt-5">
+        <a href="/contact" class="btn btn-gradient">
+            Partner With MITANZ
+        </a>
+    </div>
+
+</div>
+
+<!-- ================= STYLE ================= -->
+<style>
+
+.presence-container {
+    padding: 30px;
+    background: radial-gradient(circle at top, #0d1117, #02040a);
+    color: white;
+}
+
+/* HERO IMAGE */
+.hero-img {
+    border-radius: 20px;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.6);
+    transition: 0.4s;
+}
+
+.hero-img:hover {
+    transform: scale(1.02);
+}
+
+/* TITLE */
+.hero-title {
+    font-size: 2.8rem;
+    font-weight: bold;
+    background: linear-gradient(90deg,#0d6efd,#6610f2,#20c997);
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+.hero-sub {
+    color: #aaa;
+}
+
+/* GLASS */
+.glass-card {
+    backdrop-filter: blur(18px);
+    background: rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+}
+
+/* INNER CARDS */
+.inner-card {
+    padding: 15px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.08);
+    text-align: center;
+    transition: 0.3s;
+}
+
+.inner-card:hover {
+    transform: translateY(-5px) scale(1.03);
+}
+
+/* COLORS */
+.card-blue { border-top: 4px solid #0d6efd; }
+.card-orange { border-top: 4px solid #fd7e14; }
+.card-green { border-top: 4px solid #20c997; }
+.card-purple { border-top: 4px solid #6610f2; }
+.card-cyan { border-top: 4px solid #00e5ff; }
+
+/* FUTURE */
+.highlight {
+    background: linear-gradient(135deg,#ff7a00,#ff3c00);
+}
+
+/* BUTTON */
+.btn-gradient {
+    background: linear-gradient(45deg,#0d6efd,#6610f2);
+    border-radius: 25px;
+    padding: 10px 25px;
+    color: white;
+    text-decoration: none;
+}
+
+.btn-gradient:hover {
+    transform: scale(1.05);
+}
+
+/* RESPONSIVE */
+@@media (max-width: 768px) {
+
+    .hero-title {
+        font-size: 2rem;
+    }
+
+    .presence-container {
+        padding: 20px;
+    }
+
+}
+
+</style>

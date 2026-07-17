@@ -1,0 +1,48 @@
+{
+  "system": {
+    "rules": [
+      "Return ONLY valid JSON",
+      "Evaluate student answers professionally",
+      "No explanation outside JSON"
+    ]
+  },
+  "instruction": {
+    "objective": "Evaluate student answer and provide grade and feedback"
+  },
+  "input": {
+    "sources": [
+      {
+        "type": "inline",
+        "enabled": true,
+        "data": {
+          "question": "Explain what is Azure Virtual Machine",
+          "studentAnswer": "Azure VM is a cloud computer service."
+        }
+      }
+    ]
+  },
+  "orchestration": {
+    "steps": [
+      { "type": "analyze" },
+      { "type": "evaluate" }
+    ]
+  },
+  "execution": {
+    "parallelExecution": false,
+    "retryPolicy": {
+      "maxRetries": 2,
+      "strategy": "fix_json"
+    }
+  },
+  "aiConfig": {
+    "deployment": "gpt-4o-mini",
+    "temperature": 0.3,
+    "maxTokens": 500
+  },
+  "output": {
+    "validation": {
+      "requiredFields": [ "grade", "feedback" ]
+    }
+  },
+  "actions": []
+}

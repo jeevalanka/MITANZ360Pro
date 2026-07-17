@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MITANZ360Edu Activity Engine Blueprint</title>
+<style>
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f3f6fb;margin:0;color:#323130}
+header{background:linear-gradient(90deg,#0078d4,#106ebe);color:white;padding:30px}
+.container{max-width:1200px;margin:auto;padding:20px}
+.card{background:white;border-radius:12px;padding:20px;margin:15px 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+h1,h2,h3{margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:15px}
+.icon{font-size:28px}
+.code{background:#f8f8f8;border-left:4px solid #0078d4;padding:10px;white-space:pre-wrap;font-family:Consolas}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ddd;padding:8px}
+th{background:#eaf3ff}
+.badge{display:inline-block;padding:6px 10px;background:#dff6dd;border-radius:20px;margin:3px}
+</style>
+</head>
+<body>
+<header>
+<h1>🎓 MITANZ360Edu Activity Engine Blueprint</h1>
+<p>AI-Driven LMS Engagement, Evidence, Analytics & Automation Framework</p>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h2>🏗 Architecture Overview</h2>
+<div class="code">Student → Activity → Evidence → AI Analysis → Activity Metadata → Enrollment Metadata → Analytics → Reporting → Recommendations</div>
+</div>
+
+<div class="card">
+<h2>📚 Supported Activity Types</h2>
+<div class="grid">
+<div>📖 Reading</div><div>🎥 Video</div><div>📝 Quiz</div><div>📋 Assessment</div>
+<div>🧪 Lab</div><div>📂 Assignment</div><div>💬 Discussion</div><div>👥 Group Activity</div>
+<div>📅 Attendance</div><div>🎤 Presentation</div><div>🎯 Exam</div><div>📊 Survey</div>
+<div>🏆 Certificate</div><div>🌐 External Learning</div><div>🤖 AI Session</div><div>📁 Portfolio</div>
+<div>🔍 Research</div><div>🧩 Game</div><div>🎮 Simulation</div><div>🤝 Peer Review</div>
+<div>👨‍🏫 Workshop</div><div>📡 Webinar</div><div>🏢 Industry Visit</div><div>💼 Placement</div>
+</div>
+</div>
+
+<div class="card">
+<h2>🗂 SharePoint Lists</h2>
+<table>
+<tr><th>List</th><th>Purpose</th></tr>
+<tr><td>LMS_Enrollments</td><td>Student Course Summary</td></tr>
+<tr><td>LMS_StudentActivities</td><td>Activity Events</td></tr>
+<tr><td>LMS_Courses</td><td>Course Definitions</td></tr>
+<tr><td>LMS_Modules</td><td>Course Modules</td></tr>
+<tr><td>LMS_Badges</td><td>Gamification</td></tr>
+<tr><td>LMS_Certificates</td><td>Certificate Tracking</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h2>👤 Enrollment Record Structure</h2>
+<div class="code">EnrollmentId
+StudentId
+CourseId
+ProgressPercent
+AttendanceRate
+PresentCount
+AbsentCount
+LateCount
+EngagementScore
+RiskLevel
+MetadataJson
+AIAnalysisJson</div>
+</div>
+
+<div class="card">
+<h2>🧾 Master MetadataJson</h2>
+<div class="code">{
+  "Progress":{"OverallPercent":72},
+  "Activities":{
+    "ReadingCompleted":12,
+    "VideoCompleted":8,
+    "QuizCompleted":15,
+    "AssessmentCompleted":4,
+    "AssignmentCompleted":6,
+    "LabCompleted":10,
+    "DiscussionCompleted":5,
+    "GroupActivities":3,
+    "Presentations":2,
+    "ResearchTasks":4,
+    "Projects":2,
+    "Certificates":5,
+    "ExternalActivities":8
+  },
+  "Scores":{
+    "QuizAverage":87,
+    "AssessmentAverage":84,
+    "LabAverage":92,
+    "ExamAverage":79
+  },
+  "Achievements":{
+    "Points":1250,
+    "Badges":8,
+    "Certificates":5
+  },
+  "Engagement":{
+    "Score":91,
+    "Risk":"Low"
+  }
+}</div>
+</div>
+
+<div class="card">
+<h2>🤖 AIAnalysisJson</h2>
+<div class="code">{
+  "Strengths":["Cloud Concepts","Azure Pricing"],
+  "Weaknesses":["Networking"],
+  "Recommendations":["Complete Lab 6","Retake Quiz 3"],
+  "RiskLevel":"Low",
+  "PredictedCompletion":95
+}</div>
+</div>
+
+<div class="card">
+<h2>📄 Generic Activity MetadataJson</h2>
+<div class="code">{
+  "ActivityType":"Quiz",
+  "Status":"Completed",
+  "Score":90,
+  "DurationMinutes":25,
+  "EvidenceFiles":[],
+  "AIValidation":{
+      "Status":"Passed",
+      "Confidence":98
+  },
+  "CustomData":{}
+}</div>
+</div>
+
+<div class="card">
+<h2>⚙ Automation Workflow</h2>
+<div class="code">Activity Completed
+↓
+Evidence Uploaded
+↓
+AI OCR & Analysis
+↓
+Update Activity MetadataJson
+↓
+Update Enrollment MetadataJson
+↓
+Recalculate Progress
+↓
+Generate PDF Report
+↓
+Email Student
+↓
+Update Dashboards</div>
+</div>
+
+<div class="card">
+<h2>📈 Reporting & Analytics</h2>
+<span class="badge">Student Dashboard</span>
+<span class="badge">Tutor Dashboard</span>
+<span class="badge">Power BI</span>
+<span class="badge">At-Risk Detection</span>
+<span class="badge">NZQA Evidence</span>
+<span class="badge">AI Recommendations</span>
+</div>
+
+<div class="card">
+<h2>🚀 Future Enhancements</h2>
+<ul>
+<li>Microsoft Learn integration</li>
+<li>Azure OpenAI Copilot</li>
+<li>Automated evidence verification</li>
+<li>Gamification engine</li>
+<li>Competency framework</li>
+<li>Career pathway recommendations</li>
+</ul>
+</div>
+
+</div>
+</body>
+</html>

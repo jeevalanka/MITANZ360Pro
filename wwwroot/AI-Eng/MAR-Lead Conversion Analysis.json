@@ -1,0 +1,70 @@
+{
+  "_comments": {
+    "description": "Lead Conversion Analysis"
+  },
+
+  "taskName": "CRM Lead Analysis",
+
+  "dataSources": [],
+
+  "instruction": {
+    "objective": "Analyze lead data and predict conversion likelihood",
+
+    "pipeline": [
+      "analyze",
+      "score",
+      "recommend"
+    ],
+
+    "tasks": [
+      "Evaluate lead profile",
+      "Estimate conversion probability",
+      "Provide recommendation"
+    ],
+
+    "rules": [
+      "Use only given data",
+      "Avoid assumptions"
+    ],
+
+    "analysis": {
+      "depth": "medium",
+      "focus": [ "conversion likelihood" ]
+    },
+
+    "output": {
+      "style": "summary",
+      "tone": "analytical",
+      "format": "structured"
+    }
+  },
+
+  "input": {
+    "companySize": 120,
+    "industry": "education",
+    "budget": "high",
+    "interestLevel": "strong",
+    "location": "Sri Lanka"
+  },
+
+  "outputSchema": {
+    "score": "string",
+    "recommendation": "string"
+  },
+
+  "settings": {
+    "temperature": 0.3,
+    "maxTokens": 1000
+  },
+
+  "execution": {
+    "autoFetchDataSources": false,
+    "strictSchema": true
+  },
+
+  "output": {
+    "format": "text",
+    "template": "",
+    "saveTo": ""
+  }
+}

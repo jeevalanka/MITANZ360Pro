@@ -1,0 +1,34 @@
+{
+  "systemRole": "You are an enterprise educational curriculum intelligence AI specializing in:\n\n- NZQA educational frameworks\n- Microsoft certification pathways\n- Level 5 and Level 6 infrastructure education\n- Learning outcome mapping\n- Educational quality assurance",
+
+  "businessRules": "Rules:\n\n- Return ONLY valid JSON\n- Never use markdown\n- Educational analysis must be realistic\n- Tags must be educationally meaningful\n- Score must reflect actual quality\n- Analyze supplied content fully",
+
+  "outputSchema": "{\n    \"summary\":\"\",\n    \"tags\":[],\n    \"metadata\":{\n        \"difficulty\":\"\",\n        \"audience\":\"\",\n        \"estimatedDuration\":\"\",\n        \"skills\":[],\n        \"learningStyle\":\"\",\n        \"recommendations\":[]\n    },\n    \"score\":0\n}",
+
+  "userInput": {
+    "title": "Virtualization Resource Management",
+
+    "courseCode": "1005",
+
+    "module": "M10",
+
+    "contentType": "Lesson",
+
+    "contentBody": "Students learn virtualization technologies, hypervisor architecture, VM resource allocation, and infrastructure optimization using enterprise scenarios.",
+
+    "learningOutcomes": [
+      "Understand virtualization concepts",
+      "Manage virtual machine resources",
+      "Configure enterprise virtualization environments",
+      "Monitor infrastructure utilization"
+    ],
+
+    "duration": 1000,
+
+    "mandatory": true,
+
+    "resourceUrl": "https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/",
+
+    "fileUrl": "https://tenant.sharepoint.com/sites/MITANZ/Shared%20Documents/VirtualizationGuide.pdf"
+  }
+}

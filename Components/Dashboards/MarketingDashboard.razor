@@ -1,0 +1,239 @@
+﻿@page "/marketing-dashboard"
+@layout MainLayout
+
+@attribute [Authorize(Roles = "Marketing, SysAdmin")]
+
+
+<div class="dashboard">
+
+    <div class="header">📊 Marketing Dashboard</div>
+
+    <!-- KPI -->
+    <div class="grid">
+        <div class="card blue">
+            <i class="bi bi-people-fill"></i>
+            <h3>1,250</h3>
+            <p>Total Leads</p>
+        </div>
+
+        <div class="card green">
+            <i class="bi bi-person-check-fill"></i>
+            <h3>320</h3>
+            <p>Registered Students</p>
+        </div>
+
+        <div class="card orange">
+            <i class="bi bi-currency-dollar"></i>
+            <h3>$18,500</h3>
+            <p>Revenue</p>
+        </div>
+
+        <div class="card purple">
+            <i class="bi bi-bar-chart-fill"></i>
+            <h3>78%</h3>
+            <p>Conversion Rate</p>
+        </div>
+    </div>
+
+    <!-- CHANNELS -->
+    <div class="section">
+        <div class="section-title">📢 Marketing Channels</div>
+        <div class="grid">
+            <div class="card teal">
+                <i class="bi bi-facebook"></i>
+                <h3>Facebook</h3>
+                <p>Leads: 540</p>
+            </div>
+
+            <div class="card pink">
+                <i class="bi bi-instagram"></i>
+                <h3>Instagram</h3>
+                <p>Leads: 320</p>
+            </div>
+
+            <div class="card blue">
+                <i class="bi bi-linkedin"></i>
+                <h3>LinkedIn</h3>
+                <p>Leads: 210</p>
+            </div>
+
+            <div class="card green">
+                <i class="bi bi-google"></i>
+                <h3>Google Ads</h3>
+                <p>Leads: 180</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- COURSES -->
+    <div class="section">
+        <div class="section-title">🎓 Course Interest</div>
+        <div class="grid">
+            <div class="card orange">
+                <i class="bi bi-cloud-fill"></i>
+                <h3>AZ-900</h3>
+                <p>Top Interest</p>
+            </div>
+
+            <div class="card purple">
+                <i class="bi bi-diagram-3-fill"></i>
+                <h3>PL-900</h3>
+                <p>High Demand</p>
+            </div>
+
+            <div class="card blue">
+                <i class="bi bi-cpu-fill"></i>
+                <h3>AZ-305</h3>
+                <p>Growing</p>
+            </div>
+
+            <div class="card green">
+                <i class="bi bi-gear-fill"></i>
+                <h3>PL-600</h3>
+                <p>Advanced Level</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- EVENT PLANNER -->
+    <div class="section">
+        <div class="section-title">📅 Upcoming Events</div>
+
+        <div class="event-filters">
+            <span class="filter active">All</span>
+            <span class="filter">General</span>
+            <span class="filter">Global</span>
+            <span class="filter">Institutes</span>
+            <span class="filter">Special</span>
+        </div>
+
+        <div class="grid">
+
+            <div class="card blue">
+                <i class="bi bi-calendar-event-fill"></i>
+                <h3>Open Day Webinar</h3>
+                <p>General Event</p>
+                <small>📅 15 Aug | 🌐 Online</small>
+            </div>
+
+            <div class="card green">
+                <i class="bi bi-globe"></i>
+                <h3>Global Azure Bootcamp</h3>
+                <p>Global Event</p>
+                <small>📅 20 Aug | 🌍 Worldwide</small>
+            </div>
+
+            <div class="card orange">
+                <i class="bi bi-building"></i>
+                <h3>MITANZ Info Session</h3>
+                <p>Institute Event</p>
+                <small>📅 25 Aug | 📍 Auckland</small>
+            </div>
+
+            <div class="card purple">
+                <i class="bi bi-star-fill"></i>
+                <h3>Scholarship Program</h3>
+                <p>Special Event</p>
+                <small>📅 30 Aug | 🎓 Limited Seats</small>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+                <style>
+    body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+    }
+
+    .dashboard {
+        padding: 20px;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        min-height: 100vh;
+        color: white;
+    }
+
+    .header {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+    }
+
+    .card {
+        padding: 20px;
+        border-radius: 15px;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        transition: 0.3s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px) scale(1.02);
+    }
+
+    .card i {
+        font-size: 28px;
+        margin-bottom: 10px;
+    }
+
+    .card h3 {
+        margin: 0;
+    }
+
+    .card p {
+        opacity: 0.8;
+    }
+
+    /* COLORS */
+    .blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .green { background: linear-gradient(135deg, #22c55e, #15803d); }
+    .orange { background: linear-gradient(135deg, #f97316, #c2410c); }
+    .purple { background: linear-gradient(135deg, #a855f7, #6b21a8); }
+    .pink { background: linear-gradient(135deg, #ec4899, #be185d); }
+    .teal { background: linear-gradient(135deg, #14b8a6, #0f766e); }
+
+    .section {
+        margin-top: 30px;
+    }
+
+    .section-title {
+        font-size: 20px;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+
+    /* EVENT FILTER */
+    .event-filters {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .filter {
+        padding: 6px 12px;
+        border-radius: 20px;
+        background: #1e293b;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    .filter.active {
+        background: #f97316;
+        color: white;
+    }
+
+    /* RESPONSIVE */
+    @@media (max-width: 768px) {
+        .dashboard {
+            padding: 10px;
+        }
+    }
+</style>

@@ -1,0 +1,253 @@
+﻿@page "/mark-about"
+@layout MainLayout
+@attribute [Authorize(Roles = "Marketing, SysAdmin")]
+
+<style>
+
+    /* BACKGROUND */
+    .about-container {
+        padding: 50px 40px;
+        background: linear-gradient(to bottom, #f8fafc, #eef2f7);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* HERO */
+    .about-hero h1 {
+        font-size: 44px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: #64748b;
+        font-size: 18px;
+        margin-bottom: 40px;
+    }
+
+    /* GRID */
+    .custom-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-bottom: 25px;
+    }
+
+    /* CARDS */
+    .feature-card,
+    .info-card {
+        background: white;
+        padding: 25px;
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+        position: relative;
+    }
+
+        /* HOVER EFFECT */
+        .feature-card:hover,
+        .info-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+        }
+
+    /* ICON */
+    .card-icon {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #f97316, #fb923c);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        margin-bottom: 15px;
+        font-size: 20px;
+    }
+
+    /* TITLES */
+    .feature-card h5,
+    .info-card h5 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #0f172a;
+    }
+
+    /* TEXT */
+    .feature-card p,
+    .info-card p {
+        font-size: 14px;
+        color: #475569;
+        line-height: 1.6;
+    }
+
+    /* LIST */
+    .benefits {
+        padding-left: 18px;
+    }
+
+        .benefits li {
+            margin-bottom: 8px;
+            color: #475569;
+        }
+
+    /* HIGHLIGHT */
+    .highlight-box {
+        background: linear-gradient(135deg, #fff7ed, #ffedd5);
+        padding: 20px;
+        border-left: 5px solid #f97316;
+        border-radius: 10px;
+        margin-top: 15px;
+    }
+
+    /* BUTTON */
+    .about-cta {
+        margin-top: 30px;
+        text-align: center;
+    }
+
+    .btn-main {
+        padding: 12px 28px;
+        background: linear-gradient(135deg, #f97316, #ea580c);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+        .btn-main:hover {
+            transform: scale(1.05);
+        }
+
+    /* RESPONSIVE */
+    @@media (max-width: 768px) {
+
+        .about-hero h1 {
+            font-size: 32px;
+        }
+
+        .about-container {
+            padding: 25px 15px;
+        }
+    }
+
+</style>
+
+<div class="about-container">
+
+    <div class="about-hero">
+        <h1>MITANZ360Pro</h1>
+        <p class="subtitle">
+            AI-Powered Education Platform Built on Microsoft Technology & ANZ Standards
+        </p>
+    </div>
+
+    <div class="custom-row">
+
+        <div class="col">
+            <div class="feature-card">
+                <div class="card-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h5>Complete Education System</h5>
+                <p>Integrated LMS, student management, finance, and compliance.</p>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="feature-card">
+                <div class="card-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h5>AI-Driven Platform</h5>
+                <p>Automates learning and administration.</p>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="feature-card">
+                <div class="card-icon">
+                    <i class="fas fa-globe"></i>
+                </div>
+                <h5>Global Delivery</h5>
+                <p>Hybrid and online international education.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="custom-row">
+
+        <div class="col">
+            <div class="info-card">
+                <h5>About MITANZ NZ Ltd</h5>
+                <p>
+                    Delivering international IT education and Microsoft certifications.
+                </p>
+
+                <ul class="benefits">
+                    <li>Microsoft Certification Training</li>
+                    <li>ANZ Standard Programs</li>
+                    <li>Global Placement</li>
+                    <li>Enterprise Solutions</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="info-card">
+                <h5>Platform Capabilities</h5>
+
+                <ul class="benefits">
+                    <li>LMS</li>
+                    <li>Student Management</li>
+                    <li>Finance</li>
+                    <li>CRM</li>
+                    <li>Compliance</li>
+                    <li>AI Automation</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="custom-row">
+
+        <div class="col">
+            <div class="info-card">
+                <h5>Global Presence</h5>
+
+                <ul class="benefits">
+                    <li>🇳🇿 New Zealand</li>
+                    <li>🇦🇺 Australia</li>
+                    <li>🇱🇰 Sri Lanka</li>
+                    <li>🌏 Maldives & Nepal</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="info-card">
+                <h5>Mission & Vision</h5>
+                <p>
+                    Deliver scalable AI-powered education globally.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="highlight-box">
+        <h5>Why MITANZ360Pro?</h5>
+        <p>A complete education operating system — not just an LMS.</p>
+    </div>
+
+    <div class="about-cta">
+        <button class="btn-main">Join MITANZ</button>
+    </div>
+
+</div>
