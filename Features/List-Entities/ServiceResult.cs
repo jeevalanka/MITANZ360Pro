@@ -1,4 +1,4 @@
-namespace MITANZ360Pro.Web.Common;
+namespace MITANZ360Pro.Web.Modules.Entities;
 
 public class ServiceResult
 {

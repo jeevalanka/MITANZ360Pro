@@ -1,6 +1,6 @@
 using Microsoft.Graph.Models.ODataErrors;
 
-namespace MITANZ360Pro.Web.Infrastructure.SharePoint;
+namespace MITANZ360Pro.Web.Modules.Entities;
 
 public static class GraphErrorMapper
 {
