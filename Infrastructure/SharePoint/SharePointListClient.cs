@@ -44,10 +44,17 @@ public sealed class SharePointListClient : ISharePointListClient
                     .Items
                     .GetAsync(config =>
                     {
-                        config.QueryParameters.Expand =
-                        [
-                            $"fields($select={string.Join(",", selectFields)})"
-                        ];
+                        if (selectFields is { Length: > 0 })
+                        {
+                            config.QueryParameters.Expand =
+                            [
+                                $"fields($select={string.Join(",", selectFields)})"
+                            ];
+                        }
+                        else
+                        {
+                            config.QueryParameters.Expand = ["fields"];
+                        }
 
                         config.QueryParameters.Top = query.PageSize;
 
