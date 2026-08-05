@@ -1,0 +1,245 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace MITANZ360Pro.Web.Modules.Entities;
+
+public static class EntityFields
+{
+    public const string Id = "id";
+    public const string Title = "Title";
+    public const string EntityId = "field_1";
+    public const string EntityType = "field_2";
+    public const string Status = "field_8";
+    public const string IsActive = "field_10";
+    public const string MetadataJson = "MetadataJson";
+    public const string Created = "Created";
+    public const string Modified = "Modified";
+    public const string Author = "Author";
+    public const string Editor = "Editor";
+}
+
+public static class EntityStatuses
+{
+    public const string Draft = "Draft";
+    public const string Active = "Active";
+    public const string Archived = "Archived";
+}
+
+public sealed class Entity
+{
+    public int Id { get; set; }
+
+    public string Title { get; set; } = "";
+
+    public string EntityId { get; set; } = "";
+
+    public string EntityType { get; set; } = "";
+
+    public string Status { get; set; } = EntityStatuses.Draft;
+
+    public bool IsActive { get; set; } = true;
+
+    public Dictionary<string, object?> Metadata { get; set; } = new();
+
+    public DateTime? Created { get; set; }
+
+    public DateTime? Modified { get; set; }
+
+    public string? CreatedBy { get; set; }
+
+    public string? ModifiedBy { get; set; }
+}
+
+public sealed class EntityFilter
+{
+    public int PageNumber { get; set; } = 1;
+
+    public int PageSize { get; set; } = 25;
+
+    public string? SearchText { get; set; }
+
+    public string? EntityType { get; set; }
+
+    public string? Status { get; set; }
+
+    public bool? IsActive { get; set; }
+
+    public DateTime? CreatedFrom { get; set; }
+
+    public DateTime? CreatedTo { get; set; }
+
+    public string? NextLink { get; set; }
+}
+
+public static class EntityMapper
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    public static Entity FromDictionary(IDictionary<string, object>? fields, string? listItemId = null)
+    {
+        if (fields == null)
+        {
+            return new Entity();
+        }
+
+        var entity = new Entity
+        {
+            Title = GetString(fields, EntityFields.Title),
+            EntityId = GetString(fields, EntityFields.EntityId),
+            EntityType = GetString(fields, EntityFields.EntityType),
+            Status = GetString(fields, EntityFields.Status, EntityStatuses.Draft),
+            IsActive = GetBool(fields, EntityFields.IsActive, true),
+            Created = GetDate(fields, EntityFields.Created),
+            Modified = GetDate(fields, EntityFields.Modified),
+            CreatedBy = GetLookupDisplay(fields, EntityFields.Author),
+            ModifiedBy = GetLookupDisplay(fields, EntityFields.Editor)
+        };
+
+        if (!string.IsNullOrWhiteSpace(listItemId) && int.TryParse(listItemId, out var id))
+        {
+            entity.Id = id;
+        }
+        else
+        {
+            entity.Id = GetInt(fields, "ID");
+        }
+
+        var metadataJson = GetString(fields, EntityFields.MetadataJson);
+        if (!string.IsNullOrWhiteSpace(metadataJson))
+        {
+            try
+            {
+                entity.Metadata = JsonSerializer.Deserialize<Dictionary<string, object?>>(metadataJson, JsonOptions)
+                    ?? new Dictionary<string, object?>();
+            }
+            catch
+            {
+                entity.Metadata = new Dictionary<string, object?>();
+            }
+        }
+
+        return entity;
+    }
+
+    public static Dictionary<string, object> ToFieldDictionary(Entity entity)
+    {
+        var fields = new Dictionary<string, object>
+        {
+            [EntityFields.Title] = entity.Title,
+            [EntityFields.EntityId] = entity.EntityId,
+            [EntityFields.EntityType] = entity.EntityType,
+            [EntityFields.Status] = entity.Status,
+            [EntityFields.IsActive] = entity.IsActive,
+            [EntityFields.MetadataJson] = JsonSerializer.Serialize(entity.Metadata, JsonOptions)
+        };
+
+        return fields;
+    }
+
+    private static string GetString(IDictionary<string, object> fields, string key, string defaultValue = "")
+    {
+        if (!fields.TryGetValue(key, out var value) || value == null)
+        {
+            return defaultValue;
+        }
+
+        return value switch
+        {
+            JsonElement json => json.ValueKind switch
+            {
+                JsonValueKind.String => json.GetString() ?? defaultValue,
+                JsonValueKind.Number => json.GetRawText(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                _ => json.ToString() ?? defaultValue
+            },
+            _ => value.ToString() ?? defaultValue
+        };
+    }
+
+    private static bool GetBool(IDictionary<string, object> fields, string key, bool defaultValue)
+    {
+        if (!fields.TryGetValue(key, out var value) || value == null)
+        {
+            return defaultValue;
+        }
+
+        return value switch
+        {
+            bool b => b,
+            JsonElement json when json.ValueKind == JsonValueKind.True => true,
+            JsonElement json when json.ValueKind == JsonValueKind.False => false,
+            string s when bool.TryParse(s, out var parsed) => parsed,
+            _ => defaultValue
+        };
+    }
+
+    private static int GetInt(IDictionary<string, object> fields, string key)
+    {
+        if (!fields.TryGetValue(key, out var value) || value == null)
+        {
+            return 0;
+        }
+
+        return value switch
+        {
+            int i => i,
+            long l => (int)l,
+            JsonElement json when json.ValueKind == JsonValueKind.Number => json.GetInt32(),
+            string s when int.TryParse(s, out var parsed) => parsed,
+            _ => 0
+        };
+    }
+
+    private static DateTime? GetDate(IDictionary<string, object> fields, string key)
+    {
+        if (!fields.TryGetValue(key, out var value) || value == null)
+        {
+            return null;
+        }
+
+        if (value is DateTimeOffset dto)
+        {
+            return dto.UtcDateTime;
+        }
+
+        if (value is DateTime dt)
+        {
+            return dt;
+        }
+
+        if (value is JsonElement json && json.ValueKind == JsonValueKind.String)
+        {
+            return DateTime.TryParse(json.GetString(), out var parsed) ? parsed : null;
+        }
+
+        return DateTime.TryParse(value.ToString(), out var result) ? result : null;
+    }
+
+    private static string? GetLookupDisplay(IDictionary<string, object> fields, string key)
+    {
+        if (!fields.TryGetValue(key, out var value) || value == null)
+        {
+            return null;
+        }
+
+        if (value is JsonElement json && json.ValueKind == JsonValueKind.Object)
+        {
+            if (json.TryGetProperty("LookupValue", out var lookup))
+            {
+                return lookup.GetString();
+            }
+
+            if (json.TryGetProperty("Email", out var email))
+            {
+                return email.GetString();
+            }
+        }
+
+        return value.ToString();
+    }
+}

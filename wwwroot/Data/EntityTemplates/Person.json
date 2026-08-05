@@ -1,0 +1,10 @@
+{
+  "EntityType": "Person",
+  "DisplayName": "Person",
+  "Fields": [
+    { "Name": "FirstName", "Label": "First Name", "Type": "text", "Required": true, "MaxLength": 100 },
+    { "Name": "LastName", "Label": "Last Name", "Type": "text", "Required": true, "MaxLength": 100 },
+    { "Name": "Email", "Label": "Email", "Type": "email", "Required": false, "Pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+    { "Name": "Phone", "Label": "Phone", "Type": "text", "Required": false, "MaxLength": 30 }
+  ]
+}
