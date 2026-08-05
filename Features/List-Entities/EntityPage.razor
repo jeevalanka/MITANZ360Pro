@@ -457,9 +457,30 @@
 
     private async Task BeginEdit(Entity entity)
     {
-        var loaded = await EntityService.GetByIdAsync(entity.Id);
+        Entity? loaded = null;
 
-        EditorModel = loaded ?? entity;
+        if (entity.Id > 0)
+        {
+            loaded = await EntityService.GetByIdAsync(entity.Id);
+        }
+
+        // Fallback: resolve by business EntityId when list item Id was lost (legacy mapper bug).
+        if (loaded == null && !string.IsNullOrWhiteSpace(entity.EntityId))
+        {
+            loaded = await EntityService.GetByEntityIdAsync(entity.EntityId);
+        }
+
+        EditorModel = CloneEntity(loaded ?? entity);
+
+        if (EditorModel.Id <= 0)
+        {
+            NotificationService.Notify(
+                NotificationSeverity.Error,
+                "Edit Failed",
+                "Could not resolve the SharePoint list item Id for this entity. Refresh the grid and try again.");
+            return;
+        }
+
         IsCreateMode = false;
         ShowEditor = true;
         IsDirty = false;
@@ -528,6 +549,25 @@
             }
             else
             {
+                // Edit must never create. Resolve Id by EntityId if needed, then update only.
+                if (EditorModel.Id <= 0 && !string.IsNullOrWhiteSpace(EditorModel.EntityId))
+                {
+                    var existing = await EntityService.GetByEntityIdAsync(EditorModel.EntityId);
+                    if (existing != null)
+                    {
+                        EditorModel.Id = existing.Id;
+                    }
+                }
+
+                if (EditorModel.Id <= 0)
+                {
+                    NotificationService.Notify(
+                        NotificationSeverity.Error,
+                        "Save Failed",
+                        "Cannot update: missing SharePoint item Id. Close the editor, refresh, and open Edit again.");
+                    return;
+                }
+
                 var result = await EntityService.UpdateAsync(EditorModel);
 
                 if (!result.IsSuccess)
@@ -676,6 +716,26 @@
     private void MarkDirty()
     {
         IsDirty = true;
+    }
+
+    private static Entity CloneEntity(Entity source)
+    {
+        return new Entity
+        {
+            Id = source.Id,
+            Title = source.Title,
+            EntityId = source.EntityId,
+            EntityType = source.EntityType,
+            Status = source.Status,
+            IsActive = source.IsActive,
+            Metadata = source.Metadata != null
+                ? new Dictionary<string, object?>(source.Metadata)
+                : new Dictionary<string, object?>(),
+            Created = source.Created,
+            Modified = source.Modified,
+            CreatedBy = source.CreatedBy,
+            ModifiedBy = source.ModifiedBy
+        };
     }
 
     private void OpenDrawer(Entity entity)

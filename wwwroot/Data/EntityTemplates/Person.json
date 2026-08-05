@@ -4,7 +4,12 @@
   "Fields": [
     { "Name": "FirstName", "Label": "First Name", "Type": "text", "Required": true, "MaxLength": 100 },
     { "Name": "LastName", "Label": "Last Name", "Type": "text", "Required": true, "MaxLength": 100 },
-    { "Name": "Email", "Label": "Email", "Type": "email", "Required": false, "Pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
-    { "Name": "Phone", "Label": "Phone", "Type": "text", "Required": false, "MaxLength": 30 }
+    { "Name": "Email", "Label": "Email", "Type": "email", "Required": true, "Pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+    { "Name": "Phone", "Label": "Phone", "Type": "text", "Required": false, "MaxLength": 30 },
+    { "Name": "DateOfBirth", "Label": "Date Of Birth", "Type": "date", "Required": false },
+    { "Name": "Gender", "Label": "Gender", "Type": "dropdown", "Required": false, "Options": ["Male", "Female", "Other", "Prefer not to say"] },
+    { "Name": "Nationality", "Label": "Nationality", "Type": "text", "Required": false, "MaxLength": 100 },
+    { "Name": "PassportNo", "Label": "Passport Number", "Type": "text", "Required": false, "MaxLength": 50 },
+    { "Name": "Notes", "Label": "Notes", "Type": "textarea", "Required": false, "MaxLength": 2000 }
   ]
 }

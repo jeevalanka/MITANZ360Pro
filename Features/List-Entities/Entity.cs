@@ -99,13 +99,23 @@ public static class EntityMapper
             ModifiedBy = GetLookupDisplay(fields, EntityFields.Editor)
         };
 
-        if (!string.IsNullOrWhiteSpace(listItemId) && int.TryParse(listItemId, out var id))
+        // Graph returns the SharePoint list item id on ListItem.Id — not reliably in fields.
+        // Prefer listItemId; fall back to common field keys used by Graph/SharePoint.
+        if (!string.IsNullOrWhiteSpace(listItemId) && int.TryParse(listItemId, out var idFromItem))
         {
-            entity.Id = id;
+            entity.Id = idFromItem;
         }
         else
         {
             entity.Id = GetInt(fields, "ID");
+            if (entity.Id <= 0)
+            {
+                entity.Id = GetInt(fields, "Id");
+            }
+            if (entity.Id <= 0)
+            {
+                entity.Id = GetInt(fields, "id");
+            }
         }
 
         var metadataJson = GetString(fields, EntityFields.MetadataJson);

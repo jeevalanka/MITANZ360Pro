@@ -209,24 +209,70 @@ public sealed class EntityRepository : IEntityRepository
             return null;
         }
 
-        var safe = EscapeOData(entityId);
-        var filter = $"fields/{EntityFields.EntityId} eq '{safe}'";
-
-        var query = new ListQuery
+        try
         {
-            PageSize = 1,
-            Filter = filter
-        };
+            var safe = EscapeOData(entityId);
+            var filter = $"fields/{EntityFields.EntityId} eq '{safe}'";
 
-        var response = await _sharePointClient.GetItemsAsync(
-            _options.SiteId,
-            _options.Lists.Entities,
-            SelectFields,
-            query,
-            cancellationToken);
+            var query = new ListQuery
+            {
+                PageSize = 5,
+                Filter = filter
+            };
 
-        var item = response.Items.FirstOrDefault();
-        return item == null ? null : Map(item);
+            var response = await _sharePointClient.GetItemsAsync(
+                _options.SiteId,
+                _options.Lists.Entities,
+                SelectFields,
+                query,
+                cancellationToken);
+
+            var item = response.Items.FirstOrDefault();
+            if (item != null)
+            {
+                return Map(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            // field_1 may not be indexed — fall back to scanning pages in memory.
+            _logger.LogWarning(
+                ex,
+                "OData lookup for EntityId '{EntityId}' failed; falling back to in-memory search.",
+                entityId);
+        }
+
+        return await FindByEntityIdInMemoryAsync(entityId, cancellationToken);
+    }
+
+    private async Task<Entity?> FindByEntityIdInMemoryAsync(
+        string entityId,
+        CancellationToken cancellationToken)
+    {
+        var pageNumber = 1;
+        const int pageSize = 200;
+
+        while (true)
+        {
+            var page = await GetPagedAsync(
+                new EntityFilter { PageNumber = pageNumber, PageSize = pageSize },
+                cancellationToken);
+
+            var match = page.Items.FirstOrDefault(x =>
+                string.Equals(x.EntityId, entityId, StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+            {
+                return match;
+            }
+
+            if (page.Items.Count < pageSize || pageNumber * pageSize >= page.TotalCount)
+            {
+                return null;
+            }
+
+            pageNumber++;
+        }
     }
 
     public async Task<bool> ExistsAsync(
@@ -261,8 +307,32 @@ public sealed class EntityRepository : IEntityRepository
                 EntityMapper.ToFieldDictionary(entity),
                 cancellationToken);
 
-            return Map(response)
+            var mapped = Map(response)
                 ?? throw new InvalidOperationException("Entity mapping failed.");
+
+            // Graph create responses sometimes omit Fields; ensure we always have the list item Id.
+            if (mapped.Id <= 0 && !string.IsNullOrWhiteSpace(response.Id) &&
+                int.TryParse(response.Id, out var createdId))
+            {
+                mapped.Id = createdId;
+            }
+
+            if (mapped.Id <= 0 && !string.IsNullOrWhiteSpace(entity.EntityId))
+            {
+                var reloaded = await GetByEntityIdAsync(entity.EntityId, cancellationToken);
+                if (reloaded != null)
+                {
+                    return reloaded;
+                }
+            }
+
+            if (mapped.Id <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Entity was created but SharePoint list item Id could not be resolved.");
+            }
+
+            return mapped;
         }
         catch (Exception ex)
         {
@@ -458,13 +528,29 @@ public sealed class EntityRepository : IEntityRepository
     private static string EscapeOData(string value)
         => value.Replace("'", "''", StringComparison.Ordinal);
 
-    private static Entity? Map(ListItem item)
+    private Entity? Map(ListItem item)
     {
         if (item.Fields?.AdditionalData == null)
         {
+            // Create/update responses can return an item with Id but no Fields payload.
+            if (!string.IsNullOrWhiteSpace(item.Id) && int.TryParse(item.Id, out var idOnly))
+            {
+                return new Entity { Id = idOnly };
+            }
+
             return null;
         }
 
-        return EntityMapper.FromDictionary(item.Fields.AdditionalData, item.Id);
+        var entity = EntityMapper.FromDictionary(item.Fields.AdditionalData, item.Id);
+
+        if (entity.Id <= 0)
+        {
+            _logger.LogWarning(
+                "Mapped entity '{EntityId}' has missing SharePoint list item Id (ListItem.Id={ListItemId}).",
+                entity.EntityId,
+                item.Id);
+        }
+
+        return entity;
     }
 }
