@@ -46,7 +46,8 @@ public sealed class EntityRepository : IEntityRepository
 {
     private static readonly string[] SelectFields =
     [
-        EntityFields.Id,
+        // Do not include "id" here — Graph fields($select=id,...) is invalid.
+        // List item Id comes from ListItem.Id in Map().
         EntityFields.Title,
         EntityFields.EntityId,
         EntityFields.EntityType,
@@ -91,32 +92,17 @@ public sealed class EntityRepository : IEntityRepository
         {
             _logger.LogInformation("Loading Entity page {PageNumber}", filter.PageNumber);
 
-            var oDataFilter = BuildODataFilter(filter);
-            var requiresMetadataSearch = RequiresMetadataSearch(filter);
+            // Never send Filter/OrderBy to Graph — Title/field_* are often not indexed
+            // and Graph returns: "Field 'X' cannot be referenced in filter or orderby".
+            // Load pages with NextLink only, then filter/sort/page in memory.
+            var all = new List<Entity>();
+            string? nextLink = null;
 
-            if (requiresMetadataSearch)
-            {
-                return await GetPagedWithMetadataSearchAsync(filter, oDataFilter, cancellationToken);
-            }
-
-            var totalCount = await _sharePointClient.GetItemCountAsync(
-                _options.SiteId,
-                _options.Lists.Entities,
-                oDataFilter,
-                cancellationToken);
-
-            var skip = Math.Max(0, (filter.PageNumber - 1) * filter.PageSize);
-            var collected = new List<Entity>();
-            string? nextLink = filter.NextLink;
-            var skipped = 0;
-
-            while (collected.Count < filter.PageSize)
+            do
             {
                 var query = new ListQuery
                 {
-                    PageSize = filter.PageSize,
-                    Filter = string.IsNullOrWhiteSpace(nextLink) ? oDataFilter : null,
-                    OrderBy = $"fields/{EntityFields.Title}",
+                    PageSize = 200,
                     NextLink = nextLink
                 };
 
@@ -127,48 +113,35 @@ public sealed class EntityRepository : IEntityRepository
                     query,
                     cancellationToken);
 
-                var batch = response.Items
-                    .Select(item => Map(item))
+                all.AddRange(response.Items
+                    .Select(Map)
                     .Where(x => x != null)
-                    .Cast<Entity>()
-                    .ToList();
-
-                foreach (var entity in batch)
-                {
-                    if (skipped < skip)
-                    {
-                        skipped++;
-                        continue;
-                    }
-
-                    collected.Add(entity);
-
-                    if (collected.Count >= filter.PageSize)
-                    {
-                        break;
-                    }
-                }
+                    .Cast<Entity>());
 
                 nextLink = response.NextLink;
-
-                if (string.IsNullOrWhiteSpace(nextLink) || batch.Count == 0)
-                {
-                    break;
-                }
             }
+            while (!string.IsNullOrWhiteSpace(nextLink));
 
-            if (totalCount == 0 && collected.Count > 0)
-            {
-                totalCount = skip + collected.Count + (string.IsNullOrWhiteSpace(nextLink) ? 0 : filter.PageSize);
-            }
+            var filtered = ApplyInMemoryFilter(all, filter);
+            var skip = Math.Max(0, (filter.PageNumber - 1) * filter.PageSize);
+
+            var pageItems = filtered
+                .Skip(skip)
+                .Take(filter.PageSize)
+                .ToList();
+
+            _logger.LogInformation(
+                "Loaded {Total} entities from SharePoint; returning page {Page} ({Count} items).",
+                filtered.Count,
+                filter.PageNumber,
+                pageItems.Count);
 
             return new EntityPagedResult<Entity>
             {
-                Items = collected,
-                TotalCount = totalCount,
+                Items = pageItems,
+                TotalCount = filtered.Count,
                 PageNumber = filter.PageNumber,
-                PageSize = filter.PageSize,
-                NextLink = nextLink
+                PageSize = filter.PageSize
             };
         }
         catch (Exception ex)
@@ -209,70 +182,18 @@ public sealed class EntityRepository : IEntityRepository
             return null;
         }
 
-        try
-        {
-            var safe = EscapeOData(entityId);
-            var filter = $"fields/{EntityFields.EntityId} eq '{safe}'";
-
-            var query = new ListQuery
+        // Always scan in memory — OData filter on field_1 fails when the column is not indexed.
+        var page = await GetPagedAsync(
+            new EntityFilter
             {
-                PageSize = 5,
-                Filter = filter
-            };
+                SearchText = entityId,
+                PageNumber = 1,
+                PageSize = 500
+            },
+            cancellationToken);
 
-            var response = await _sharePointClient.GetItemsAsync(
-                _options.SiteId,
-                _options.Lists.Entities,
-                SelectFields,
-                query,
-                cancellationToken);
-
-            var item = response.Items.FirstOrDefault();
-            if (item != null)
-            {
-                return Map(item);
-            }
-        }
-        catch (Exception ex)
-        {
-            // field_1 may not be indexed — fall back to scanning pages in memory.
-            _logger.LogWarning(
-                ex,
-                "OData lookup for EntityId '{EntityId}' failed; falling back to in-memory search.",
-                entityId);
-        }
-
-        return await FindByEntityIdInMemoryAsync(entityId, cancellationToken);
-    }
-
-    private async Task<Entity?> FindByEntityIdInMemoryAsync(
-        string entityId,
-        CancellationToken cancellationToken)
-    {
-        var pageNumber = 1;
-        const int pageSize = 200;
-
-        while (true)
-        {
-            var page = await GetPagedAsync(
-                new EntityFilter { PageNumber = pageNumber, PageSize = pageSize },
-                cancellationToken);
-
-            var match = page.Items.FirstOrDefault(x =>
-                string.Equals(x.EntityId, entityId, StringComparison.OrdinalIgnoreCase));
-
-            if (match != null)
-            {
-                return match;
-            }
-
-            if (page.Items.Count < pageSize || pageNumber * pageSize >= page.TotalCount)
-            {
-                return null;
-            }
-
-            pageNumber++;
-        }
+        return page.Items.FirstOrDefault(x =>
+            string.Equals(x.EntityId, entityId, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task<bool> ExistsAsync(
@@ -390,116 +311,40 @@ public sealed class EntityRepository : IEntityRepository
         await UpdateAsync(entity, cancellationToken);
     }
 
-    private async Task<EntityPagedResult<Entity>> GetPagedWithMetadataSearchAsync(
-        EntityFilter filter,
-        string? oDataFilter,
-        CancellationToken cancellationToken)
+    private static List<Entity> ApplyInMemoryFilter(IEnumerable<Entity> entities, EntityFilter filter)
     {
-        var all = new List<Entity>();
-        string? nextLink = null;
-
-        do
-        {
-            var query = new ListQuery
-            {
-                PageSize = 200,
-                Filter = string.IsNullOrWhiteSpace(nextLink) ? oDataFilter : null,
-                OrderBy = $"fields/{EntityFields.Title}",
-                NextLink = nextLink
-            };
-
-            var response = await _sharePointClient.GetItemsAsync(
-                _options.SiteId,
-                _options.Lists.Entities,
-                SelectFields,
-                query,
-                cancellationToken);
-
-            all.AddRange(response.Items
-                .Select(Map)
-                .Where(x => x != null)
-                .Cast<Entity>());
-
-            nextLink = response.NextLink;
-        }
-        while (!string.IsNullOrWhiteSpace(nextLink));
-
-        var filtered = ApplyMetadataSearch(all, filter);
-        var skip = Math.Max(0, (filter.PageNumber - 1) * filter.PageSize);
-
-        var pageItems = filtered
-            .Skip(skip)
-            .Take(filter.PageSize)
-            .ToList();
-
-        return new EntityPagedResult<Entity>
-        {
-            Items = pageItems,
-            TotalCount = filtered.Count,
-            PageNumber = filter.PageNumber,
-            PageSize = filter.PageSize
-        };
-    }
-
-    private static bool RequiresMetadataSearch(EntityFilter filter)
-    {
-        return !string.IsNullOrWhiteSpace(filter.SearchText);
-    }
-
-    private static string? BuildODataFilter(EntityFilter filter)
-    {
-        var clauses = new List<string>();
+        IEnumerable<Entity> query = entities;
 
         if (!string.IsNullOrWhiteSpace(filter.EntityType))
         {
-            clauses.Add($"fields/{EntityFields.EntityType} eq '{EscapeOData(filter.EntityType)}'");
+            query = query.Where(x =>
+                string.Equals(x.EntityType, filter.EntityType, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Status))
         {
-            clauses.Add($"fields/{EntityFields.Status} eq '{EscapeOData(filter.Status)}'");
+            query = query.Where(x =>
+                string.Equals(x.Status, filter.Status, StringComparison.OrdinalIgnoreCase));
         }
 
         if (filter.IsActive.HasValue)
         {
-            clauses.Add($"fields/{EntityFields.IsActive} eq {filter.IsActive.Value.ToString().ToLowerInvariant()}");
+            query = query.Where(x => x.IsActive == filter.IsActive.Value);
         }
 
         if (filter.CreatedFrom.HasValue)
         {
-            clauses.Add($"fields/{EntityFields.Created} ge '{filter.CreatedFrom.Value:O}'");
+            query = query.Where(x => x.Created >= filter.CreatedFrom.Value);
         }
 
         if (filter.CreatedTo.HasValue)
         {
-            clauses.Add($"fields/{EntityFields.Created} le '{filter.CreatedTo.Value:O}'");
+            query = query.Where(x => x.Created <= filter.CreatedTo.Value);
         }
-
-        if (!string.IsNullOrWhiteSpace(filter.SearchText) && !RequiresMetadataSearchOnly(filter))
-        {
-            var safe = EscapeOData(filter.SearchText);
-            clauses.Add(
-                $"contains(fields/{EntityFields.Title},'{safe}') or " +
-                $"contains(fields/{EntityFields.EntityId},'{safe}') or " +
-                $"contains(fields/{EntityFields.EntityType},'{safe}')");
-        }
-
-        return clauses.Count == 0 ? null : string.Join(" and ", clauses);
-    }
-
-    private static bool RequiresMetadataSearchOnly(EntityFilter filter)
-    {
-        return !string.IsNullOrWhiteSpace(filter.SearchText);
-    }
-
-    private static List<Entity> ApplyMetadataSearch(IEnumerable<Entity> entities, EntityFilter filter)
-    {
-        var query = entities.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(filter.SearchText))
         {
             var search = filter.SearchText;
-
             query = query.Where(x =>
                 x.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
                 || x.EntityId.Contains(search, StringComparison.OrdinalIgnoreCase)
