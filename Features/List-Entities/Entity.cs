@@ -89,23 +89,40 @@ public static class EntityMapper
         var entity = new Entity
         {
             Title = GetString(fields, EntityFields.Title),
-            EntityId = GetString(fields, EntityFields.EntityId),
-            EntityType = GetString(fields, EntityFields.EntityType),
-            Status = GetString(fields, EntityFields.Status, EntityStatuses.Draft),
-            IsActive = GetBool(fields, EntityFields.IsActive, true),
+            EntityId = FirstNonEmpty(
+                GetString(fields, EntityFields.EntityId),
+                GetString(fields, "EntityId")),
+            EntityType = FirstNonEmpty(
+                GetString(fields, EntityFields.EntityType),
+                GetString(fields, "EntityType")),
+            Status = FirstNonEmpty(
+                GetString(fields, EntityFields.Status),
+                GetString(fields, "Status"),
+                EntityStatuses.Draft),
+            IsActive = GetBool(fields, EntityFields.IsActive, GetBool(fields, "IsActive", true)),
             Created = GetDate(fields, EntityFields.Created),
             Modified = GetDate(fields, EntityFields.Modified),
             CreatedBy = GetLookupDisplay(fields, EntityFields.Author),
             ModifiedBy = GetLookupDisplay(fields, EntityFields.Editor)
         };
 
-        if (!string.IsNullOrWhiteSpace(listItemId) && int.TryParse(listItemId, out var id))
+        // Graph returns the SharePoint list item id on ListItem.Id — not reliably in fields.
+        // Prefer listItemId; fall back to common field keys used by Graph/SharePoint.
+        if (!string.IsNullOrWhiteSpace(listItemId) && int.TryParse(listItemId, out var idFromItem))
         {
-            entity.Id = id;
+            entity.Id = idFromItem;
         }
         else
         {
             entity.Id = GetInt(fields, "ID");
+            if (entity.Id <= 0)
+            {
+                entity.Id = GetInt(fields, "Id");
+            }
+            if (entity.Id <= 0)
+            {
+                entity.Id = GetInt(fields, "id");
+            }
         }
 
         var metadataJson = GetString(fields, EntityFields.MetadataJson);
@@ -138,6 +155,19 @@ public static class EntityMapper
         };
 
         return fields;
+    }
+
+    private static string FirstNonEmpty(params string[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return string.Empty;
     }
 
     private static string GetString(IDictionary<string, object> fields, string key, string defaultValue = "")

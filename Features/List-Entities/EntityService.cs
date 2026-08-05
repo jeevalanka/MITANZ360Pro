@@ -1,4 +1,3 @@
-using MITANZ360Pro.Web.Common;
 using MITANZ360Pro.Web.Infrastructure.SharePoint;
 
 namespace MITANZ360Pro.Web.Modules.Entities;
@@ -11,6 +10,10 @@ public interface IEntityService
 
     Task<Entity?> GetByIdAsync(
         int id,
+        CancellationToken cancellationToken = default);
+
+    Task<Entity?> GetByEntityIdAsync(
+        string entityId,
         CancellationToken cancellationToken = default);
 
     Task<bool> EntityIdExistsAsync(
@@ -71,6 +74,11 @@ public sealed class EntityService : IEntityService
         int id,
         CancellationToken cancellationToken = default)
         => _repository.GetByIdAsync(id, cancellationToken);
+
+    public Task<Entity?> GetByEntityIdAsync(
+        string entityId,
+        CancellationToken cancellationToken = default)
+        => _repository.GetByEntityIdAsync(entityId, cancellationToken);
 
     public Task<bool> EntityIdExistsAsync(
         string entityId,
@@ -140,9 +148,20 @@ public sealed class EntityService : IEntityService
         Entity entity,
         CancellationToken cancellationToken = default)
     {
+        // Resolve missing SharePoint list item Id by business EntityId so edit never becomes create.
+        if (entity.Id <= 0 && !string.IsNullOrWhiteSpace(entity.EntityId))
+        {
+            var byBusinessId = await _repository.GetByEntityIdAsync(entity.EntityId, cancellationToken);
+            if (byBusinessId != null)
+            {
+                entity.Id = byBusinessId.Id;
+            }
+        }
+
         if (entity.Id <= 0)
         {
-            return ServiceResult<Entity>.Failure("Invalid entity record.");
+            return ServiceResult<Entity>.Failure(
+                "Invalid entity record. Missing SharePoint item Id — reopen the record from the grid and try again.");
         }
 
         try

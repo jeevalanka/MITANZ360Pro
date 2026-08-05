@@ -174,7 +174,7 @@ builder.Services.AddScoped<SharePointService>();
 builder.Services.Configure<MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointOptions>(
     builder.Configuration.GetSection(MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointOptions.SectionName));
 builder.Services.AddScoped<MITANZ360Pro.Web.Infrastructure.SharePoint.ISharePointListClient, MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointListClient>();
-builder.Services.AddScoped<MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointListValidator>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.EntityListValidator>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityRepository, MITANZ360Pro.Web.Modules.Entities.EntityRepository>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityService, MITANZ360Pro.Web.Modules.Entities.EntityService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityTemplateService, MITANZ360Pro.Web.Modules.Entities.EntityTemplateService>();
@@ -304,7 +304,7 @@ using (var scope = app.Services.CreateScope())
     await DbInitializer.SeedAsync(services);
     await EnsureSysAdminAsync(services);
 
-    var listValidator = services.GetRequiredService<MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointListValidator>();
+    var listValidator = services.GetRequiredService<MITANZ360Pro.Web.Modules.Entities.EntityListValidator>();
     await listValidator.ValidateEntityListAsync();
 }
 

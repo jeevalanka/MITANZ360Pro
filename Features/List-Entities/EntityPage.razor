@@ -16,33 +16,36 @@
 
 <PageTitle>Entities</PageTitle>
 
-<RadzenCard class="entity-page" aria-label="Entity management">
-    <div class="entity-header">
+<div class="ms-entities">
+    <div class="ms-entities-header">
         <div>
-            <h2>Entities</h2>
-            <p class="text-muted">Manage metadata-driven entity records.</p>
+            <h1 class="ms-entities-title">Entities</h1>
+            <p class="ms-entities-subtitle">Manage metadata-driven entity records.</p>
         </div>
 
-        <div class="entity-toolbar" role="toolbar" aria-label="Entity actions">
+        <div class="ms-entities-toolbar" role="toolbar" aria-label="Entity actions">
             <RadzenButton Text="New"
                           Icon="add"
+                          ButtonStyle="ButtonStyle.Primary"
                           Click="@BeginCreate"
                           aria-label="Create new entity" />
             <RadzenButton Text="Refresh"
                           Icon="refresh"
-                          ButtonStyle="ButtonStyle.Light"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Variant="Variant.Outlined"
                           Click="@RefreshGridAsync"
                           aria-label="Refresh entity list" />
             <RadzenButton Text="Export"
                           Icon="download"
-                          ButtonStyle="ButtonStyle.Light"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Variant="Variant.Outlined"
                           Click="@ExportCurrentPage"
                           Disabled="@(!PagedItems.Any())"
                           aria-label="Export current page" />
         </div>
     </div>
 
-    <div class="entity-filters" role="search" aria-label="Entity filters">
+    <div class="ms-entities-filters" role="search" aria-label="Entity filters">
         <RadzenTextBox Value="@Filter.SearchText"
                        ValueChanged="@OnSearchTextChanged"
                        Placeholder="Search title, ID, type, or metadata"
@@ -95,63 +98,75 @@
                           aria-label="Created to date" />
     </div>
 
-    @if (IsGridLoading)
+    @if (IsGridLoading && !HasLoadedOnce)
     {
-        <div class="entity-loading" role="status" aria-live="polite">
+        <div class="ms-entities-loading" role="status" aria-live="polite">
             <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width:100%" />
             <span>Loading entities...</span>
         </div>
     }
 
-    @if (!IsGridLoading && TotalCount == 0)
-    {
-        <div class="entity-empty" role="status">
-            <p>No entities found.</p>
-            <RadzenButton Text="Create First Entity"
-                          Icon="add"
-                          Click="@BeginCreate"
-                          aria-label="Create first entity" />
-        </div>
-    }
-    else if (!IsGridLoading)
-    {
+    <div class="ms-entities-grid-wrap @(IsGridLoading ? "is-loading" : null)">
         <RadzenDataGrid @ref="Grid"
                         TItem="Entity"
                         Data="@PagedItems"
                         Count="@TotalCount"
                         LoadData="@LoadGridData"
+                        IsLoading="@IsGridLoading"
                         AllowPaging="true"
                         PageSize="25"
-                        AllowSorting="true"
+                        AllowSorting="false"
                         Responsive="true"
+                        Density="Density.Compact"
+                        class="ms-entities-grid"
                         aria-label="Entity list">
             <Columns>
-                <RadzenDataGridColumn Property="EntityId" Title="Entity ID" Width="140px" />
                 <RadzenDataGridColumn Property="Title" Title="Title" />
+                <RadzenDataGridColumn Property="EntityId" Title="Entity ID" Width="140px" />
                 <RadzenDataGridColumn Property="EntityType" Title="Type" Width="120px" />
-                <RadzenDataGridColumn Property="Status" Title="Status" Width="110px" />
+                <RadzenDataGridColumn Property="Status" Title="Status" Width="110px">
+                    <Template Context="item">
+                        <span class="ms-status ms-status-@item.Status.ToLowerInvariant()">@item.Status</span>
+                    </Template>
+                </RadzenDataGridColumn>
                 <RadzenDataGridColumn Title="Active" Width="90px">
                     <Template Context="item">
                         @(item.IsActive ? "Yes" : "No")
                     </Template>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn Property="Created" Title="Created" Width="160px" FormatString="{0:g}" />
-                <RadzenDataGridColumn Title="Actions" Width="120px" Sortable="false" Filterable="false">
+                <RadzenDataGridColumn Title="Actions" Width="100px" Sortable="false" Filterable="false">
                     <Template Context="item">
-                        <RadzenDropDownButton Text="Actions"
-                                              Icon="more_vert"
-                                              aria-label="@($"Actions for {item.EntityId}")">
-                            <ChildContent>
-                                <RadzenDropDownButtonItem Text="View" Icon="visibility" Click="@(() => OpenDrawer(item))" />
-                                <RadzenDropDownButtonItem Text="Edit" Icon="edit" Click="@(() => BeginEdit(item))" />
-                                <RadzenDropDownButtonItem Text="Archive" Icon="archive" Click="@(() => ArchiveEntity(item))" />
-                            </ChildContent>
-                        </RadzenDropDownButton>
+                        <RadzenButton Icon="edit"
+                                      ButtonStyle="ButtonStyle.Light"
+                                      Size="ButtonSize.Small"
+                                      title="Edit"
+                                      Click="@(() => BeginEdit(item))"
+                                      aria-label="@($"Edit {item.EntityId}")" />
+                        <RadzenButton Icon="visibility"
+                                      ButtonStyle="ButtonStyle.Light"
+                                      Size="ButtonSize.Small"
+                                      title="View"
+                                      Click="@(() => OpenDrawer(item))"
+                                      aria-label="@($"View {item.EntityId}")" />
                     </Template>
                 </RadzenDataGridColumn>
             </Columns>
         </RadzenDataGrid>
-    }
+
+        @if (HasLoadedOnce && !IsGridLoading && TotalCount == 0)
+        {
+            <div class="ms-entities-empty" role="status">
+                <p>No entities found.</p>
+                <RadzenButton Text="Create First Entity"
+                              Icon="add"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Click="@BeginCreate"
+                              aria-label="Create first entity" />
+            </div>
+        }
+    </div>
+
 
     @if (ShowEditor)
     {
@@ -292,6 +307,7 @@
                                   aria-label="Cancel editing" />
                     <RadzenButton Text="@(IsCreateMode ? "Create" : "Save")"
                                   Icon="save"
+                                  ButtonStyle="ButtonStyle.Primary"
                                   Click="@SaveAsync"
                                   Disabled="@IsSaving"
                                   aria-label="@(IsCreateMode ? "Create entity" : "Save entity")" />
@@ -327,7 +343,7 @@
             }
         </aside>
     }
-</RadzenCard>
+</div>
 
 @code {
     private enum EntityIdAvailability
@@ -342,13 +358,18 @@
     private List<Entity> PagedItems = [];
     private int TotalCount;
     private bool IsGridLoading;
+    private bool HasLoadedOnce;
     private bool IsSaving;
     private bool IsTemplateLoading;
     private bool ShowEditor;
     private bool IsCreateMode;
     private bool IsDirty;
 
-    private EntityFilter Filter = new();
+    private EntityFilter Filter = new()
+    {
+        Status = EntityStatuses.Active,
+        IsActive = true
+    };
     private Entity EditorModel = new();
     private Entity? DrawerEntity;
     private EntityTemplate? SelectedTemplate;
@@ -370,17 +391,28 @@
     protected override async Task OnInitializedAsync()
     {
         EntityTypeOptions = (await TemplateService.GetTemplatesAsync()).ToList();
+
+        // Load immediately — do not wait for the grid LoadData callback
+        // (empty-state used to hide the grid and LoadData never fired).
+        await LoadEntitiesAsync(pageNumber: 1, pageSize: 25);
     }
 
     private async Task LoadGridData(LoadDataArgs args)
+    {
+        var pageNumber = (args.Skip ?? 0) / (args.Top ?? 25) + 1;
+        var pageSize = args.Top ?? 25;
+        await LoadEntitiesAsync(pageNumber, pageSize);
+    }
+
+    private async Task LoadEntitiesAsync(int pageNumber, int pageSize)
     {
         IsGridLoading = true;
         StateHasChanged();
 
         try
         {
-            Filter.PageNumber = (args.Skip ?? 0) / (args.Top ?? 25) + 1;
-            Filter.PageSize = args.Top ?? 25;
+            Filter.PageNumber = pageNumber;
+            Filter.PageSize = pageSize;
 
             var result = await EntityService.GetPagedAsync(Filter);
             PagedItems = result.Items.ToList();
@@ -388,17 +420,27 @@
         }
         catch (Exception ex)
         {
+            PagedItems = [];
+            TotalCount = 0;
             NotificationService.Notify(NotificationSeverity.Error, "Load Failed", ex.Message);
         }
         finally
         {
+            HasLoadedOnce = true;
             IsGridLoading = false;
+            StateHasChanged();
         }
     }
 
-    private Task RefreshGridAsync()
+    private async Task RefreshGridAsync()
     {
-        return Grid?.Reload() ?? Task.CompletedTask;
+        if (Grid != null)
+        {
+            await Grid.Reload();
+            return;
+        }
+
+        await LoadEntitiesAsync(Filter.PageNumber <= 0 ? 1 : Filter.PageNumber, Filter.PageSize <= 0 ? 25 : Filter.PageSize);
     }
 
     private Task ReloadGrid()
@@ -457,9 +499,30 @@
 
     private async Task BeginEdit(Entity entity)
     {
-        var loaded = await EntityService.GetByIdAsync(entity.Id);
+        Entity? loaded = null;
 
-        EditorModel = loaded ?? entity;
+        if (entity.Id > 0)
+        {
+            loaded = await EntityService.GetByIdAsync(entity.Id);
+        }
+
+        // Fallback: resolve by business EntityId when list item Id was lost (legacy mapper bug).
+        if (loaded == null && !string.IsNullOrWhiteSpace(entity.EntityId))
+        {
+            loaded = await EntityService.GetByEntityIdAsync(entity.EntityId);
+        }
+
+        EditorModel = CloneEntity(loaded ?? entity);
+
+        if (EditorModel.Id <= 0)
+        {
+            NotificationService.Notify(
+                NotificationSeverity.Error,
+                "Edit Failed",
+                "Could not resolve the SharePoint list item Id for this entity. Refresh the grid and try again.");
+            return;
+        }
+
         IsCreateMode = false;
         ShowEditor = true;
         IsDirty = false;
@@ -528,6 +591,25 @@
             }
             else
             {
+                // Edit must never create. Resolve Id by EntityId if needed, then update only.
+                if (EditorModel.Id <= 0 && !string.IsNullOrWhiteSpace(EditorModel.EntityId))
+                {
+                    var existing = await EntityService.GetByEntityIdAsync(EditorModel.EntityId);
+                    if (existing != null)
+                    {
+                        EditorModel.Id = existing.Id;
+                    }
+                }
+
+                if (EditorModel.Id <= 0)
+                {
+                    NotificationService.Notify(
+                        NotificationSeverity.Error,
+                        "Save Failed",
+                        "Cannot update: missing SharePoint item Id. Close the editor, refresh, and open Edit again.");
+                    return;
+                }
+
                 var result = await EntityService.UpdateAsync(EditorModel);
 
                 if (!result.IsSuccess)
@@ -678,6 +760,26 @@
         IsDirty = true;
     }
 
+    private static Entity CloneEntity(Entity source)
+    {
+        return new Entity
+        {
+            Id = source.Id,
+            Title = source.Title,
+            EntityId = source.EntityId,
+            EntityType = source.EntityType,
+            Status = source.Status,
+            IsActive = source.IsActive,
+            Metadata = source.Metadata != null
+                ? new Dictionary<string, object?>(source.Metadata)
+                : new Dictionary<string, object?>(),
+            Created = source.Created,
+            Modified = source.Modified,
+            CreatedBy = source.CreatedBy,
+            ModifiedBy = source.ModifiedBy
+        };
+    }
+
     private void OpenDrawer(Entity entity)
     {
         DrawerEntity = entity;
@@ -714,46 +816,118 @@
 }
 
 <style>
-    .entity-page {
-        position: relative;
+    .ms-entities {
+        --ms-brand: #0078d4;
+        --ms-brand-hover: #106ebe;
+        --ms-border: #edebe9;
+        --ms-text: #323130;
+        --ms-text-secondary: #605e5c;
+        --ms-surface: #ffffff;
+        --ms-surface-alt: #faf9f8;
+        --ms-success: #107c10;
+        --ms-warning: #797775;
+        font-family: "Segoe UI", Segoe UI, system-ui, -apple-system, sans-serif;
+        color: var(--ms-text);
+        background: var(--ms-surface);
+        border: 1px solid var(--ms-border);
+        border-radius: 2px;
+        padding: 1.25rem 1.5rem 1.5rem;
     }
 
-    .entity-header {
+    .ms-entities-header {
         display: flex;
         justify-content: space-between;
         gap: 1rem;
         flex-wrap: wrap;
         margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--ms-border);
     }
 
-    .entity-toolbar {
+    .ms-entities-title {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--ms-text);
+        letter-spacing: -0.01em;
+    }
+
+    .ms-entities-subtitle {
+        margin: 0.25rem 0 0;
+        color: var(--ms-text-secondary);
+        font-size: 0.875rem;
+    }
+
+    .ms-entities-toolbar {
         display: flex;
         gap: 0.5rem;
         flex-wrap: wrap;
+        align-items: center;
     }
 
-    .entity-filters {
+    .ms-entities-filters {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 0.75rem;
         margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: var(--ms-surface-alt);
+        border: 1px solid var(--ms-border);
+        border-radius: 2px;
     }
 
-    .entity-loading {
+    .ms-entities-loading {
         display: grid;
         gap: 0.5rem;
         margin: 1rem 0;
+        color: var(--ms-text-secondary);
+        font-size: 0.875rem;
     }
 
-    .entity-empty {
+    .ms-entities-grid-wrap {
+        position: relative;
+        min-height: 160px;
+    }
+
+    .ms-entities-grid-wrap.is-loading {
+        opacity: 0.7;
+    }
+
+    .ms-entities-empty {
         text-align: center;
-        padding: 2rem 1rem;
+        padding: 2.5rem 1rem;
+        color: var(--ms-text-secondary);
+    }
+
+    .ms-status {
+        display: inline-block;
+        padding: 0.1rem 0.45rem;
+        border-radius: 2px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #f3f2f1;
+        color: var(--ms-text);
+    }
+
+    .ms-status-active {
+        background: #dff6dd;
+        color: var(--ms-success);
+    }
+
+    .ms-status-draft {
+        background: #fff4ce;
+        color: #8a6116;
+    }
+
+    .ms-status-archived {
+        background: #f3f2f1;
+        color: var(--ms-warning);
     }
 
     .entity-editor-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.35);
+        background: rgba(0, 0, 0, 0.4);
         display: flex;
         justify-content: center;
         align-items: flex-start;
@@ -764,6 +938,7 @@
 
     .entity-editor {
         width: min(960px, 100%);
+        border-radius: 2px;
     }
 
     .entity-editor-header,
@@ -782,8 +957,9 @@
     }
 
     .entity-section legend {
-        font-weight: 700;
+        font-weight: 600;
         margin-bottom: 0.75rem;
+        color: var(--ms-text);
     }
 
     .form-row {
@@ -797,15 +973,15 @@
     }
 
     .entity-id-status .status-ok {
-        color: #1e7e34;
+        color: var(--ms-success);
     }
 
     .entity-id-status .status-warn {
-        color: #c0392b;
+        color: #a4262c;
     }
 
     .required-indicator {
-        color: #c0392b;
+        color: #a4262c;
     }
 
     .audit-grid {
@@ -820,16 +996,18 @@
         right: 0;
         width: min(360px, 100%);
         height: 100vh;
-        background: var(--rz-base-background-color, #fff);
+        background: var(--ms-surface);
+        border-left: 1px solid var(--ms-border);
         box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
         padding: 1rem;
         z-index: 1100;
         overflow-y: auto;
+        font-family: "Segoe UI", Segoe UI, system-ui, sans-serif;
     }
 
     @@media (max-width: 768px) {
-        .entity-header,
-        .entity-toolbar,
+        .ms-entities-header,
+        .ms-entities-toolbar,
         .entity-id-row,
         .entity-editor-actions {
             flex-direction: column;
