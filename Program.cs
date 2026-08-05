@@ -171,6 +171,16 @@ builder.Services.AddSingleton<GraphServiceClient>(sp =>
 #region 🧠 SHAREPOINT SERVICES
 
 builder.Services.AddScoped<SharePointService>();
+builder.Services.Configure<MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointOptions>(
+    builder.Configuration.GetSection(MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointOptions.SectionName));
+builder.Services.AddScoped<MITANZ360Pro.Web.Infrastructure.SharePoint.ISharePointListClient, MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointListClient>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointListValidator>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityRepository, MITANZ360Pro.Web.Modules.Entities.EntityRepository>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityService, MITANZ360Pro.Web.Modules.Entities.EntityService>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityTemplateService, MITANZ360Pro.Web.Modules.Entities.EntityTemplateService>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntitySequenceService, MITANZ360Pro.Web.Modules.Entities.EntitySequenceService>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityActivityService, MITANZ360Pro.Web.Modules.Entities.EntityActivityService>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityWorkflowService, MITANZ360Pro.Web.Modules.Entities.EntityWorkflowService>();
 
 #endregion
 
@@ -293,6 +303,9 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
     await DbInitializer.SeedAsync(services);
     await EnsureSysAdminAsync(services);
+
+    var listValidator = services.GetRequiredService<MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointListValidator>();
+    await listValidator.ValidateEntityListAsync();
 }
 
 #endregion

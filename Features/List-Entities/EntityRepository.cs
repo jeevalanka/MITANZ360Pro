@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Graph.Models;
 using MITANZ360Pro.Web.Common;
 using MITANZ360Pro.Web.Infrastructure.SharePoint;
@@ -7,7 +8,7 @@ namespace MITANZ360Pro.Web.Modules.Entities;
 
 public interface IEntityRepository
 {
-    Task<PagedResult<Entity>> GetPagedAsync(
+    Task<EntityPagedResult<Entity>> GetPagedAsync(
         EntityFilter filter,
         CancellationToken cancellationToken = default);
 
@@ -32,7 +33,11 @@ public interface IEntityRepository
         Entity entity,
         CancellationToken cancellationToken = default);
 
-    Task DeleteAsync(
+    Task ArchiveAsync(
+        int id,
+        CancellationToken cancellationToken = default);
+
+    Task RestoreAsync(
         int id,
         CancellationToken cancellationToken = default);
 }
@@ -55,65 +60,115 @@ public sealed class EntityRepository : IEntityRepository
     ];
 
     private readonly ISharePointListClient _sharePointClient;
+    private readonly SharePointOptions _options;
     private readonly ILogger<EntityRepository> _logger;
-    private readonly string _siteId;
-    private readonly string _listId;
 
     public EntityRepository(
         ISharePointListClient sharePointClient,
-        ILogger<EntityRepository> logger,
-        IConfiguration configuration)
+        IOptions<SharePointOptions> options,
+        ILogger<EntityRepository> logger)
     {
         _sharePointClient = sharePointClient;
+        _options = options.Value;
         _logger = logger;
 
-        _siteId = configuration["SharePoint:SiteId"]
-            ?? throw new InvalidOperationException(
-                "SharePoint SiteId configuration missing.");
+        if (string.IsNullOrWhiteSpace(_options.SiteId))
+        {
+            throw new InvalidOperationException("SharePoint SiteId configuration missing.");
+        }
 
-        _listId = configuration["SharePoint:Lists:Entities"]
-            ?? EntityList.ListId;
+        if (string.IsNullOrWhiteSpace(_options.Lists.Entities))
+        {
+            throw new InvalidOperationException("SharePoint Lists:Entities configuration missing.");
+        }
     }
 
-    public async Task<PagedResult<Entity>> GetPagedAsync(
+    public async Task<EntityPagedResult<Entity>> GetPagedAsync(
         EntityFilter filter,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation(
-                "Loading Entity page {PageNumber}",
-                filter.PageNumber);
+            _logger.LogInformation("Loading Entity page {PageNumber}", filter.PageNumber);
 
-            // Do not set OrderBy or Filter on the Graph query — SharePoint list
-            // columns (Title, field_*) are often not indexed and Graph will reject
-            // the request. Filter and sort in memory instead.
-            var query = new ListQuery
+            var oDataFilter = BuildODataFilter(filter);
+            var requiresMetadataSearch = RequiresMetadataSearch(filter);
+
+            if (requiresMetadataSearch)
             {
-                PageSize = filter.PageSize
-            };
+                return await GetPagedWithMetadataSearchAsync(filter, oDataFilter, cancellationToken);
+            }
 
-            var response = await _sharePointClient.GetItemsAsync(
-                _siteId,
-                _listId,
-                SelectFields,
-                query,
+            var totalCount = await _sharePointClient.GetItemCountAsync(
+                _options.SiteId,
+                _options.Lists.Entities,
+                oDataFilter,
                 cancellationToken);
 
-            var entities = response.Items
-                .Select(Map)
-                .Where(x => x != null)
-                .Cast<Entity>()
-                .ToList();
+            var skip = Math.Max(0, (filter.PageNumber - 1) * filter.PageSize);
+            var collected = new List<Entity>();
+            string? nextLink = filter.NextLink;
+            var skipped = 0;
 
-            entities = ApplyInMemoryFilter(entities, filter);
-
-            return new PagedResult<Entity>
+            while (collected.Count < filter.PageSize)
             {
-                Items = entities,
-                TotalCount = entities.Count,
+                var query = new ListQuery
+                {
+                    PageSize = filter.PageSize,
+                    Filter = string.IsNullOrWhiteSpace(nextLink) ? oDataFilter : null,
+                    OrderBy = $"fields/{EntityFields.Title}",
+                    NextLink = nextLink
+                };
+
+                var response = await _sharePointClient.GetItemsAsync(
+                    _options.SiteId,
+                    _options.Lists.Entities,
+                    SelectFields,
+                    query,
+                    cancellationToken);
+
+                var batch = response.Items
+                    .Select(item => Map(item))
+                    .Where(x => x != null)
+                    .Cast<Entity>()
+                    .ToList();
+
+                foreach (var entity in batch)
+                {
+                    if (skipped < skip)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    collected.Add(entity);
+
+                    if (collected.Count >= filter.PageSize)
+                    {
+                        break;
+                    }
+                }
+
+                nextLink = response.NextLink;
+
+                if (string.IsNullOrWhiteSpace(nextLink) || batch.Count == 0)
+                {
+                    break;
+                }
+            }
+
+            if (totalCount == 0 && collected.Count > 0)
+            {
+                totalCount = skip + collected.Count + (string.IsNullOrWhiteSpace(nextLink) ? 0 : filter.PageSize);
+            }
+
+            return new EntityPagedResult<Entity>
+            {
+                Items = collected,
+                TotalCount = totalCount,
                 PageNumber = filter.PageNumber,
-                PageSize = filter.PageSize
+                PageSize = filter.PageSize,
+                NextLink = nextLink
             };
         }
         catch (Exception ex)
@@ -130,8 +185,8 @@ public sealed class EntityRepository : IEntityRepository
         try
         {
             var item = await _sharePointClient.GetItemByIdAsync(
-                _siteId,
-                _listId,
+                _options.SiteId,
+                _options.Lists.Entities,
                 id.ToString(),
                 SelectFields,
                 cancellationToken);
@@ -149,19 +204,29 @@ public sealed class EntityRepository : IEntityRepository
         string entityId,
         CancellationToken cancellationToken = default)
     {
-        var page = await GetPagedAsync(
-            new EntityFilter
-            {
-                SearchText = entityId,
-                PageSize = 500
-            },
+        if (string.IsNullOrWhiteSpace(entityId))
+        {
+            return null;
+        }
+
+        var safe = EscapeOData(entityId);
+        var filter = $"fields/{EntityFields.EntityId} eq '{safe}'";
+
+        var query = new ListQuery
+        {
+            PageSize = 1,
+            Filter = filter
+        };
+
+        var response = await _sharePointClient.GetItemsAsync(
+            _options.SiteId,
+            _options.Lists.Entities,
+            SelectFields,
+            query,
             cancellationToken);
 
-        return page.Items
-            .FirstOrDefault(x =>
-                x.EntityId.Equals(
-                    entityId,
-                    StringComparison.OrdinalIgnoreCase));
+        var item = response.Items.FirstOrDefault();
+        return item == null ? null : Map(item);
     }
 
     public async Task<bool> ExistsAsync(
@@ -191,8 +256,8 @@ public sealed class EntityRepository : IEntityRepository
         try
         {
             var response = await _sharePointClient.CreateItemAsync(
-                _siteId,
-                _listId,
+                _options.SiteId,
+                _options.Lists.Entities,
                 EntityMapper.ToFieldDictionary(entity),
                 cancellationToken);
 
@@ -213,8 +278,8 @@ public sealed class EntityRepository : IEntityRepository
         try
         {
             await _sharePointClient.UpdateItemAsync(
-                _siteId,
-                _listId,
+                _options.SiteId,
+                _options.Lists.Entities,
                 entity.Id.ToString(),
                 EntityMapper.ToFieldDictionary(entity),
                 cancellationToken);
@@ -229,80 +294,169 @@ public sealed class EntityRepository : IEntityRepository
         }
     }
 
-    public async Task DeleteAsync(
+    public async Task ArchiveAsync(
         int id,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await _sharePointClient.DeleteItemAsync(
-                _siteId,
-                _listId,
-                id.ToString(),
-                cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Entity deletion failed");
-            throw;
-        }
+        var entity = await GetByIdAsync(id, cancellationToken)
+            ?? throw new InvalidOperationException("Entity not found.");
+
+        entity.Status = EntityStatuses.Archived;
+        entity.IsActive = false;
+
+        await UpdateAsync(entity, cancellationToken);
     }
 
-    private static List<Entity> ApplyInMemoryFilter(
-        IEnumerable<Entity> entities,
-        EntityFilter filter)
+    public async Task RestoreAsync(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await GetByIdAsync(id, cancellationToken)
+            ?? throw new InvalidOperationException("Entity not found.");
+
+        entity.Status = EntityStatuses.Active;
+        entity.IsActive = true;
+
+        await UpdateAsync(entity, cancellationToken);
+    }
+
+    private async Task<EntityPagedResult<Entity>> GetPagedWithMetadataSearchAsync(
+        EntityFilter filter,
+        string? oDataFilter,
+        CancellationToken cancellationToken)
+    {
+        var all = new List<Entity>();
+        string? nextLink = null;
+
+        do
+        {
+            var query = new ListQuery
+            {
+                PageSize = 200,
+                Filter = string.IsNullOrWhiteSpace(nextLink) ? oDataFilter : null,
+                OrderBy = $"fields/{EntityFields.Title}",
+                NextLink = nextLink
+            };
+
+            var response = await _sharePointClient.GetItemsAsync(
+                _options.SiteId,
+                _options.Lists.Entities,
+                SelectFields,
+                query,
+                cancellationToken);
+
+            all.AddRange(response.Items
+                .Select(Map)
+                .Where(x => x != null)
+                .Cast<Entity>());
+
+            nextLink = response.NextLink;
+        }
+        while (!string.IsNullOrWhiteSpace(nextLink));
+
+        var filtered = ApplyMetadataSearch(all, filter);
+        var skip = Math.Max(0, (filter.PageNumber - 1) * filter.PageSize);
+
+        var pageItems = filtered
+            .Skip(skip)
+            .Take(filter.PageSize)
+            .ToList();
+
+        return new EntityPagedResult<Entity>
+        {
+            Items = pageItems,
+            TotalCount = filtered.Count,
+            PageNumber = filter.PageNumber,
+            PageSize = filter.PageSize
+        };
+    }
+
+    private static bool RequiresMetadataSearch(EntityFilter filter)
+    {
+        return !string.IsNullOrWhiteSpace(filter.SearchText);
+    }
+
+    private static string? BuildODataFilter(EntityFilter filter)
+    {
+        var clauses = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(filter.EntityType))
+        {
+            clauses.Add($"fields/{EntityFields.EntityType} eq '{EscapeOData(filter.EntityType)}'");
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Status))
+        {
+            clauses.Add($"fields/{EntityFields.Status} eq '{EscapeOData(filter.Status)}'");
+        }
+
+        if (filter.IsActive.HasValue)
+        {
+            clauses.Add($"fields/{EntityFields.IsActive} eq {filter.IsActive.Value.ToString().ToLowerInvariant()}");
+        }
+
+        if (filter.CreatedFrom.HasValue)
+        {
+            clauses.Add($"fields/{EntityFields.Created} ge '{filter.CreatedFrom.Value:O}'");
+        }
+
+        if (filter.CreatedTo.HasValue)
+        {
+            clauses.Add($"fields/{EntityFields.Created} le '{filter.CreatedTo.Value:O}'");
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.SearchText) && !RequiresMetadataSearchOnly(filter))
+        {
+            var safe = EscapeOData(filter.SearchText);
+            clauses.Add(
+                $"contains(fields/{EntityFields.Title},'{safe}') or " +
+                $"contains(fields/{EntityFields.EntityId},'{safe}') or " +
+                $"contains(fields/{EntityFields.EntityType},'{safe}')");
+        }
+
+        return clauses.Count == 0 ? null : string.Join(" and ", clauses);
+    }
+
+    private static bool RequiresMetadataSearchOnly(EntityFilter filter)
+    {
+        return !string.IsNullOrWhiteSpace(filter.SearchText);
+    }
+
+    private static List<Entity> ApplyMetadataSearch(IEnumerable<Entity> entities, EntityFilter filter)
     {
         var query = entities.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(filter.SearchText))
         {
+            var search = filter.SearchText;
+
             query = query.Where(x =>
-                x.Title.Contains(filter.SearchText, StringComparison.OrdinalIgnoreCase)
-                || x.EntityId.Contains(filter.SearchText, StringComparison.OrdinalIgnoreCase)
-                || x.EntityType.Contains(filter.SearchText, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.EntityType))
-        {
-            query = query.Where(x =>
-                x.EntityType.Equals(filter.EntityType, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.Status))
-        {
-            query = query.Where(x =>
-                x.Status.Equals(filter.Status, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (filter.IsActive.HasValue)
-        {
-            query = query.Where(x => x.IsActive == filter.IsActive);
-        }
-
-        if (filter.CreatedFrom.HasValue)
-        {
-            query = query.Where(x => x.Created >= filter.CreatedFrom.Value);
-        }
-
-        if (filter.CreatedTo.HasValue)
-        {
-            query = query.Where(x => x.Created <= filter.CreatedTo.Value);
-        }
-
-        if (filter.ModifiedFrom.HasValue)
-        {
-            query = query.Where(x => x.Modified >= filter.ModifiedFrom.Value);
-        }
-
-        if (filter.ModifiedTo.HasValue)
-        {
-            query = query.Where(x => x.Modified <= filter.ModifiedTo.Value);
+                x.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || x.EntityId.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || x.EntityType.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || MetadataContains(x.Metadata, search));
         }
 
         return query
             .OrderBy(x => x.Title)
             .ToList();
     }
+
+    private static bool MetadataContains(Dictionary<string, object?> metadata, string search)
+    {
+        foreach (var value in metadata.Values)
+        {
+            if (value?.ToString()?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string EscapeOData(string value)
+        => value.Replace("'", "''", StringComparison.Ordinal);
 
     private static Entity? Map(ListItem item)
     {
@@ -311,6 +465,6 @@ public sealed class EntityRepository : IEntityRepository
             return null;
         }
 
-        return EntityMapper.FromDictionary(item.Fields.AdditionalData);
+        return EntityMapper.FromDictionary(item.Fields.AdditionalData, item.Id);
     }
 }

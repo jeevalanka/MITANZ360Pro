@@ -1,0 +1,146 @@
+@using MITANZ360Pro.Web.Modules.Entities
+
+@if (Template?.Fields is { Count: > 0 })
+{
+    <div class="metadata-grid" role="group" aria-label="Metadata fields">
+        @foreach (var field in Template.Fields)
+        {
+            <div class="metadata-field">
+                <label for="@GetFieldId(field.Name)">
+                    @field.Label
+                    @if (field.Required)
+                    {
+                        <span class="required-indicator" aria-hidden="true">*</span>
+                        <span class="visually-hidden">required</span>
+                    }
+                </label>
+
+                @switch (field.Type.ToLowerInvariant())
+                {
+                    case "textarea":
+                        <RadzenTextArea id="@GetFieldId(field.Name)"
+                                        Value="@GetString(field.Name)"
+                                        ValueChanged="@(value => SetValue(field.Name, value))"
+                                        Disabled="@Disabled"
+                                        Style="width:100%"
+                                        aria-required="@field.Required"
+                                        aria-label="@field.Label" />
+                        break;
+
+                    case "date":
+                        <RadzenDatePicker id="@GetFieldId(field.Name)"
+                                          TValue="DateTime?"
+                                          Value="@GetDate(field.Name)"
+                                          ValueChanged="@(value => SetValue(field.Name, value?.ToString("yyyy-MM-dd")))"
+                                          Disabled="@Disabled"
+                                          Style="width:100%"
+                                          aria-required="@field.Required"
+                                          aria-label="@field.Label" />
+                        break;
+
+                    case "number":
+                        <RadzenNumeric id="@GetFieldId(field.Name)"
+                                       TValue="decimal?"
+                                       Value="@GetDecimal(field.Name)"
+                                       ValueChanged="@(value => SetValue(field.Name, value))"
+                                       Disabled="@Disabled"
+                                       Style="width:100%"
+                                       aria-required="@field.Required"
+                                       aria-label="@field.Label" />
+                        break;
+
+                    case "dropdown":
+                    case "select":
+                        <RadzenDropDown id="@GetFieldId(field.Name)"
+                                        TValue="string"
+                                        Data="@(field.Options ?? [])"
+                                        Value="@GetString(field.Name)"
+                                        ValueChanged="@(value => SetValue(field.Name, value))"
+                                        Disabled="@Disabled"
+                                        Style="width:100%"
+                                        AllowClear="true"
+                                        aria-required="@field.Required"
+                                        aria-label="@field.Label" />
+                        break;
+
+                    default:
+                        <RadzenTextBox id="@GetFieldId(field.Name)"
+                                       Value="@GetString(field.Name)"
+                                       ValueChanged="@(value => SetValue(field.Name, value))"
+                                       Disabled="@Disabled"
+                                       Style="width:100%"
+                                       MaxLength="@field.MaxLength"
+                                       aria-required="@field.Required"
+                                       aria-label="@field.Label" />
+                        break;
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public EntityTemplate? Template { get; set; }
+
+    [Parameter] public Dictionary<string, object?> Metadata { get; set; } = new();
+
+    [Parameter] public EventCallback<Dictionary<string, object?>> MetadataChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string FieldIdPrefix { get; set; } = "entity-meta";
+
+    private string GetFieldId(string name) => $"{FieldIdPrefix}-{name}";
+
+    private string? GetString(string name)
+        => Metadata.TryGetValue(name, out var value) ? value?.ToString() : null;
+
+    private DateTime? GetDate(string name)
+    {
+        var text = GetString(name);
+        return DateTime.TryParse(text, out var date) ? date : null;
+    }
+
+    private decimal? GetDecimal(string name)
+    {
+        var text = GetString(name);
+        return decimal.TryParse(text, out var number) ? number : null;
+    }
+
+    private async Task SetValue(string name, object? value)
+    {
+        Metadata[name] = value;
+        await MetadataChanged.InvokeAsync(Metadata);
+    }
+}
+
+<style>
+    .metadata-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .metadata-field label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+    }
+
+    .required-indicator {
+        color: #c0392b;
+        margin-left: 0.15rem;
+    }
+
+    .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+</style>

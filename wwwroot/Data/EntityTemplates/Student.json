@@ -1,0 +1,13 @@
+{
+  "EntityType": "Student",
+  "DisplayName": "Student",
+  "Fields": [
+    { "Name": "FirstName", "Label": "First Name", "Type": "text", "Required": true, "MaxLength": 100 },
+    { "Name": "LastName", "Label": "Last Name", "Type": "text", "Required": true, "MaxLength": 100 },
+    { "Name": "Passport", "Label": "Passport", "Type": "text", "Required": false, "MaxLength": 50 },
+    { "Name": "Email", "Label": "Email", "Type": "email", "Required": false, "Pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+    { "Name": "Phone", "Label": "Phone", "Type": "text", "Required": false, "MaxLength": 30 },
+    { "Name": "NIC", "Label": "NIC", "Type": "text", "Required": false, "MaxLength": 20 },
+    { "Name": "DOB", "Label": "Date of Birth", "Type": "date", "Required": false }
+  ]
+}

@@ -12,6 +12,12 @@ public interface ISharePointListClient
         ListQuery query,
         CancellationToken cancellationToken = default);
 
+    Task<int> GetItemCountAsync(
+        string siteId,
+        string listId,
+        string? filter,
+        CancellationToken cancellationToken = default);
+
     Task<ListItem?> GetItemByIdAsync(
         string siteId,
         string listId,

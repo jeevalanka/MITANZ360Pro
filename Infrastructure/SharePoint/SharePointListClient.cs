@@ -3,6 +3,7 @@ using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Graph.Sites.Item.Lists.Item.Items;
 using MITANZ360Pro.Web.Common;
+using MITANZ360Pro.Web.Infrastructure.SharePoint;
 
 namespace MITANZ360Pro.Web.Infrastructure.SharePoint;
 
@@ -50,8 +51,15 @@ public sealed class SharePointListClient : ISharePointListClient
 
                         config.QueryParameters.Top = query.PageSize;
 
-                        // Do not set Filter or OrderBy here — SharePoint custom
-                        // columns are often not indexed. Filter in memory instead.
+                        if (!string.IsNullOrWhiteSpace(query.Filter))
+                        {
+                            config.QueryParameters.Filter = query.Filter;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(query.OrderBy))
+                        {
+                            config.QueryParameters.Orderby = [query.OrderBy];
+                        }
                     }, cancellationToken);
             }
 
@@ -66,6 +74,45 @@ public sealed class SharePointListClient : ISharePointListClient
         {
             _logger.LogError(ex, "Error getting list items from site {SiteId}, list {ListId}", siteId, listId);
             throw;
+        }
+    }
+
+    public async Task<int> GetItemCountAsync(
+        string siteId,
+        string listId,
+        string? filter,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _graphClient
+                .Sites[siteId]
+                .Lists[listId]
+                .Items
+                .GetAsync(config =>
+                {
+                    config.QueryParameters.Count = true;
+                    config.QueryParameters.Top = 1;
+
+                    if (!string.IsNullOrWhiteSpace(filter))
+                    {
+                        config.QueryParameters.Filter = filter;
+                    }
+
+                    config.Headers.Add("ConsistencyLevel", "eventual");
+                }, cancellationToken);
+
+            if (response?.OdataCount.HasValue == true)
+            {
+                return (int)response.OdataCount.Value;
+            }
+
+            return response?.Value?.Count ?? 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Count query failed for list {ListId}; falling back to zero.", listId);
+            return 0;
         }
     }
 
@@ -116,7 +163,24 @@ public sealed class SharePointListClient : ISharePointListClient
                 .Items
                 .PostAsync(item, cancellationToken: cancellationToken);
 
-            return created ?? throw new InvalidOperationException("Create returned null.");
+            if (created == null)
+            {
+                throw new InvalidOperationException("Create returned null.");
+            }
+
+            if (created.Fields?.AdditionalData == null || created.Fields.AdditionalData.Count == 0)
+            {
+                var refreshed = await GetItemByIdAsync(
+                    siteId,
+                    listId,
+                    created.Id!,
+                    fields.Keys.ToArray(),
+                    cancellationToken);
+
+                return refreshed ?? created;
+            }
+
+            return created;
         }
         catch (Exception ex)
         {
