@@ -6,6 +6,7 @@
     { "Name": "ContactPerson", "Label": "Contact Person", "Type": "text", "Required": true, "MaxLength": 100 },
     { "Name": "Email", "Label": "Email", "Type": "email", "Required": true, "Pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
     { "Name": "Phone", "Label": "Phone", "Type": "text", "Required": false, "MaxLength": 30 },
-    { "Name": "Country", "Label": "Country", "Type": "text", "Required": false, "MaxLength": 100 }
+    { "Name": "Country", "Label": "Country", "Type": "text", "Required": false, "MaxLength": 100 },
+    { "Name": "ReferralCode", "Label": "Referral Code", "Type": "text", "Required": false, "MaxLength": 20, "Pattern": "^[A-Z0-9]{2,20}$" }
   ]
 }

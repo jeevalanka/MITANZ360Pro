@@ -1,0 +1,372 @@
+/* Student Visa public registration — Fluent-inspired, Bootstrap 5 friendly */
+
+.sv-page {
+    --sv-primary: #0078d4;
+    --sv-primary-hover: #106ebe;
+    --sv-success: #107c10;
+    --sv-surface: #f3f2f1;
+    --sv-card: #ffffff;
+    --sv-text: #242424;
+    --sv-muted: #605e5c;
+    --sv-border: #edebe9;
+    --sv-radius: 12px;
+    --sv-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+    color: var(--sv-text);
+    background: linear-gradient(180deg, #e8f4fc 0%, var(--sv-surface) 280px, var(--sv-surface) 100%);
+    min-height: 100%;
+    padding-bottom: 4rem;
+}
+
+.sv-hero {
+    background: linear-gradient(135deg, #0b5cab 0%, #0078d4 55%, #2b88d8 100%);
+    color: #fff;
+    padding: 2.75rem 1.25rem 2.5rem;
+    margin-bottom: 1.75rem;
+}
+
+.sv-hero-inner {
+    max-width: 920px;
+    margin: 0 auto;
+}
+
+.sv-brand {
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.9;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.sv-title {
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+}
+
+.sv-subtitle {
+    margin: 0;
+    max-width: 40rem;
+    opacity: 0.92;
+    font-size: 1.05rem;
+}
+
+.sv-container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+}
+
+.sv-info-panel {
+    background: #deecf9;
+    border: 1px solid #c7e0f4;
+    border-left: 4px solid var(--sv-primary);
+    border-radius: var(--sv-radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--sv-shadow);
+}
+
+.sv-info-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+}
+
+.sv-info-header h2 {
+    font-size: 1.15rem;
+    margin: 0;
+    font-weight: 600;
+}
+
+.sv-info-header i {
+    color: var(--sv-primary);
+    font-size: 1.35rem;
+}
+
+.sv-info-list {
+    margin: 0;
+    padding-left: 1.2rem;
+    color: var(--sv-text);
+}
+
+.sv-info-list li {
+    margin-bottom: 0.4rem;
+}
+
+.sv-card {
+    background: var(--sv-card);
+    border: 1px solid var(--sv-border);
+    border-radius: var(--sv-radius);
+    box-shadow: var(--sv-shadow);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.sv-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 1rem 1.35rem;
+    border-bottom: 1px solid var(--sv-border);
+    background: #faf9f8;
+}
+
+.sv-card-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.sv-card-header i {
+    color: var(--sv-primary);
+    font-size: 1.2rem;
+}
+
+.sv-card-body {
+    padding: 1.5rem 1.35rem 1.75rem;
+}
+
+.sv-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+    color: var(--sv-text);
+}
+
+.sv-req {
+    color: #a4262c;
+}
+
+.sv-input {
+    border-radius: 8px !important;
+    border-color: #8a8886 !important;
+    padding: 0.55rem 0.75rem !important;
+}
+
+.sv-input:focus {
+    border-color: var(--sv-primary) !important;
+    box-shadow: 0 0 0 1px var(--sv-primary) !important;
+}
+
+.sv-help {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--sv-muted);
+}
+
+.sv-help i {
+    margin-right: 0.25rem;
+}
+
+.validation-message {
+    display: block;
+    color: #a4262c;
+    font-size: 0.82rem;
+    margin-top: 0.25rem;
+}
+
+.sv-check .form-check-label {
+    color: var(--sv-text);
+    font-size: 0.95rem;
+}
+
+.sv-hp {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.sv-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
+.sv-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem 1.35rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.sv-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.sv-btn-primary {
+    background: var(--sv-primary);
+    color: #fff;
+}
+
+.sv-btn-primary:hover:not(:disabled) {
+    background: var(--sv-primary-hover);
+}
+
+.sv-btn-secondary {
+    background: #fff;
+    color: var(--sv-text);
+    border: 1px solid #8a8886;
+    margin-right: 0.65rem;
+}
+
+.sv-btn-secondary:hover:not(:disabled) {
+    background: #f3f2f1;
+}
+
+.sv-alert {
+    border-radius: var(--sv-radius);
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.95rem;
+}
+
+.sv-alert-error {
+    background: #fde7e9;
+    border: 1px solid #f1aeb5;
+    color: #a4262c;
+}
+
+.sv-alert-info {
+    background: #fff4ce;
+    border: 1px solid #f8e5a0;
+    color: #6c5700;
+}
+
+.sv-success-card {
+    text-align: center;
+    background: var(--sv-card);
+    border-radius: var(--sv-radius);
+    box-shadow: var(--sv-shadow);
+    border: 1px solid var(--sv-border);
+    padding: 3rem 1.5rem;
+}
+
+.sv-success-icon {
+    font-size: 4rem;
+    color: var(--sv-success);
+    margin-bottom: 0.75rem;
+    line-height: 1;
+}
+
+.sv-success-card h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.sv-success-msg {
+    font-size: 1.1rem;
+    color: var(--sv-muted);
+    margin-bottom: 1.5rem;
+}
+
+.sv-success-meta {
+    display: inline-grid;
+    gap: 1rem 2.5rem;
+    grid-template-columns: auto auto;
+    text-align: left;
+    margin: 0 auto 1.5rem;
+}
+
+.sv-success-meta dt {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--sv-muted);
+    margin: 0;
+}
+
+.sv-success-meta dd {
+    margin: 0.15rem 0 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.sv-success-hint {
+    color: var(--sv-muted);
+    margin-bottom: 1.5rem;
+}
+
+.sv-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.sv-modal-card {
+    position: relative;
+    background: #fff;
+    border-radius: var(--sv-radius);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 420px;
+    width: 100%;
+    padding: 1.5rem 1.5rem 1.25rem;
+}
+
+.sv-modal-card h3 {
+    margin: 0 2rem 0.75rem 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.sv-modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    border: none;
+    background: transparent;
+    font-size: 1.1rem;
+    color: var(--sv-muted);
+    cursor: pointer;
+    padding: 0.35rem;
+    border-radius: 6px;
+}
+
+.sv-modal-close:hover {
+    background: #f3f2f1;
+    color: var(--sv-text);
+}
+
+.sv-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+}
+
+@media (max-width: 576px) {
+    .sv-card-body {
+        padding: 1.15rem 1rem 1.35rem;
+    }
+
+    .sv-actions {
+        justify-content: stretch;
+    }
+
+    .sv-actions .sv-btn {
+        width: 100%;
+    }
+
+    .sv-success-meta {
+        grid-template-columns: 1fr;
+    }
+}

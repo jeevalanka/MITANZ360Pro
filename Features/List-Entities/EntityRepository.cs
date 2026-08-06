@@ -49,6 +49,18 @@ public interface IEntityRepository
         string entityId,
         int? excludeId = null,
         CancellationToken cancellationToken = default);
+
+    Task<Entity?> FindStudentByEmailAsync(
+        string email,
+        CancellationToken cancellationToken = default);
+
+    Task<Entity?> FindByEmailVerifyTokenAsync(
+        string token,
+        CancellationToken cancellationToken = default);
+
+    Task<Entity?> FindReferralPartnerByCodeAsync(
+        string referralCode,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class EntityRepository : IEntityRepository
@@ -339,6 +351,83 @@ public sealed class EntityRepository : IEntityRepository
         }
     }
 
+    public async Task<Entity?> FindStudentByEmailAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var normalized = email.Trim();
+        var page = await GetPagedAsync(
+            new EntityFilter
+            {
+                EntityType = "Student",
+                PageNumber = 1,
+                PageSize = 500
+            },
+            cancellationToken);
+
+        return page.Items.FirstOrDefault(x =>
+            string.Equals(
+                GetMetaString(x.Metadata, "Email"),
+                normalized,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    public async Task<Entity?> FindByEmailVerifyTokenAsync(
+        string token,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return null;
+        }
+
+        var page = await GetPagedAsync(
+            new EntityFilter
+            {
+                EntityType = "Student",
+                PageNumber = 1,
+                PageSize = 500
+            },
+            cancellationToken);
+
+        return page.Items.FirstOrDefault(x =>
+            string.Equals(
+                GetMetaString(x.Metadata, EntityFields.EmailVerifyTokenMeta),
+                token.Trim(),
+                StringComparison.Ordinal));
+    }
+
+    public async Task<Entity?> FindReferralPartnerByCodeAsync(
+        string referralCode,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(referralCode))
+        {
+            return null;
+        }
+
+        var code = referralCode.Trim().ToUpperInvariant();
+        var page = await GetPagedAsync(
+            new EntityFilter
+            {
+                EntityType = "Agent",
+                PageNumber = 1,
+                PageSize = 500
+            },
+            cancellationToken);
+
+        return page.Items.FirstOrDefault(x =>
+            string.Equals(
+                GetMetaString(x.Metadata, "ReferralCode"),
+                code,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
     public async Task<bool> IsReferencedAsync(
         string entityId,
         int? excludeId = null,
@@ -440,6 +529,22 @@ public sealed class EntityRepository : IEntityRepository
         }
 
         return false;
+    }
+
+    private static string GetMetaString(Dictionary<string, object?> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var value) || value == null)
+        {
+            return string.Empty;
+        }
+
+        return value switch
+        {
+            System.Text.Json.JsonElement json when json.ValueKind == System.Text.Json.JsonValueKind.String
+                => json.GetString() ?? string.Empty,
+            System.Text.Json.JsonElement json => json.ToString(),
+            _ => value.ToString() ?? string.Empty
+        };
     }
 
     private static string EscapeOData(string value)

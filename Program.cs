@@ -181,6 +181,7 @@ builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityTemplateServ
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntitySequenceService, MITANZ360Pro.Web.Modules.Entities.EntitySequenceService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityActivityService, MITANZ360Pro.Web.Modules.Entities.EntityActivityService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityWorkflowService, MITANZ360Pro.Web.Modules.Entities.EntityWorkflowService>();
+builder.Services.AddSingleton<MITANZ360Pro.Web.Modules.Entities.IStudentVisaRateLimiter, MITANZ360Pro.Web.Modules.Entities.StudentVisaRateLimiter>();
 
 #endregion
 

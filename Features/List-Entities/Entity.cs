@@ -20,6 +20,9 @@ public static class EntityFields
     /// <summary>App-login audit keys stored inside MetadataJson (not Office 365 person fields).</summary>
     public const string AppCreatedByMeta = "__CreatedBy";
     public const string AppModifiedByMeta = "__ModifiedBy";
+
+    /// <summary>Reserved: one-time token for public student email verification.</summary>
+    public const string EmailVerifyTokenMeta = "__EmailVerifyToken";
 }
 
 public static class EntityStatuses
