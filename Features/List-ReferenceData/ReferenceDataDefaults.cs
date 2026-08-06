@@ -10,6 +10,12 @@ public static class ReferenceDataDefaults
         void Add(string category, string code, string title)
             => rows.Add((category, code, title));
 
+        // Gender
+        Add("Gender", "M", "Male");
+        Add("Gender", "F", "Female");
+        Add("Gender", "O", "Other");
+        Add("Gender", "PNS", "Prefer not to say");
+
         // Nationality
         Add("Nationality", "LK", "Sri Lankan");
         Add("Nationality", "NZ", "New Zealander");
@@ -33,6 +39,11 @@ public static class ReferenceDataDefaults
         Add("Country", "SG", "Singapore");
         Add("Country", "MY", "Malaysia");
         Add("Country", "JP", "Japan");
+
+        // PreferredContactMethod
+        Add("PreferredContactMethod", "EMAIL", "Email");
+        Add("PreferredContactMethod", "MOBILE", "Mobile");
+        Add("PreferredContactMethod", "WHATSAPP", "WhatsApp");
 
         // PreferredCountry
         Add("PreferredCountry", "NZ", "New Zealand");
@@ -84,6 +95,14 @@ public static class ReferenceDataDefaults
         Add("PreferredIntake", "OCT", "October");
         Add("PreferredIntake", "NOV", "November");
         Add("PreferredIntake", "DEC", "December");
+
+        // EnglishTest
+        Add("EnglishTest", "IELTS", "IELTS");
+        Add("EnglishTest", "PTE", "PTE");
+        Add("EnglishTest", "TOEFL", "TOEFL");
+        Add("EnglishTest", "DUOLINGO", "Duolingo");
+        Add("EnglishTest", "NONE", "None");
+        Add("EnglishTest", "OTHER", "Other");
 
         // HighestQualification
         Add("HighestQualification", "NONE", "No Formal Qualification");

@@ -103,9 +103,9 @@
                                 <label class="sv-label" for="sv-gender">Gender <span class="sv-req">*</span></label>
                                 <InputSelect id="sv-gender" class="form-select sv-input" @bind-Value="_model.Gender" disabled="@_busy">
                                     <option value="">Select…</option>
-                                    @foreach (var g in GenderOptions)
+                                    @foreach (var g in _genders)
                                     {
-                                        <option value="@g">@g</option>
+                                        <option value="@g.Value">@g.Title</option>
                                     }
                                 </InputSelect>
                                 <ValidationMessage For="() => _model.Gender" />
@@ -117,7 +117,13 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="sv-label" for="sv-nat">Nationality <span class="sv-req">*</span></label>
-                                <InputText id="sv-nat" class="form-control sv-input" @bind-Value="_model.Nationality" disabled="@_busy" />
+                                <InputSelect id="sv-nat" class="form-select sv-input" @bind-Value="_model.Nationality" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var n in _nationalities)
+                                    {
+                                        <option value="@n.Value">@n.Title</option>
+                                    }
+                                </InputSelect>
                                 <ValidationMessage For="() => _model.Nationality" />
                             </div>
                             <div class="col-md-6">
@@ -155,7 +161,13 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="sv-label" for="sv-country">Country <span class="sv-req">*</span></label>
-                                <InputText id="sv-country" class="form-control sv-input" @bind-Value="_model.Country" disabled="@_busy" />
+                                <InputSelect id="sv-country" class="form-select sv-input" @bind-Value="_model.Country" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var c in _countries)
+                                    {
+                                        <option value="@c.Value">@c.Title</option>
+                                    }
+                                </InputSelect>
                                 <ValidationMessage For="() => _model.Country" />
                             </div>
                             <div class="col-md-4">
@@ -167,9 +179,9 @@
                                 <label class="sv-label" for="sv-pcm">Preferred Contact Method <span class="sv-req">*</span></label>
                                 <InputSelect id="sv-pcm" class="form-select sv-input" @bind-Value="_model.PreferredContactMethod" disabled="@_busy">
                                     <option value="">Select…</option>
-                                    @foreach (var c in ContactMethods)
+                                    @foreach (var c in _contactMethods)
                                     {
-                                        <option value="@c">@c</option>
+                                        <option value="@c.Value">@c.Title</option>
                                     }
                                 </InputSelect>
                                 <ValidationMessage For="() => _model.PreferredContactMethod" />
@@ -187,34 +199,55 @@
                         <div class="row g-4">
                             <div class="col-md-6">
                                 <label class="sv-label" for="sv-pcountry">Preferred Country <span class="sv-req">*</span></label>
-                                <InputText id="sv-pcountry" class="form-control sv-input" @bind-Value="_model.PreferredCountry" disabled="@_busy" />
+                                <InputSelect id="sv-pcountry" class="form-select sv-input" @bind-Value="_model.PreferredCountry" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var c in _preferredCountries)
+                                    {
+                                        <option value="@c.Value">@c.Title</option>
+                                    }
+                                </InputSelect>
                                 <ValidationMessage For="() => _model.PreferredCountry" />
-                                <span class="sv-help"><i class="bi bi-info-circle"></i> e.g. New Zealand</span>
                             </div>
                             <div class="col-md-6">
                                 <label class="sv-label" for="sv-pqual">Preferred Qualification <span class="sv-req">*</span></label>
-                                <InputText id="sv-pqual" class="form-control sv-input" @bind-Value="_model.PreferredQualification" disabled="@_busy" />
+                                <InputSelect id="sv-pqual" class="form-select sv-input" @bind-Value="_model.PreferredQualification" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var q in _preferredQualifications)
+                                    {
+                                        <option value="@q.Value">@q.Title</option>
+                                    }
+                                </InputSelect>
                                 <ValidationMessage For="() => _model.PreferredQualification" />
                             </div>
                             <div class="col-md-6">
                                 <label class="sv-label" for="sv-pcourse">Preferred Course <span class="sv-req">*</span></label>
-                                <InputText id="sv-pcourse" class="form-control sv-input" @bind-Value="_model.PreferredCourse" disabled="@_busy" />
+                                <InputSelect id="sv-pcourse" class="form-select sv-input" @bind-Value="_model.PreferredCourse" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var c in _preferredCourses)
+                                    {
+                                        <option value="@c.Value">@c.Title</option>
+                                    }
+                                </InputSelect>
                                 <ValidationMessage For="() => _model.PreferredCourse" />
-                                <span class="sv-help"><i class="bi bi-info-circle"></i> e.g. Master of IT</span>
                             </div>
                             <div class="col-md-6">
                                 <label class="sv-label" for="sv-pintake">Preferred Intake <span class="sv-req">*</span></label>
-                                <InputText id="sv-pintake" class="form-control sv-input" @bind-Value="_model.PreferredIntake" disabled="@_busy" />
+                                <InputSelect id="sv-pintake" class="form-select sv-input" @bind-Value="_model.PreferredIntake" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var i in _preferredIntakes)
+                                    {
+                                        <option value="@i.Value">@i.Title</option>
+                                    }
+                                </InputSelect>
                                 <ValidationMessage For="() => _model.PreferredIntake" />
-                                <span class="sv-help"><i class="bi bi-info-circle"></i> e.g. February 2027</span>
                             </div>
                             <div class="col-md-4">
                                 <label class="sv-label" for="sv-eng">English Test</label>
                                 <InputSelect id="sv-eng" class="form-select sv-input" @bind-Value="_model.EnglishTest" disabled="@_busy">
                                     <option value="">Select…</option>
-                                    @foreach (var t in EnglishTests)
+                                    @foreach (var t in _englishTests)
                                     {
-                                        <option value="@t">@t</option>
+                                        <option value="@t.Value">@t.Title</option>
                                     }
                                 </InputSelect>
                             </div>
@@ -229,7 +262,13 @@
                             </div>
                             <div class="col-12">
                                 <label class="sv-label" for="sv-hq">Highest Qualification</label>
-                                <InputText id="sv-hq" class="form-control sv-input" @bind-Value="_model.HighestQualification" disabled="@_busy" />
+                                <InputSelect id="sv-hq" class="form-select sv-input" @bind-Value="_model.HighestQualification" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var q in _highestQualifications)
+                                    {
+                                        <option value="@q.Value">@q.Title</option>
+                                    }
+                                </InputSelect>
                             </div>
                         </div>
                     </div>

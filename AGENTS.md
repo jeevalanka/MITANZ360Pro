@@ -62,3 +62,5 @@ Apply these patterns for modals, drawers, and action forms project-wide:
 - SharePoint list GUID: `SharePoint:Lists:ReferenceData` in `appsettings.json`.
 - UI → `IReferenceDataService` → `IReferenceDataRepository` → `ISharePointListClient` → Graph (never call Graph from Razor).
 - Import Defaults skips duplicate `Category`+`Code`; does not overwrite.
+- App consumers: Student Visa (`/student-visa`) and Entity `DynamicMetadataRenderer` load active options via `GetLookupOptionsAsync(category)` where category matches field name (Gender, Nationality, Country, PreferredCountry, etc.).
+- After adding/editing Reference Data, re-open forms (5‑minute lookup cache). Re-run **Import Defaults** to seed Gender / PreferredContactMethod / EnglishTest if missing.

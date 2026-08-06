@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
+using MITANZ360Pro.Web.Modules.ReferenceData;
 using MITANZ360Pro.Web.Services;
 using Radzen;
 
@@ -8,6 +9,7 @@ namespace MITANZ360Pro.Web.Modules.Entities;
 public partial class StudentVisa : ComponentBase
 {
     [Inject] private IEntityService EntityService { get; set; } = default!;
+    [Inject] private IReferenceDataService ReferenceDataService { get; set; } = default!;
     [Inject] private IGraphMailService GraphMailService { get; set; } = default!;
     [Inject] private IStudentVisaRateLimiter RateLimiter { get; set; } = default!;
     [Inject] private IHttpContextAccessor HttpContextAccessor { get; set; } = default!;
@@ -16,9 +18,20 @@ public partial class StudentVisa : ComponentBase
     [Inject] private ILogger<StudentVisa> Logger { get; set; } = default!;
     [Inject] private IConfiguration Configuration { get; set; } = default!;
 
-    private static readonly string[] GenderOptions = ["Male", "Female", "Other", "Prefer not to say"];
-    private static readonly string[] ContactMethods = ["Email", "Mobile", "WhatsApp"];
-    private static readonly string[] EnglishTests = ["IELTS", "PTE", "TOEFL", "Duolingo", "None", "Other"];
+    private static readonly string[] FallbackGender = ["Male", "Female", "Other", "Prefer not to say"];
+    private static readonly string[] FallbackContact = ["Email", "Mobile", "WhatsApp"];
+    private static readonly string[] FallbackEnglish = ["IELTS", "PTE", "TOEFL", "Duolingo", "None", "Other"];
+
+    private IReadOnlyList<ReferenceDataLookupOption> _genders = [];
+    private IReadOnlyList<ReferenceDataLookupOption> _nationalities = [];
+    private IReadOnlyList<ReferenceDataLookupOption> _countries = [];
+    private IReadOnlyList<ReferenceDataLookupOption> _contactMethods = [];
+    private IReadOnlyList<ReferenceDataLookupOption> _preferredCountries = [];
+    private IReadOnlyList<ReferenceDataLookupOption> _preferredQualifications = [];
+    private IReadOnlyList<ReferenceDataLookupOption> _preferredCourses = [];
+    private IReadOnlyList<ReferenceDataLookupOption> _preferredIntakes = [];
+    private IReadOnlyList<ReferenceDataLookupOption> _englishTests = [];
+    private IReadOnlyList<ReferenceDataLookupOption> _highestQualifications = [];
 
     private StudentVisaFormModel _model = new();
     private bool _busy;
@@ -34,9 +47,45 @@ public partial class StudentVisa : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadLookupsAsync();
         ApplyReferralFromQuery();
         await ResolveReferralPartnerAsync();
     }
+
+    private async Task LoadLookupsAsync()
+    {
+        try
+        {
+            _genders = await LoadOrFallback(ReferenceDataCategories.Gender, FallbackGender);
+            _nationalities = await ReferenceDataService.GetLookupOptionsAsync(ReferenceDataCategories.Nationality);
+            _countries = await ReferenceDataService.GetLookupOptionsAsync(ReferenceDataCategories.Country);
+            _contactMethods = await LoadOrFallback(ReferenceDataCategories.PreferredContactMethod, FallbackContact);
+            _preferredCountries = await ReferenceDataService.GetLookupOptionsAsync(ReferenceDataCategories.PreferredCountry);
+            _preferredQualifications = await ReferenceDataService.GetLookupOptionsAsync(ReferenceDataCategories.PreferredQualification);
+            _preferredCourses = await ReferenceDataService.GetLookupOptionsAsync(ReferenceDataCategories.PreferredCourse);
+            _preferredIntakes = await ReferenceDataService.GetLookupOptionsAsync(ReferenceDataCategories.PreferredIntake);
+            _englishTests = await LoadOrFallback(ReferenceDataCategories.EnglishTest, FallbackEnglish);
+            _highestQualifications = await ReferenceDataService.GetLookupOptionsAsync(ReferenceDataCategories.HighestQualification);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Reference Data lookups unavailable; using fallback options where needed.");
+            _genders = ToOptions(FallbackGender);
+            _contactMethods = ToOptions(FallbackContact);
+            _englishTests = ToOptions(FallbackEnglish);
+        }
+    }
+
+    private async Task<IReadOnlyList<ReferenceDataLookupOption>> LoadOrFallback(
+        string category,
+        string[] fallback)
+    {
+        var options = await ReferenceDataService.GetLookupOptionsAsync(category);
+        return options.Count > 0 ? options : ToOptions(fallback);
+    }
+
+    private static IReadOnlyList<ReferenceDataLookupOption> ToOptions(IEnumerable<string> titles)
+        => titles.Select(t => new ReferenceDataLookupOption { Code = t, Title = t }).ToList();
 
     private void ApplyReferralFromQuery()
     {

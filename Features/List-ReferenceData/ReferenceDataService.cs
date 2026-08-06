@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using MITANZ360Pro.Web.Modules.Entities;
 
 namespace MITANZ360Pro.Web.Modules.ReferenceData;
@@ -30,18 +31,43 @@ public interface IReferenceDataService
 
     Task<ServiceResult<ReferenceDataImportResult>> ImportDefaultsAsync(
         CancellationToken cancellationToken = default);
+
+    /// <summary>Active items for a category, ordered by SortOrder then Title.</summary>
+    Task<IReadOnlyList<ReferenceDataItem>> GetActiveByCategoryAsync(
+        string category,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Dropdown options (Value=Title) for UI selects.</summary>
+    Task<IReadOnlyList<ReferenceDataLookupOption>> GetLookupOptionsAsync(
+        string category,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class ReferenceDataLookupOption
+{
+    public string Code { get; set; } = "";
+
+    public string Title { get; set; } = "";
+
+    /// <summary>Stored / bound value — Title for display-friendly forms.</summary>
+    public string Value => Title;
 }
 
 public sealed class ReferenceDataService : IReferenceDataService
 {
     private readonly IReferenceDataRepository _repository;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<ReferenceDataService> _logger;
+
+    private static readonly TimeSpan LookupCacheDuration = TimeSpan.FromMinutes(5);
 
     public ReferenceDataService(
         IReferenceDataRepository repository,
+        IMemoryCache cache,
         ILogger<ReferenceDataService> logger)
     {
         _repository = repository;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -140,6 +166,7 @@ public sealed class ReferenceDataService : IReferenceDataService
 
             Normalize(item);
             var created = await _repository.CreateAsync(item, cancellationToken);
+            InvalidateLookupCache();
             _logger.LogInformation(
                 "Reference data created Id={Id} Category={Category} Code={Code}",
                 created.Id,
@@ -186,6 +213,7 @@ public sealed class ReferenceDataService : IReferenceDataService
 
             Normalize(item);
             var updated = await _repository.UpdateAsync(item, cancellationToken);
+            InvalidateLookupCache();
             _logger.LogInformation("Reference data updated Id={Id}", updated.Id);
             return ServiceResult<ReferenceDataItem>.Success(updated);
         }
@@ -212,6 +240,7 @@ public sealed class ReferenceDataService : IReferenceDataService
             }
 
             await _repository.DeleteAsync(id, cancellationToken);
+            InvalidateLookupCache();
             _logger.LogInformation("Reference data deleted Id={Id}", id);
             return ServiceResult.Success();
         }
@@ -289,12 +318,64 @@ public sealed class ReferenceDataService : IReferenceDataService
                 result.Skipped,
                 result.Errors);
 
+            InvalidateLookupCache();
             return ServiceResult<ReferenceDataImportResult>.Success(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Import defaults failed");
             return ServiceResult<ReferenceDataImportResult>.Failure(FriendlyError(ex));
+        }
+    }
+
+    public async Task<IReadOnlyList<ReferenceDataItem>> GetActiveByCategoryAsync(
+        string category,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            return [];
+        }
+
+        var cacheKey = $"refdata:active:{category.Trim().ToLowerInvariant()}";
+        if (_cache.TryGetValue(cacheKey, out IReadOnlyList<ReferenceDataItem>? cached) && cached != null)
+        {
+            return cached;
+        }
+
+        var all = await _repository.GetAllAsync(cancellationToken);
+        var items = all
+            .Where(x =>
+                x.IsActive &&
+                x.Category.Equals(category.Trim(), StringComparison.OrdinalIgnoreCase))
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Title)
+            .ToList();
+
+        _cache.Set(cacheKey, (IReadOnlyList<ReferenceDataItem>)items, LookupCacheDuration);
+        return items;
+    }
+
+    public async Task<IReadOnlyList<ReferenceDataLookupOption>> GetLookupOptionsAsync(
+        string category,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await GetActiveByCategoryAsync(category, cancellationToken);
+        return items
+            .Select(x => new ReferenceDataLookupOption
+            {
+                Code = x.Code,
+                Title = x.Title
+            })
+            .ToList();
+    }
+
+    private void InvalidateLookupCache()
+    {
+        // IMemoryCache has no clear-all; bump generation via known category keys from defaults + common ones.
+        foreach (var category in ReferenceDataCategories.All)
+        {
+            _cache.Remove($"refdata:active:{category.ToLowerInvariant()}");
         }
     }
 
