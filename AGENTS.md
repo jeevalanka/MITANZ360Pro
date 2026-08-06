@@ -46,9 +46,13 @@ Apply these patterns for modals, drawers, and action forms project-wide:
    - Saving after a type change requires **confirmation** that previous type-specific metadata will be removed.
    - **Delete** icon is available; delete only when the record is **not referenced** by other records, with **confirmation**. Otherwise block with a clear message.
 
+6. **Lists / grids**
+   - Never hide the DataGrid behind an empty-state that prevents `LoadData` from running; load on init and keep the grid mounted; show empty state as an overlay/message after load.
+
 ### Student Visa public portal
 - Routes: `/student-visa` (optional `?r=REFCODE`) and `/student-visa/confirm?token=…` — `[AllowAnonymous]`, under `Features/List-Entities/Public/`.
 - Uses generic Entity (`EntityType=Student`) + Metadata only; no Student SharePoint list / StudentRepository.
 - Create-or-update by unique Metadata `Email`; Student Number from sequence (`ST######`); status defaults to `Draft`.
 - Welcome email via `IGraphMailService`; verification sets `Metadata.EmailVerified` / `EmailVerifiedDate`.
 - Public audit details (Who/When/IP/Browser/Operation) go into Activity `Details`. In-memory rate limit on submit.
+- If SharePoint Activities list columns do not match (`Field 'Action' is not recognized`), activity writes soft-fail to logs; Entity create/update still succeeds.
