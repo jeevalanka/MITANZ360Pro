@@ -40,6 +40,15 @@ public interface IEntityRepository
     Task RestoreAsync(
         int id,
         CancellationToken cancellationToken = default);
+
+    Task DeleteAsync(
+        int id,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> IsReferencedAsync(
+        string entityId,
+        int? excludeId = null,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class EntityRepository : IEntityRepository
@@ -309,6 +318,69 @@ public sealed class EntityRepository : IEntityRepository
         entity.IsActive = true;
 
         await UpdateAsync(entity, cancellationToken);
+    }
+
+    public async Task DeleteAsync(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _sharePointClient.DeleteItemAsync(
+                _options.SiteId,
+                _options.Lists.Entities,
+                id.ToString(),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Entity delete failed for {Id}", id);
+            throw;
+        }
+    }
+
+    public async Task<bool> IsReferencedAsync(
+        string entityId,
+        int? excludeId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(entityId))
+        {
+            return false;
+        }
+
+        // Soft reference check: other Entity records whose metadata/title mention this EntityId.
+        var page = await GetPagedAsync(
+            new EntityFilter { PageNumber = 1, PageSize = 500 },
+            cancellationToken);
+
+        foreach (var other in page.Items)
+        {
+            if (excludeId.HasValue && other.Id == excludeId.Value)
+            {
+                continue;
+            }
+
+            if (string.Equals(other.EntityId, entityId, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (other.Title.Contains(entityId, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            foreach (var value in other.Metadata.Values)
+            {
+                if (value?.ToString()?.Contains(entityId, StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static List<Entity> ApplyInMemoryFilter(IEnumerable<Entity> entities, EntityFilter filter)

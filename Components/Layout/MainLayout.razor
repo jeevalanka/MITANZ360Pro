@@ -8,11 +8,15 @@
 @using MITANZ360Pro.Web.Components.Layout
 @using Microsoft.Extensions.Options
 @using MITANZ360Pro.Web.Models
+@using MITANZ360Pro.Web.Services
+@using System.Security.Claims
 
 @inject IOptions<ApplicationSettings> AppSettings
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
 @inject HttpClient Http
+@inject UserSessionInitializer UserSessionInitializer
+@inject UserSessionService UserSession
 
 <ErrorBoundary>
     <ChildContent>
@@ -152,15 +156,21 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await UserSessionInitializer.InitializeAsync();
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 
         if (user.Identity?.IsAuthenticated == true)
         {
-            _displayName = user.Identity.Name;
+            // Prefer app login email (not Office 365 / Graph identity).
+            _displayName = UserSession.CurrentUser.Email
+                ?? user.FindFirst(ClaimTypes.Email)?.Value
+                ?? user.FindFirst("email")?.Value
+                ?? user.Identity.Name;
 
             var roles = user.Claims
-                .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
+                .Where(c => c.Type == ClaimTypes.Role)
                 .Select(c => c.Value)
                 .ToList();
 
