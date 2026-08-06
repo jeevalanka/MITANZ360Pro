@@ -100,6 +100,11 @@ public sealed class EntityTemplateService : IEntityTemplateService
 
         foreach (var key in metadata.Keys)
         {
+            if (EntityMapper.IsReservedMetaKey(key))
+            {
+                continue;
+            }
+
             if (!allowed.Contains(key))
             {
                 return ServiceResult.Failure($"Unknown metadata field '{key}' for template '{template.EntityType}'.");

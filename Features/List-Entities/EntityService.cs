@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using MITANZ360Pro.Web.Infrastructure.SharePoint;
+using MITANZ360Pro.Web.Services;
+using System.Security.Claims;
 
 namespace MITANZ360Pro.Web.Modules.Entities;
 
@@ -37,6 +40,15 @@ public interface IEntityService
         int id,
         CancellationToken cancellationToken = default);
 
+    Task<ServiceResult> DeleteAsync(
+        int id,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> IsReferencedAsync(
+        string entityId,
+        int? excludeId = null,
+        CancellationToken cancellationToken = default);
+
     Task<string> GenerateEntityIdAsync(CancellationToken cancellationToken = default);
 }
 
@@ -47,6 +59,8 @@ public sealed class EntityService : IEntityService
     private readonly IEntitySequenceService _sequenceService;
     private readonly IEntityActivityService _activityService;
     private readonly IEntityWorkflowService _workflowService;
+    private readonly UserSessionService _userSession;
+    private readonly AuthenticationStateProvider _authStateProvider;
     private readonly ILogger<EntityService> _logger;
 
     public EntityService(
@@ -55,6 +69,8 @@ public sealed class EntityService : IEntityService
         IEntitySequenceService sequenceService,
         IEntityActivityService activityService,
         IEntityWorkflowService workflowService,
+        UserSessionService userSession,
+        AuthenticationStateProvider authStateProvider,
         ILogger<EntityService> logger)
     {
         _repository = repository;
@@ -62,6 +78,8 @@ public sealed class EntityService : IEntityService
         _sequenceService = sequenceService;
         _activityService = activityService;
         _workflowService = workflowService;
+        _userSession = userSession;
+        _authStateProvider = authStateProvider;
         _logger = logger;
     }
 
@@ -85,6 +103,12 @@ public sealed class EntityService : IEntityService
         int? excludeId = null,
         CancellationToken cancellationToken = default)
         => _repository.ExistsAsync(entityId, excludeId, cancellationToken);
+
+    public Task<bool> IsReferencedAsync(
+        string entityId,
+        int? excludeId = null,
+        CancellationToken cancellationToken = default)
+        => _repository.IsReferencedAsync(entityId, excludeId, cancellationToken);
 
     public async Task<ServiceResult<Entity>> CreateAsync(
         Entity entity,
@@ -111,6 +135,8 @@ public sealed class EntityService : IEntityService
             {
                 return ServiceResult<Entity>.Failure($"Entity ID '{entity.EntityId}' already exists.");
             }
+
+            await ApplyAppUserAuditAsync(entity, isCreate: true);
 
             var template = await _templateService.GetTemplateAsync(entity.EntityType, cancellationToken);
 
@@ -148,7 +174,6 @@ public sealed class EntityService : IEntityService
         Entity entity,
         CancellationToken cancellationToken = default)
     {
-        // Resolve missing SharePoint list item Id by business EntityId so edit never becomes create.
         if (entity.Id <= 0 && !string.IsNullOrWhiteSpace(entity.EntityId))
         {
             var byBusinessId = await _repository.GetByEntityIdAsync(entity.EntityId, cancellationToken);
@@ -177,6 +202,14 @@ public sealed class EntityService : IEntityService
             {
                 return ServiceResult<Entity>.Failure($"Entity ID '{entity.EntityId}' already exists.");
             }
+
+            // Preserve original app CreatedBy; always refresh ModifiedBy from app login.
+            if (string.IsNullOrWhiteSpace(entity.CreatedBy))
+            {
+                entity.CreatedBy = existing.CreatedBy;
+            }
+
+            await ApplyAppUserAuditAsync(entity, isCreate: false);
 
             var template = await _templateService.GetTemplateAsync(entity.EntityType, cancellationToken);
 
@@ -287,6 +320,82 @@ public sealed class EntityService : IEntityService
         }
     }
 
+    public async Task<ServiceResult> DeleteAsync(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var existing = await _repository.GetByIdAsync(id, cancellationToken);
+
+            if (existing == null)
+            {
+                return ServiceResult.Failure("Entity not found.");
+            }
+
+            if (await _repository.IsReferencedAsync(existing.EntityId, existing.Id, cancellationToken))
+            {
+                return ServiceResult.Failure(
+                    $"Cannot delete '{existing.EntityId}' because it is referenced by other records.");
+            }
+
+            await _repository.DeleteAsync(id, cancellationToken);
+            await _activityService.LogAsync("Delete", existing, cancellationToken: cancellationToken);
+
+            return ServiceResult.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Delete entity failed for {Id}", id);
+            return ServiceResult.Failure(GraphErrorMapper.Map(ex));
+        }
+    }
+
     public Task<string> GenerateEntityIdAsync(CancellationToken cancellationToken = default)
         => _sequenceService.GenerateNextEntityIdAsync(cancellationToken);
+
+    private async Task ApplyAppUserAuditAsync(Entity entity, bool isCreate)
+    {
+        var display = await ResolveAppUserDisplayAsync();
+
+        if (isCreate || string.IsNullOrWhiteSpace(entity.CreatedBy))
+        {
+            entity.CreatedBy = display;
+        }
+
+        entity.ModifiedBy = display;
+    }
+
+    private async Task<string> ResolveAppUserDisplayAsync()
+    {
+        var session = _userSession.CurrentUser;
+
+        if (!string.IsNullOrWhiteSpace(session.Email))
+        {
+            return session.Email;
+        }
+
+        if (!string.IsNullOrWhiteSpace(session.FullName))
+        {
+            return session.FullName;
+        }
+
+        var authState = await _authStateProvider.GetAuthenticationStateAsync();
+        var principal = authState.User;
+
+        if (principal.Identity?.IsAuthenticated == true)
+        {
+            var email = principal.FindFirst(ClaimTypes.Email)?.Value
+                        ?? principal.FindFirst("email")?.Value
+                        ?? principal.FindFirst("preferred_username")?.Value
+                        ?? principal.Identity.Name;
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                return email;
+            }
+        }
+
+        return "unknown";
+    }
 }
