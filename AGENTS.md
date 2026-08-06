@@ -56,3 +56,9 @@ Apply these patterns for modals, drawers, and action forms project-wide:
 - Welcome email via `IGraphMailService`; verification sets `Metadata.EmailVerified` / `EmailVerifiedDate`.
 - Public audit details (Who/When/IP/Browser/Operation) go into Activity `Details`. In-memory rate limit on submit.
 - If SharePoint Activities list columns do not match (`Field 'Action' is not recognized`), activity writes soft-fail to logs; Entity create/update still succeeds.
+
+### Reference Data
+- Admin page: `/reference-data` (`Admin`/`SysAdmin`). Feature code under `Features/List-ReferenceData/`.
+- SharePoint list GUID: `SharePoint:Lists:ReferenceData` in `appsettings.json`.
+- UI → `IReferenceDataService` → `IReferenceDataRepository` → `ISharePointListClient` → Graph (never call Graph from Razor).
+- Import Defaults skips duplicate `Category`+`Code`; does not overwrite.

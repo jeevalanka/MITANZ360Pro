@@ -182,7 +182,8 @@ builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntitySequenceServ
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityActivityService, MITANZ360Pro.Web.Modules.Entities.EntityActivityService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityWorkflowService, MITANZ360Pro.Web.Modules.Entities.EntityWorkflowService>();
 builder.Services.AddSingleton<MITANZ360Pro.Web.Modules.Entities.IStudentVisaRateLimiter, MITANZ360Pro.Web.Modules.Entities.StudentVisaRateLimiter>();
-
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.ReferenceData.IReferenceDataRepository, MITANZ360Pro.Web.Modules.ReferenceData.ReferenceDataRepository>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.ReferenceData.IReferenceDataService, MITANZ360Pro.Web.Modules.ReferenceData.ReferenceDataService>();
 #endregion
 
 #region Document Processing

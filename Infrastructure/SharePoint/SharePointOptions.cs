@@ -18,4 +18,6 @@ public sealed class SharePointListOptions
     public string Activities { get; set; } = "";
 
     public string WorkflowHistory { get; set; } = "";
+
+    public string ReferenceData { get; set; } = "";
 }
