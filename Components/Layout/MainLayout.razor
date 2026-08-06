@@ -18,6 +18,10 @@
 @inject UserSessionInitializer UserSessionInitializer
 @inject UserSessionService UserSession
 
+@{
+    RenderFragment? bodyContent = Body;
+}
+
 <ErrorBoundary>
     <ChildContent>
 
@@ -121,7 +125,7 @@
 
                     <!-- MAIN CONTENT -->
                     <article class="content">
-                        @Body
+                        @bodyContent
                     </article>
 
                     <!-- ✅ RIGHT PANEL (FIXED BEHAVIOR) -->
