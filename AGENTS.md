@@ -73,3 +73,6 @@ Apply these patterns for modals, drawers, and action forms project-wide:
 - **Sources of truth:** Entity `Metadata.RequiredDocuments[]` = required docs; SharePoint library = uploaded files. Match by `DocumentCode`. Replace always uploads a new file and flips `IsLatest` (never overwrite).
 - Download/preview API: `GET /api/entity-documents/{driveItemId}?inline=true` (authorized). LMS preview remains `/api/documents/render/{id}`.
 - Permissions: pass `IsAdminMode=false` on `EntityDocumentsPanel` for student UX (upload/replace requested only; no verify/delete/metadata).
+- Library list id is resolved from the Documents **drive** (`drives/{id}/list`). Do not rely on `SharePoint:Lists:Documents` if that GUID points at a non-library list.
+- Optional columns (Description, Remarks, ExpiryDate, UploadedBy) are patched best-effort; core fields (Title, EntityType, EntityNumber, DocumentCode, Status, DocumentVersion, IsLatest, Active, UploadedByRole) are required for full behavior — provision them on the Documents library if missing.
+- One-shot smoke: `DOC_SMOKE=1 dotnet run --no-launch-profile` runs request+upload against an existing Student and exits (see `DocumentHelloWorldSmoke.cs`).

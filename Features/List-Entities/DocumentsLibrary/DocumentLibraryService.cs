@@ -813,37 +813,39 @@ public sealed class DocumentLibraryService : IDocumentLibraryService
         var fields = new Dictionary<string, object>
         {
             ["Title"] = title,
-            ["Description"] = request.Description ?? "",
             ["EntityType"] = request.EntityType,
             ["EntityNumber"] = request.EntityNumber,
             ["DocumentCode"] = request.DocumentCode,
             ["Status"] = "Uploaded",
-            ["Remarks"] = request.Remarks ?? "",
             ["Active"] = true,
             ["DocumentVersion"] = version,
             ["IsLatest"] = true,
             ["UploadedByRole"] = request.UploadedByRole ?? "Admin"
         };
 
+        await PatchFieldsResilientAsync(uploaded.Id, fields, cancellationToken);
+
+        // Optional columns — best effort (library may not have every column provisioned yet)
+        var optional = new Dictionary<string, object>();
+        if (!string.IsNullOrWhiteSpace(request.Description))
+            optional["Description"] = request.Description!;
+        if (!string.IsNullOrWhiteSpace(request.Remarks))
+            optional["Remarks"] = request.Remarks!;
         if (request.ExpiryDate.HasValue)
-            fields["ExpiryDate"] = request.ExpiryDate.Value.ToUniversalTime().ToString("o");
+            optional["ExpiryDate"] = request.ExpiryDate.Value.ToUniversalTime().ToString("o");
+        if (!string.IsNullOrWhiteSpace(request.UploadedBy))
+            optional["UploadedBy"] = request.UploadedBy!;
 
-        await PatchFieldsAsync(uploaded.Id, fields, cancellationToken);
-
-        // Also try to set UploadedBy if column exists (best-effort)
-        try
+        foreach (var kv in optional)
         {
-            if (!string.IsNullOrWhiteSpace(request.UploadedBy))
+            try
             {
-                await PatchFieldsAsync(uploaded.Id, new Dictionary<string, object>
-                {
-                    ["UploadedBy"] = request.UploadedBy
-                }, cancellationToken);
+                await PatchFieldsAsync(uploaded.Id, new Dictionary<string, object> { [kv.Key] = kv.Value }, cancellationToken);
             }
-        }
-        catch
-        {
-            // optional column
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Optional document field {Field} not set on {ItemId}", kv.Key, uploaded.Id);
+            }
         }
 
         var meta = await GetDocumentAsync(uploaded.Id, cancellationToken);
@@ -906,6 +908,34 @@ public sealed class DocumentLibraryService : IDocumentLibraryService
         }, cancellationToken);
     }
 
+    private async Task PatchFieldsResilientAsync(
+        string driveItemId,
+        Dictionary<string, object> fields,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await PatchFieldsAsync(driveItemId, fields, cancellationToken);
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Full metadata patch failed for {ItemId}; retrying field-by-field.", driveItemId);
+        }
+
+        foreach (var kv in fields)
+        {
+            try
+            {
+                await PatchFieldsAsync(driveItemId, new Dictionary<string, object> { [kv.Key] = kv.Value }, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not set document field {Field} on {ItemId}", kv.Key, driveItemId);
+            }
+        }
+    }
+
     private async Task PatchFieldsAsync(
         string driveItemId,
         Dictionary<string, object> fields,
@@ -964,7 +994,8 @@ public sealed class DocumentLibraryService : IDocumentLibraryService
                 {
                     page = await _graph.Sites[siteId].Lists[listId].Items.GetAsync(cfg =>
                     {
-                        cfg.QueryParameters.Expand = ["fields", "driveItem"];
+                        // Avoid expand=driveItem when list may not be a true library; resolve drive item separately if needed
+                        cfg.QueryParameters.Expand = ["fields"];
                         cfg.QueryParameters.Top = 100;
                     }, cancellationToken);
                 }
@@ -1157,28 +1188,41 @@ public sealed class DocumentLibraryService : IDocumentLibraryService
         if (!string.IsNullOrWhiteSpace(_documentsListId))
             return _documentsListId;
 
+        // Prefer discovering the list from the Documents drive (authoritative for a document library).
+        try
+        {
+            var driveId = await GetDocumentsDriveIdAsync(cancellationToken);
+            var list = await _graph.Drives[driveId].List.GetAsync(cancellationToken: cancellationToken);
+            if (!string.IsNullOrWhiteSpace(list?.Id))
+            {
+                _documentsListId = list.Id;
+                return _documentsListId;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not resolve Documents list from drive; trying config.");
+        }
+
         var configured = _configuration["SharePoint:Lists:Documents"];
         if (!string.IsNullOrWhiteSpace(configured))
         {
             _documentsListId = configured;
-            return _documentsListId;
+            return _documentsListId!;
         }
 
-        // Discover from drive
-        var driveId = await GetDocumentsDriveIdAsync(cancellationToken);
-        var drive = await _graph.Drives[driveId].GetAsync(cancellationToken: cancellationToken);
-        // list id often available via sharepoint ids — fallback: lists named Documents
         var siteId = _configuration["SharePoint:SiteId"]!;
         var lists = await _graph.Sites[siteId].Lists.GetAsync(cancellationToken: cancellationToken);
-        var list = lists?.Value?.FirstOrDefault(l =>
+        var named = lists?.Value?.FirstOrDefault(l =>
             string.Equals(l.Name, "Documents", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(l.DisplayName, "Documents", StringComparison.OrdinalIgnoreCase));
+            || string.Equals(l.DisplayName, "Documents", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(l.Name, "Shared Documents", StringComparison.OrdinalIgnoreCase));
 
-        if (list?.Id == null)
+        if (named?.Id == null)
             throw new InvalidOperationException(
-                "Unable to resolve Documents library list id. Set SharePoint:Lists:Documents.");
+                "Unable to resolve Documents library list id from drive or SharePoint:Lists:Documents.");
 
-        _documentsListId = list.Id;
+        _documentsListId = named.Id;
         return _documentsListId;
     }
 

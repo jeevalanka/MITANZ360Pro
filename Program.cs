@@ -378,6 +378,16 @@ app.MapRazorComponents<App>()
 
 #endregion
 
+if (string.Equals(Environment.GetEnvironmentVariable("DOC_SMOKE"), "1", StringComparison.Ordinal))
+{
+    using var smokeScope = app.Services.CreateScope();
+    var docs = smokeScope.ServiceProvider.GetRequiredService<MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.IDocumentLibraryService>();
+    var entities = smokeScope.ServiceProvider.GetRequiredService<MITANZ360Pro.Web.Modules.Entities.IEntityService>();
+    var smokeResult = await MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.DocumentLibrarySmokeHelpers.RunAsync(docs, entities);
+    Console.WriteLine("DOC_SMOKE_RESULT=" + smokeResult);
+    return;
+}
+
 app.Run();
 
 #region 🔐 SYSADMIN SEED

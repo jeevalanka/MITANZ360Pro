@@ -685,20 +685,27 @@ public sealed class EntityService : IEntityService
             return session.FullName;
         }
 
-        var authState = await _authStateProvider.GetAuthenticationStateAsync();
-        var principal = authState.User;
-
-        if (principal.Identity?.IsAuthenticated == true)
+        try
         {
-            var email = principal.FindFirst(ClaimTypes.Email)?.Value
-                        ?? principal.FindFirst("email")?.Value
-                        ?? principal.FindFirst("preferred_username")?.Value
-                        ?? principal.Identity.Name;
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            var principal = authState.User;
 
-            if (!string.IsNullOrWhiteSpace(email))
+            if (principal.Identity?.IsAuthenticated == true)
             {
-                return email;
+                var email = principal.FindFirst(ClaimTypes.Email)?.Value
+                            ?? principal.FindFirst("email")?.Value
+                            ?? principal.FindFirst("preferred_username")?.Value
+                            ?? principal.Identity.Name;
+
+                if (!string.IsNullOrWhiteSpace(email))
+                {
+                    return email;
+                }
             }
+        }
+        catch (InvalidOperationException)
+        {
+            // Called outside a Blazor circuit (e.g. background smoke / hosted job) — fall through.
         }
 
         return "unknown";
