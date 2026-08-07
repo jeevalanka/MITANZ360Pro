@@ -106,17 +106,19 @@
     private Dictionary<string, string> StatusColors = new(StringComparer.OrdinalIgnoreCase);
     private string CurrentUser = "unknown";
 
-    private readonly List<(string Text, bool? Value)> VerifiedOptions =
+    private readonly List<BoolFilterOption> VerifiedOptions =
     [
-        ("Verified", true),
-        ("Not verified", false)
+        new("Verified", true),
+        new("Not verified", false)
     ];
 
-    private readonly List<(string Text, bool? Value)> ExpiredOptions =
+    private readonly List<BoolFilterOption> ExpiredOptions =
     [
-        ("Expired", true),
-        ("Not expired", false)
+        new("Expired", true),
+        new("Not expired", false)
     ];
+
+    private sealed record BoolFilterOption(string Text, bool? Value);
 
     protected override async Task OnInitializedAsync()
     {
