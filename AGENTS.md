@@ -48,3 +48,19 @@ Apply these patterns for modals, drawers, and action forms project-wide:
 
 6. **Lists / grids**
    - Never hide the DataGrid behind an empty-state that prevents `LoadData` from running; load on init and keep the grid mounted; show empty state as an overlay/message after load.
+
+### Student Visa public portal
+- Routes: `/student-visa` (optional `?r=REFCODE`) and `/student-visa/confirm?token=…` — `[AllowAnonymous]`, under `Features/List-Entities/Public/`.
+- Uses generic Entity (`EntityType=Student`) + Metadata only; no Student SharePoint list / StudentRepository.
+- Create-or-update by unique Metadata `Email`; Student Number from sequence (`ST######`); status defaults to `Draft`.
+- Welcome email via `IGraphMailService`; verification sets `Metadata.EmailVerified` / `EmailVerifiedDate`.
+- Public audit details (Who/When/IP/Browser/Operation) go into Activity `Details`. In-memory rate limit on submit.
+- If SharePoint Activities list columns do not match (`Field 'Action' is not recognized`), activity writes soft-fail to logs; Entity create/update still succeeds.
+
+### Reference Data
+- Admin page: `/reference-data` (`Admin`/`SysAdmin`). Feature code under `Features/List-ReferenceData/`.
+- SharePoint list GUID: `SharePoint:Lists:ReferenceData` in `appsettings.json`.
+- UI → `IReferenceDataService` → `IReferenceDataRepository` → `ISharePointListClient` → Graph (never call Graph from Razor).
+- Import Defaults skips duplicate `Category`+`Code`; does not overwrite.
+- App consumers: Student Visa (`/student-visa`) and Entity `DynamicMetadataRenderer` load active options via `GetLookupOptionsAsync(category)` where category matches field name (Gender, Nationality, Country, PreferredCountry, etc.).
+- After adding/editing Reference Data, re-open forms (5‑minute lookup cache). Re-run **Import Defaults** to seed Gender / PreferredContactMethod / EnglishTest if missing.

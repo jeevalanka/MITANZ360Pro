@@ -1,4 +1,7 @@
 @using MITANZ360Pro.Web.Modules.Entities
+@using MITANZ360Pro.Web.Modules.ReferenceData
+@inject IReferenceDataService ReferenceDataService
+@inject ILogger<DynamicMetadataRenderer> Logger
 
 @if (Template?.Fields is { Count: > 0 })
 {
@@ -53,7 +56,7 @@
                     case "select":
                         <RadzenDropDown id="@GetFieldId(field.Name)"
                                         TValue="string"
-                                        Data="@(field.Options ?? [])"
+                                        Data="@GetOptions(field)"
                                         Value="@GetString(field.Name)"
                                         ValueChanged="@(value => SetValue(field.Name, value))"
                                         Disabled="@Disabled"
@@ -64,14 +67,31 @@
                         break;
 
                     default:
-                        <RadzenTextBox id="@GetFieldId(field.Name)"
-                                       Value="@GetString(field.Name)"
-                                       ValueChanged="@(value => SetValue(field.Name, value))"
-                                       Disabled="@Disabled"
-                                       Style="width:100%"
-                                       MaxLength="@field.MaxLength"
-                                       aria-required="@field.Required"
-                                       aria-label="@field.Label" />
+                        @* Prefer Reference Data dropdown when category matches field name *@
+                        @if (_refOptions.TryGetValue(field.Name, out var refOpts) && refOpts.Count > 0)
+                        {
+                            <RadzenDropDown id="@GetFieldId(field.Name)"
+                                            TValue="string"
+                                            Data="@refOpts"
+                                            Value="@GetString(field.Name)"
+                                            ValueChanged="@(value => SetValue(field.Name, value))"
+                                            Disabled="@Disabled"
+                                            Style="width:100%"
+                                            AllowClear="true"
+                                            aria-required="@field.Required"
+                                            aria-label="@field.Label" />
+                        }
+                        else
+                        {
+                            <RadzenTextBox id="@GetFieldId(field.Name)"
+                                           Value="@GetString(field.Name)"
+                                           ValueChanged="@(value => SetValue(field.Name, value))"
+                                           Disabled="@Disabled"
+                                           Style="width:100%"
+                                           MaxLength="@field.MaxLength"
+                                           aria-required="@field.Required"
+                                           aria-label="@field.Label" />
+                        }
                         break;
                 }
             </div>
@@ -89,6 +109,53 @@
     [Parameter] public bool Disabled { get; set; }
 
     [Parameter] public string FieldIdPrefix { get; set; } = "entity-meta";
+
+    private readonly Dictionary<string, List<string>> _refOptions = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadReferenceOptionsAsync();
+    }
+
+    private async Task LoadReferenceOptionsAsync()
+    {
+        if (Template?.Fields is not { Count: > 0 })
+        {
+            return;
+        }
+
+        foreach (var field in Template.Fields)
+        {
+            if (_refOptions.ContainsKey(field.Name))
+            {
+                continue;
+            }
+
+            // Match field name to Reference Data category (e.g. Nationality, PreferredCountry)
+            try
+            {
+                var options = await ReferenceDataService.GetLookupOptionsAsync(field.Name);
+                if (options.Count > 0)
+                {
+                    _refOptions[field.Name] = options.Select(x => x.Title).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "No Reference Data for field {Field}", field.Name);
+            }
+        }
+    }
+
+    private IEnumerable<string> GetOptions(EntityTemplateField field)
+    {
+        if (_refOptions.TryGetValue(field.Name, out var fromRef) && fromRef.Count > 0)
+        {
+            return fromRef;
+        }
+
+        return field.Options ?? [];
+    }
 
     private string GetFieldId(string name) => $"{FieldIdPrefix}-{name}";
 

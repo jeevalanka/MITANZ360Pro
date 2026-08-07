@@ -1,0 +1,245 @@
+.ms-rd {
+    --ms-brand: #0078d4;
+    --ms-brand-hover: #106ebe;
+    --ms-border: #edebe9;
+    --ms-text: #323130;
+    --ms-text-secondary: #605e5c;
+    --ms-surface: #ffffff;
+    --ms-surface-alt: #faf9f8;
+    --ms-success: #107c10;
+    --ms-danger: #a4262c;
+    --ms-radius: 12px;
+    font-family: "Segoe UI", Segoe UI, system-ui, -apple-system, sans-serif;
+    color: var(--ms-text);
+    background: var(--ms-surface);
+    border: 1px solid var(--ms-border);
+    border-radius: var(--ms-radius);
+    padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.ms-rd-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--ms-border);
+}
+
+.ms-rd-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.ms-rd-subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--ms-text-secondary);
+    font-size: 0.875rem;
+}
+
+.ms-rd-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.ms-rd-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--ms-surface-alt);
+    border: 1px solid var(--ms-border);
+    border-radius: var(--ms-radius);
+}
+
+.ms-rd-loading {
+    display: grid;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    color: var(--ms-text-secondary);
+    font-size: 0.875rem;
+}
+
+.ms-rd-grid-wrap {
+    position: relative;
+    min-height: 180px;
+}
+
+.ms-rd-grid-wrap.is-loading {
+    opacity: 0.72;
+}
+
+.ms-rd-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--ms-text-secondary);
+}
+
+.ms-row-actions {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: flex-end;
+}
+
+.ms-status {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #f3f2f1;
+}
+
+.ms-status-active {
+    background: #dff6dd;
+    color: var(--ms-success);
+}
+
+.ms-status-inactive {
+    background: #fde7e9;
+    color: var(--ms-danger);
+}
+
+.ms-rd-color-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid #c8c6c4;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+.ms-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: clamp(0.75rem, 3vw, 2rem);
+    z-index: 2000;
+    overflow-y: auto;
+}
+
+.ms-modal-card {
+    width: min(720px, 100%);
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+    background: var(--ms-surface);
+    border: 1px solid var(--ms-border);
+    border-radius: var(--ms-radius);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+}
+
+.ms-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--ms-border);
+    background: var(--ms-surface-alt);
+}
+
+.ms-modal-header h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.ms-modal-close {
+    margin-left: auto;
+}
+
+.ms-modal-body {
+    padding: 1rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+}
+
+.ms-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.85rem 1rem;
+    border-top: 1px solid var(--ms-border);
+}
+
+.ms-section-card {
+    border: 1px solid var(--ms-border);
+    border-radius: var(--ms-radius);
+    padding: 0.85rem 1rem;
+    background: #fff;
+}
+
+.ms-section-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.ms-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+
+.ms-req {
+    color: var(--ms-danger);
+}
+
+.ms-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.ms-rd-alert {
+    margin-top: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 8px;
+    background: #fde7e9;
+    border: 1px solid #f1aeb5;
+    color: var(--ms-danger);
+    font-size: 0.875rem;
+}
+
+.ms-rd-import-stats {
+    margin: 0;
+    padding-left: 1.1rem;
+    line-height: 1.7;
+}
+
+.validation-message {
+    display: block;
+    color: var(--ms-danger);
+    font-size: 0.8rem;
+    margin-top: 0.2rem;
+}
+
+@media (max-width: 768px) {
+    .ms-rd {
+        padding: 1rem;
+    }
+
+    .ms-rd-toolbar {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .ms-rd-toolbar ::deep .rz-button {
+        flex: 1 1 auto;
+    }
+}

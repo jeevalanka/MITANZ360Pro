@@ -1,0 +1,366 @@
+@page "/student-visa"
+@page "/student-self-register"
+@namespace MITANZ360Pro.Web.Modules.Entities
+@attribute [AllowAnonymous]
+@rendermode InteractiveServer
+@layout MainLayout
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Student Visa Registration — MITANZ</PageTitle>
+<link href="css/student-visa.css" rel="stylesheet" />
+
+<div class="sv-page">
+    <div class="sv-hero">
+        <div class="sv-hero-inner">
+            <div class="sv-brand">MITANZ360Pro</div>
+            <h1 class="sv-title">Student Visa Registration</h1>
+            <p class="sv-subtitle">
+                Register your student profile securely. We will never ask for banking passwords or credit card details.
+            </p>
+        </div>
+    </div>
+
+    <div class="sv-container">
+        @if (_showSuccess)
+        {
+            <div class="sv-success-card" role="status" aria-live="polite">
+                <div class="sv-success-icon" aria-hidden="true">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <h2>Thank you.</h2>
+                <p class="sv-success-msg">Your student profile has been successfully created.</p>
+                <dl class="sv-success-meta">
+                    <div>
+                        <dt>Student Number</dt>
+                        <dd>@_savedStudentNumber</dd>
+                    </div>
+                    <div>
+                        <dt>Status</dt>
+                        <dd>@_savedStatus</dd>
+                    </div>
+                </dl>
+                <p class="sv-success-hint">
+                    Please check your email for a confirmation link to verify your address.
+                </p>
+                <button type="button" class="sv-btn sv-btn-primary" @onclick="ResetForNewRegistration">
+                    Register another student
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="sv-info-panel" role="note">
+                <div class="sv-info-header">
+                    <i class="bi bi-shield-check" aria-hidden="true"></i>
+                    <h2>Important Information</h2>
+                </div>
+                <ul class="sv-info-list">
+                    <li>We do <strong>NOT</strong> charge visa consultation fees.</li>
+                    <li>We do <strong>NOT</strong> request any banking passwords.</li>
+                    <li>We do <strong>NOT</strong> ask for credit card details.</li>
+                    <li>Never send money to personal bank accounts.</li>
+                    <li>Tuition fees (if applicable) are paid directly to the education provider.</li>
+                    <li>Visa application charges are paid only to the official government immigration authority.</li>
+                    <li>Protect your personal information. Keep copies of all submitted documents.</li>
+                    <li>We will communicate only through official MITANZ channels.</li>
+                </ul>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_bannerError))
+            {
+                <div class="sv-alert sv-alert-error" role="alert">@_bannerError</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_bannerInfo))
+            {
+                <div class="sv-alert sv-alert-info" role="status">@_bannerInfo</div>
+            }
+
+            <EditForm Model="_model" OnValidSubmit="OnValidSubmitAsync" OnInvalidSubmit="OnInvalidSubmit">
+                <DataAnnotationsValidator />
+
+                <section class="sv-card" aria-labelledby="personal-heading">
+                    <div class="sv-card-header">
+                        <i class="bi bi-person" aria-hidden="true"></i>
+                        <h2 id="personal-heading">Personal Information</h2>
+                    </div>
+                    <div class="sv-card-body">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-first">First Name <span class="sv-req">*</span></label>
+                                <InputText id="sv-first" class="form-control sv-input" @bind-Value="_model.FirstName" disabled="@_busy" />
+                                <ValidationMessage For="() => _model.FirstName" />
+                                <span class="sv-help"><i class="bi bi-info-circle"></i> Legal first name as on passport</span>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-last">Last Name <span class="sv-req">*</span></label>
+                                <InputText id="sv-last" class="form-control sv-input" @bind-Value="_model.LastName" disabled="@_busy" />
+                                <ValidationMessage For="() => _model.LastName" />
+                                <span class="sv-help"><i class="bi bi-info-circle"></i> Legal family name as on passport</span>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="sv-label" for="sv-gender">Gender <span class="sv-req">*</span></label>
+                                <InputSelect id="sv-gender" class="form-select sv-input" @bind-Value="_model.Gender" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var g in _genders)
+                                    {
+                                        <option value="@g.Value">@g.Title</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _model.Gender" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="sv-label" for="sv-dob">Date of Birth <span class="sv-req">*</span></label>
+                                <InputDate id="sv-dob" class="form-control sv-input" @bind-Value="_model.DateOfBirth" disabled="@_busy" />
+                                <ValidationMessage For="() => _model.DateOfBirth" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="sv-label" for="sv-nat">Nationality <span class="sv-req">*</span></label>
+                                <InputSelect id="sv-nat" class="form-select sv-input" @bind-Value="_model.Nationality" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var n in _nationalities)
+                                    {
+                                        <option value="@n.Value">@n.Title</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _model.Nationality" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-pass">Passport Number <span class="sv-req">*</span></label>
+                                <InputText id="sv-pass" class="form-control sv-input" @bind-Value="_model.PassportNumber" disabled="@_busy" />
+                                <ValidationMessage For="() => _model.PassportNumber" />
+                                <span class="sv-help"><i class="bi bi-info-circle"></i> 5–20 letters or digits, no spaces</span>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-email">Email Address <span class="sv-req">*</span></label>
+                                <InputText id="sv-email" type="email" class="form-control sv-input"
+                                           @bind-Value="_model.EmailAddress"
+                                           @bind-Value:after="OnEmailChangedAsync"
+                                           disabled="@(_busy || _emailLocked)" />
+                                <ValidationMessage For="() => _model.EmailAddress" />
+                                <span class="sv-help">
+                                    <i class="bi bi-info-circle"></i>
+                                    @(_emailLocked ? "Email is a key field and cannot be changed for an existing profile." : "Unique key — existing email opens your profile for update.")
+                                </span>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-mobile">Mobile Number <span class="sv-req">*</span></label>
+                                <InputText id="sv-mobile" class="form-control sv-input" @bind-Value="_model.MobileNumber" disabled="@_busy" />
+                                <ValidationMessage For="() => _model.MobileNumber" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-wa">WhatsApp Number</label>
+                                <InputText id="sv-wa" class="form-control sv-input" @bind-Value="_model.WhatsAppNumber" disabled="@_busy" />
+                                <ValidationMessage For="() => _model.WhatsAppNumber" />
+                            </div>
+                            <div class="col-12">
+                                <label class="sv-label" for="sv-addr">Current Address <span class="sv-req">*</span></label>
+                                <InputTextArea id="sv-addr" class="form-control sv-input" rows="2" @bind-Value="_model.CurrentAddress" disabled="@_busy" />
+                                <ValidationMessage For="() => _model.CurrentAddress" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="sv-label" for="sv-country">Country <span class="sv-req">*</span></label>
+                                <InputSelect id="sv-country" class="form-select sv-input" @bind-Value="_model.Country" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var c in _countries)
+                                    {
+                                        <option value="@c.Value">@c.Title</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _model.Country" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="sv-label" for="sv-city">City <span class="sv-req">*</span></label>
+                                <InputText id="sv-city" class="form-control sv-input" @bind-Value="_model.City" disabled="@_busy" />
+                                <ValidationMessage For="() => _model.City" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="sv-label" for="sv-pcm">Preferred Contact Method <span class="sv-req">*</span></label>
+                                <InputSelect id="sv-pcm" class="form-select sv-input" @bind-Value="_model.PreferredContactMethod" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var c in _contactMethods)
+                                    {
+                                        <option value="@c.Value">@c.Title</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _model.PreferredContactMethod" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="sv-card" aria-labelledby="study-heading">
+                    <div class="sv-card-header">
+                        <i class="bi bi-mortarboard" aria-hidden="true"></i>
+                        <h2 id="study-heading">Study Preferences</h2>
+                    </div>
+                    <div class="sv-card-body">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-pcountry">Preferred Country <span class="sv-req">*</span></label>
+                                <InputSelect id="sv-pcountry" class="form-select sv-input" @bind-Value="_model.PreferredCountry" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var c in _preferredCountries)
+                                    {
+                                        <option value="@c.Value">@c.Title</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _model.PreferredCountry" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-pqual">Preferred Qualification <span class="sv-req">*</span></label>
+                                <InputSelect id="sv-pqual" class="form-select sv-input" @bind-Value="_model.PreferredQualification" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var q in _preferredQualifications)
+                                    {
+                                        <option value="@q.Value">@q.Title</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _model.PreferredQualification" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-pcourse">Preferred Course <span class="sv-req">*</span></label>
+                                <InputSelect id="sv-pcourse" class="form-select sv-input" @bind-Value="_model.PreferredCourse" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var c in _preferredCourses)
+                                    {
+                                        <option value="@c.Value">@c.Title</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _model.PreferredCourse" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-pintake">Preferred Intake <span class="sv-req">*</span></label>
+                                <InputSelect id="sv-pintake" class="form-select sv-input" @bind-Value="_model.PreferredIntake" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var i in _preferredIntakes)
+                                    {
+                                        <option value="@i.Value">@i.Title</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _model.PreferredIntake" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="sv-label" for="sv-eng">English Test</label>
+                                <InputSelect id="sv-eng" class="form-select sv-input" @bind-Value="_model.EnglishTest" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var t in _englishTests)
+                                    {
+                                        <option value="@t.Value">@t.Title</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="sv-label" for="sv-ielts">IELTS Score</label>
+                                <InputText id="sv-ielts" class="form-control sv-input" @bind-Value="_model.IELTSScore" disabled="@_busy" />
+                                <ValidationMessage For="() => _model.IELTSScore" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="sv-label" for="sv-occ">Current Occupation</label>
+                                <InputText id="sv-occ" class="form-control sv-input" @bind-Value="_model.CurrentOccupation" disabled="@_busy" />
+                            </div>
+                            <div class="col-12">
+                                <label class="sv-label" for="sv-hq">Highest Qualification</label>
+                                <InputSelect id="sv-hq" class="form-select sv-input" @bind-Value="_model.HighestQualification" disabled="@_busy">
+                                    <option value="">Select…</option>
+                                    @foreach (var q in _highestQualifications)
+                                    {
+                                        <option value="@q.Value">@q.Title</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="sv-card" aria-labelledby="referral-heading">
+                    <div class="sv-card-header">
+                        <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                        <h2 id="referral-heading">Referral Information</h2>
+                    </div>
+                    <div class="sv-card-body">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-ref">Referral Code</label>
+                                <InputText id="sv-ref" class="form-control sv-input" @bind-Value="_model.ReferralCode" readonly disabled />
+                                <span class="sv-help"><i class="bi bi-lock"></i> Set from referral link (?r=) — cannot be edited</span>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="sv-label" for="sv-partner">Referral Partner</label>
+                                <InputText id="sv-partner" class="form-control sv-input" @bind-Value="_model.ReferralPartner" readonly disabled />
+                                <span class="sv-help"><i class="bi bi-info-circle"></i> Populated automatically when the code is recognised</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="sv-card" aria-labelledby="consent-heading">
+                    <div class="sv-card-header">
+                        <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                        <h2 id="consent-heading">Consent</h2>
+                    </div>
+                    <div class="sv-card-body">
+                        <div class="form-check sv-check mb-3">
+                            <InputCheckbox id="sv-acc" class="form-check-input" @bind-Value="_model.ConfirmAccurate" disabled="@_busy" />
+                            <label class="form-check-label" for="sv-acc">
+                                I confirm the information provided is accurate. <span class="sv-req">*</span>
+                            </label>
+                            <ValidationMessage For="() => _model.ConfirmAccurate" />
+                        </div>
+                        <div class="form-check sv-check">
+                            <InputCheckbox id="sv-upd" class="form-check-input" @bind-Value="_model.AgreeUpdates" disabled="@_busy" />
+                            <label class="form-check-label" for="sv-upd">
+                                I agree to receive updates.
+                            </label>
+                        </div>
+
+                        @* Honeypot — hidden from users *@
+                        <div class="sv-hp" aria-hidden="true">
+                            <label for="sv-web">Website</label>
+                            <InputText id="sv-web" @bind-Value="_model.Website" tabindex="-1" autocomplete="off" />
+                        </div>
+                    </div>
+                </section>
+
+                <div class="sv-actions">
+                    <button type="submit" class="sv-btn sv-btn-primary" disabled="@_busy">
+                        @if (_busy)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Saving…</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-send me-2" aria-hidden="true"></i>
+                            <span>Submit application</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        }
+    </div>
+
+    @if (_showConfirm)
+    {
+        <div class="sv-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="sv-confirm-title">
+            <div class="sv-modal-card">
+                <button type="button" class="sv-modal-close" @onclick="CancelConfirm" aria-label="Close" disabled="@_busy">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <h3 id="sv-confirm-title">Confirm submission</h3>
+                <p>Are you sure you want to submit your application?</p>
+                <div class="sv-modal-footer">
+                    <button type="button" class="sv-btn sv-btn-secondary" @onclick="CancelConfirm" disabled="@_busy">Cancel</button>
+                    <button type="button" class="sv-btn sv-btn-primary" @onclick="ConfirmAndSaveAsync" disabled="@_busy">
+                        @if (_busy)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Submit
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
