@@ -8,15 +8,16 @@
 
 <div class="ms-docs">
     <div class="form-row">
-        <label>Document Type</label>
+        <label>Document Type <span class="required-indicator">*</span></label>
         <RadzenDropDown TValue="string"
                         Data="@Categories"
                         TextProperty="Title"
                         ValueProperty="Code"
-                        @bind-Value="DocumentCode"
+                        @bind-Value="SelectedDocumentCode"
                         Placeholder="Select document"
                         Style="width:100%"
-                        Disabled="@(!string.IsNullOrWhiteSpace(LockedCode))" />
+                        Disabled="@(!string.IsNullOrWhiteSpace(LockedCode))"
+                        Change="@OnDocumentCodeChanged" />
     </div>
 
     <div class="form-row">
@@ -80,7 +81,7 @@
                       Icon="upload"
                       ButtonStyle="ButtonStyle.Primary"
                       Click="@UploadAsync"
-                      Disabled="@(IsUploading || SelectedFile == null || string.IsNullOrWhiteSpace(DocumentCode))" />
+                      Disabled="@(!CanUpload)" />
     </div>
 </div>
 
@@ -95,6 +96,7 @@
     [Parameter] public bool IsReplace { get; set; }
 
     private string? LockedCode;
+    private string? SelectedDocumentCode;
     private string Title = "";
     private string? Description;
     private string? Remarks;
@@ -107,14 +109,38 @@
     private double UploadProgress;
     private string? ValidationError;
 
+    private bool CanUpload =>
+        !IsUploading
+        && SelectedFile != null
+        && !string.IsNullOrWhiteSpace(SelectedDocumentCode)
+        && !string.IsNullOrWhiteSpace(EntityType)
+        && !string.IsNullOrWhiteSpace(EntityNumber);
+
     protected override void OnInitialized()
     {
+        SelectedDocumentCode = DocumentCode;
         if (!string.IsNullOrWhiteSpace(DocumentCode))
             LockedCode = DocumentCode;
 
-        var cat = Categories.FirstOrDefault(c => string.Equals(c.Code, DocumentCode, StringComparison.OrdinalIgnoreCase));
+        var cat = Categories.FirstOrDefault(c =>
+            string.Equals(c.Code, SelectedDocumentCode, StringComparison.OrdinalIgnoreCase));
         if (cat != null && string.IsNullOrWhiteSpace(Title))
             Title = cat.Title;
+    }
+
+    private void OnDocumentCodeChanged()
+    {
+        ValidationError = null;
+        var cat = Categories.FirstOrDefault(c =>
+            string.Equals(c.Code, SelectedDocumentCode, StringComparison.OrdinalIgnoreCase));
+        if (cat != null && string.IsNullOrWhiteSpace(Title))
+            Title = cat.Title;
+
+        if (SelectedFile != null && !string.IsNullOrWhiteSpace(SelectedDocumentCode))
+        {
+            if (!DocumentService.IsAllowedFile(SelectedDocumentCode!, SelectedFile.Name, SelectedFile.Size, out var err))
+                ValidationError = err;
+        }
     }
 
     private void OnFileSelected(InputFileChangeEventArgs e)
@@ -125,8 +151,6 @@
     private async Task OnDrop(DragEventArgs _)
     {
         IsDragOver = false;
-        // Browser InputFile handles selection; drop onto InputFile is limited in Blazor —
-        // user can still use the file picker. Keep visual feedback.
         await Task.CompletedTask;
     }
 
@@ -137,22 +161,28 @@
         SelectedFileName = file.Name;
         SelectedSize = file.Size;
 
-        if (string.IsNullOrWhiteSpace(DocumentCode))
+        if (string.IsNullOrWhiteSpace(SelectedDocumentCode))
         {
             ValidationError = "Select a document type first.";
             return;
         }
 
-        if (!DocumentService.IsAllowedFile(DocumentCode!, file.Name, file.Size, out var err))
+        if (!DocumentService.IsAllowedFile(SelectedDocumentCode!, file.Name, file.Size, out var err))
             ValidationError = err;
     }
 
     private async Task UploadAsync()
     {
-        if (SelectedFile == null || string.IsNullOrWhiteSpace(DocumentCode))
+        if (SelectedFile == null || string.IsNullOrWhiteSpace(SelectedDocumentCode))
             return;
 
-        if (!DocumentService.IsAllowedFile(DocumentCode, SelectedFile.Name, SelectedFile.Size, out var err))
+        if (string.IsNullOrWhiteSpace(EntityType) || string.IsNullOrWhiteSpace(EntityNumber))
+        {
+            ValidationError = "Entity Type and Entity Number are required. Set them in the Documents filters, or upload from the Entity page.";
+            return;
+        }
+
+        if (!DocumentService.IsAllowedFile(SelectedDocumentCode, SelectedFile.Name, SelectedFile.Size, out var err))
         {
             ValidationError = err;
             return;
@@ -174,7 +204,7 @@
             {
                 EntityType = EntityType,
                 EntityNumber = EntityNumber,
-                DocumentCode = DocumentCode!,
+                DocumentCode = SelectedDocumentCode!,
                 Title = string.IsNullOrWhiteSpace(Title) ? Path.GetFileNameWithoutExtension(SelectedFile.Name) : Title,
                 Description = Description,
                 FileName = SelectedFile.Name,
