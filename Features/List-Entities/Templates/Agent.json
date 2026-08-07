@@ -8,5 +8,9 @@
     { "Name": "Phone", "Label": "Phone", "Type": "text", "Required": false, "MaxLength": 30 },
     { "Name": "Country", "Label": "Country", "Type": "text", "Required": false, "MaxLength": 100 },
     { "Name": "ReferralCode", "Label": "Referral Code", "Type": "text", "Required": false, "MaxLength": 20, "Pattern": "^[A-Z0-9]{2,20}$" }
+  ],
+  "RequiredDocuments": [
+    { "Code": "NIC", "Required": true, "Status": "Requested" },
+    { "Code": "OTHER", "Required": true, "Status": "Requested" }
   ]
 }

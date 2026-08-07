@@ -311,6 +311,12 @@
 
                     @if (!IsCreateMode)
                     {
+                        <section class="ms-section-card" disabled="@IsSaving" aria-label="Documents">
+                            <EntityDocumentsPanel Entity="@EditorModel"
+                                                  IsAdminMode="true"
+                                                  OnEntityChanged="@OnDocumentsEntityChanged" />
+                        </section>
+
                         <section class="ms-audit-card" aria-label="Audit Information">
                             <h4 class="ms-section-title">Audit Information</h4>
                             <div class="audit-grid">
@@ -372,6 +378,10 @@
                         }
                     </ul>
                 }
+
+                <div style="margin-top:1rem">
+                    <EntityDocumentsPanel Entity="@DrawerEntity" IsAdminMode="true" />
+                </div>
             </div>
         </aside>
     }
@@ -917,6 +927,19 @@
     private void MarkDirty()
     {
         IsDirty = true;
+    }
+
+    private async Task OnDocumentsEntityChanged()
+    {
+        if (EditorModel.Id <= 0)
+            return;
+
+        var refreshed = await EntityService.GetByIdAsync(EditorModel.Id);
+        if (refreshed != null)
+        {
+            EditorModel = refreshed;
+            IsDirty = false;
+        }
     }
 
     private static Entity CloneEntity(Entity source)

@@ -1,0 +1,469 @@
+@namespace MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using System.Security.Claims
+@inject IDocumentLibraryService DocumentService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<link href="css/documents-library.css" rel="stylesheet" />
+
+<div class="ms-docs">
+    <div class="ms-docs-header">
+        <div>
+            <h4 class="ms-section-title" style="margin:0">Documents</h4>
+            <p class="ms-docs-subtitle">Required documents from entity metadata · files from SharePoint Documents library</p>
+        </div>
+        <div class="ms-docs-toolbar">
+            <RadzenButton Text="Refresh"
+                          Icon="refresh"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Variant="Variant.Outlined"
+                          Click="@LoadAsync"
+                          Disabled="@IsLoading" />
+            @if (IsAdminMode)
+            {
+                <RadzenButton Text="Request"
+                              Icon="playlist_add"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Click="@RequestDocumentAsync" />
+                <RadzenButton Text="Upload"
+                              Icon="upload"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Click="@UploadNewAsync" />
+            }
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="ms-docs-card" role="status">
+            <div class="ms-docs-skeleton" style="width:40%"></div>
+            <div class="ms-docs-skeleton" style="width:90%"></div>
+            <div class="ms-docs-skeleton" style="width:70%"></div>
+            <div class="ms-docs-skeleton" style="width:85%"></div>
+        </div>
+    }
+    else if (Rows.Count == 0)
+    {
+        <div class="ms-docs-card ms-docs-empty">
+            <RadzenIcon Icon="folder_open" Style="font-size:2rem;opacity:.5" />
+            <p>No required documents configured for this entity.</p>
+            @if (IsAdminMode)
+            {
+                <RadzenButton Text="Request a document" Icon="playlist_add" ButtonStyle="ButtonStyle.Primary" Click="@RequestDocumentAsync" />
+            }
+        </div>
+    }
+    else
+    {
+        <div class="ms-docs-card">
+            <RadzenDataGrid Data="@Rows"
+                            TItem="EntityDocumentViewModel"
+                            AllowSorting="true"
+                            Density="Density.Compact"
+                            class="ms-docs-matrix-table"
+                            EmptyText="No documents">
+                <Columns>
+                    <RadzenDataGridColumn TItem="EntityDocumentViewModel" Property="Title" Title="Document" Width="180px">
+                        <Template Context="row">
+                            <strong>@row.Title</strong>
+                            <div style="font-size:.75rem;color:#605e5c">@row.DocumentCode · @row.Category</div>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="EntityDocumentViewModel" Title="Required" Width="90px" TextAlign="TextAlign.Center">
+                        <Template Context="row">
+                            @if (row.Required)
+                            {
+                                <span class="ms-docs-req-yes">✔</span>
+                            }
+                            else
+                            {
+                                <span class="ms-docs-req-no">✖</span>
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="EntityDocumentViewModel" Title="Status" Width="140px">
+                        <Template Context="row">
+                            <span class="ms-docs-status" style="background:@row.StatusColor">@row.DisplayStatus</span>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    @if (IsAdminMode)
+                    {
+                        <RadzenDataGridColumn TItem="EntityDocumentViewModel" Title="Uploaded By" Width="140px">
+                            <Template Context="row">
+                                @(row.LatestDocument?.UploadedBy ?? "—")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="EntityDocumentViewModel" Title="Uploaded" Width="120px">
+                            <Template Context="row">
+                                @(row.LatestDocument?.UploadedDate?.ToString("g") ?? "—")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="EntityDocumentViewModel" Title="Verified By" Width="120px">
+                            <Template Context="row">
+                                @(row.LatestDocument?.VerifiedBy ?? "—")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="EntityDocumentViewModel" Title="Verified" Width="120px">
+                            <Template Context="row">
+                                @(row.LatestDocument?.VerifiedDate?.ToString("g") ?? "—")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="EntityDocumentViewModel" Title="Remarks" Width="160px">
+                            <Template Context="row">
+                                @(row.LatestDocument?.Remarks ?? "—")
+                            </Template>
+                        </RadzenDataGridColumn>
+                    }
+                    else
+                    {
+                        <RadzenDataGridColumn TItem="EntityDocumentViewModel" Title="File" Width="160px">
+                            <Template Context="row">
+                                @(row.LatestDocument?.FileName ?? "—")
+                            </Template>
+                        </RadzenDataGridColumn>
+                    }
+
+                    <RadzenDataGridColumn TItem="EntityDocumentViewModel" Title="Actions" Width="220px" Sortable="false">
+                        <Template Context="row">
+                            <div class="ms-docs-actions">
+                                @if (row.HasFile)
+                                {
+                                    <RadzenButton Text="View"
+                                                  Icon="visibility"
+                                                  Size="ButtonSize.Small"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  Click="@(() => ViewAsync(row))" />
+                                    @if (IsAdminMode || DocumentService.CanStudentReplace(row))
+                                    {
+                                        <RadzenButton Text="Replace"
+                                                      Icon="sync"
+                                                      Size="ButtonSize.Small"
+                                                      ButtonStyle="ButtonStyle.Light"
+                                                      Click="@(() => ReplaceAsync(row))" />
+                                    }
+                                    @if (IsAdminMode)
+                                    {
+                                        <RadzenButton Text="Verify"
+                                                      Icon="verified"
+                                                      Size="ButtonSize.Small"
+                                                      ButtonStyle="ButtonStyle.Success"
+                                                      Disabled="@row.IsVerified"
+                                                      Click="@(() => VerifyAsync(row))" />
+                                        <RadzenButton Text="Reject"
+                                                      Icon="cancel"
+                                                      Size="ButtonSize.Small"
+                                                      ButtonStyle="ButtonStyle.Danger"
+                                                      Click="@(() => RejectAsync(row))" />
+                                        <RadzenButton Icon="history"
+                                                      Size="ButtonSize.Small"
+                                                      ButtonStyle="ButtonStyle.Light"
+                                                      title="Version history"
+                                                      Click="@(() => HistoryAsync(row))" />
+                                        <RadzenButton Icon="delete"
+                                                      Size="ButtonSize.Small"
+                                                      ButtonStyle="ButtonStyle.Danger"
+                                                      Variant="Variant.Text"
+                                                      Click="@(() => DeleteAsync(row))" />
+                                    }
+                                }
+                                else if (IsAdminMode || DocumentService.CanStudentUpload(row))
+                                {
+                                    <RadzenButton Text="Upload"
+                                                  Icon="upload"
+                                                  Size="ButtonSize.Small"
+                                                  ButtonStyle="ButtonStyle.Primary"
+                                                  Click="@(() => UploadForCodeAsync(row))" />
+                                }
+                                else
+                                {
+                                    <span style="color:#605e5c">—</span>
+                                }
+
+                                @if (IsAdminMode && row.Required)
+                                {
+                                    <RadzenButton Icon="remove_circle_outline"
+                                                  Size="ButtonSize.Small"
+                                                  ButtonStyle="ButtonStyle.Light"
+                                                  title="Remove requirement"
+                                                  Click="@(() => RemoveRequirementAsync(row))" />
+                                }
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Entity Entity { get; set; } = new();
+    [Parameter] public bool IsAdminMode { get; set; } = true;
+    [Parameter] public EventCallback OnEntityChanged { get; set; }
+
+    private List<EntityDocumentViewModel> Rows = [];
+    private bool IsLoading = true;
+    private string CurrentUser = "unknown";
+    private string CurrentRole = "Admin";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        CurrentUser = auth.User.FindFirst(ClaimTypes.Email)?.Value
+                      ?? auth.User.Identity?.Name
+                      ?? "unknown";
+        if (auth.User.IsInRole("SysAdmin") || auth.User.IsInRole("Admin"))
+            CurrentRole = "Admin";
+        else if (auth.User.IsInRole("Student"))
+            CurrentRole = "Student";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Entity.EntityId))
+        {
+            Rows = [];
+            IsLoading = false;
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var matrix = await DocumentService.GetEntityDocumentMatrixAsync(Entity);
+            Rows = matrix.ToList();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Documents", ex.Message);
+            Rows = [];
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task UploadNewAsync()
+    {
+        var categories = await DocumentService.GetCategoriesAsync();
+        var result = await DialogService.OpenAsync<DocumentUploadDialog>(
+            "Upload Document",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentUploadDialog.EntityType)] = Entity.EntityType,
+                [nameof(DocumentUploadDialog.EntityNumber)] = Entity.EntityId,
+                [nameof(DocumentUploadDialog.Categories)] = categories.ToList(),
+                [nameof(DocumentUploadDialog.UploadedBy)] = CurrentUser,
+                [nameof(DocumentUploadDialog.UploadedByRole)] = CurrentRole,
+                [nameof(DocumentUploadDialog.IsReplace)] = false
+            },
+            new DialogOptions { Width = "560px", Resizable = true, Draggable = true });
+
+        if (result is true)
+            await LoadAsync();
+    }
+
+    private async Task UploadForCodeAsync(EntityDocumentViewModel row)
+    {
+        var categories = await DocumentService.GetCategoriesAsync();
+        var result = await DialogService.OpenAsync<DocumentUploadDialog>(
+            $"Upload — {row.Title}",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentUploadDialog.EntityType)] = Entity.EntityType,
+                [nameof(DocumentUploadDialog.EntityNumber)] = Entity.EntityId,
+                [nameof(DocumentUploadDialog.DocumentCode)] = row.DocumentCode,
+                [nameof(DocumentUploadDialog.Categories)] = categories.ToList(),
+                [nameof(DocumentUploadDialog.UploadedBy)] = CurrentUser,
+                [nameof(DocumentUploadDialog.UploadedByRole)] = CurrentRole,
+                [nameof(DocumentUploadDialog.IsReplace)] = false
+            },
+            new DialogOptions { Width = "560px", Resizable = true, Draggable = true });
+
+        if (result is true)
+        {
+            if (IsAdminMode)
+                await DocumentService.UpdateRequirementStatusAsync(Entity, row.DocumentCode, "Uploaded");
+            await LoadAsync();
+            await OnEntityChanged.InvokeAsync();
+        }
+    }
+
+    private async Task ReplaceAsync(EntityDocumentViewModel row)
+    {
+        if (row.LatestDocument == null) return;
+
+        var categories = await DocumentService.GetCategoriesAsync();
+        var result = await DialogService.OpenAsync<DocumentUploadDialog>(
+            $"Replace — {row.Title} (v{row.LatestDocument.DocumentVersion})",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentUploadDialog.EntityType)] = Entity.EntityType,
+                [nameof(DocumentUploadDialog.EntityNumber)] = Entity.EntityId,
+                [nameof(DocumentUploadDialog.DocumentCode)] = row.DocumentCode,
+                [nameof(DocumentUploadDialog.ExistingDriveItemId)] = row.LatestDocument.DriveItemId,
+                [nameof(DocumentUploadDialog.Categories)] = categories.ToList(),
+                [nameof(DocumentUploadDialog.UploadedBy)] = CurrentUser,
+                [nameof(DocumentUploadDialog.UploadedByRole)] = CurrentRole,
+                [nameof(DocumentUploadDialog.IsReplace)] = true
+            },
+            new DialogOptions { Width = "560px", Resizable = true, Draggable = true });
+
+        if (result is true)
+            await LoadAsync();
+    }
+
+    private async Task ViewAsync(EntityDocumentViewModel row)
+    {
+        if (row.LatestDocument == null) return;
+
+        await DialogService.OpenAsync<DocumentViewer>(
+            row.Title,
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentViewer.Document)] = row.LatestDocument
+            },
+            new DialogOptions { Width = "80%", Height = "85%", Resizable = true, Draggable = true });
+    }
+
+    private async Task VerifyAsync(EntityDocumentViewModel row)
+    {
+        if (row.LatestDocument == null) return;
+
+        var result = await DialogService.OpenAsync<DocumentVerifyDialog>(
+            $"Verify — {row.Title}",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentVerifyDialog.DriveItemId)] = row.LatestDocument.DriveItemId,
+                [nameof(DocumentVerifyDialog.VerifiedBy)] = CurrentUser
+            },
+            new DialogOptions { Width = "480px" });
+
+        if (result is true)
+        {
+            await DocumentService.UpdateRequirementStatusAsync(Entity, row.DocumentCode, "Verified");
+            await LoadAsync();
+            await OnEntityChanged.InvokeAsync();
+        }
+    }
+
+    private async Task RejectAsync(EntityDocumentViewModel row)
+    {
+        if (row.LatestDocument == null) return;
+
+        var result = await DialogService.OpenAsync<DocumentRejectDialog>(
+            $"Reject — {row.Title}",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentRejectDialog.DriveItemId)] = row.LatestDocument.DriveItemId,
+                [nameof(DocumentRejectDialog.RejectedBy)] = CurrentUser
+            },
+            new DialogOptions { Width = "480px" });
+
+        if (result is true)
+        {
+            await DocumentService.UpdateRequirementStatusAsync(Entity, row.DocumentCode, "Rejected");
+            await LoadAsync();
+            await OnEntityChanged.InvokeAsync();
+        }
+    }
+
+    private async Task HistoryAsync(EntityDocumentViewModel row)
+    {
+        await DialogService.OpenAsync<DocumentHistory>(
+            $"History — {row.Title}",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentHistory.EntityType)] = Entity.EntityType,
+                [nameof(DocumentHistory.EntityNumber)] = Entity.EntityId,
+                [nameof(DocumentHistory.DocumentCode)] = row.DocumentCode
+            },
+            new DialogOptions { Width = "720px", Height = "70%" });
+    }
+
+    private async Task DeleteAsync(EntityDocumentViewModel row)
+    {
+        if (row.LatestDocument == null) return;
+
+        var confirm = await DialogService.Confirm(
+            $"Delete '{row.LatestDocument.FileName}'? This cannot be undone.",
+            "Delete document",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Cancel" });
+
+        if (confirm != true) return;
+
+        var result = await DocumentService.DeleteFileAsync(row.LatestDocument.DriveItemId);
+        if (result.Success)
+        {
+            NotificationService.Notify(NotificationSeverity.Success, "Deleted", "Document deleted.");
+            await LoadAsync();
+        }
+        else
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Delete failed", result.ErrorMessage ?? "Unknown error");
+        }
+    }
+
+    private async Task RequestDocumentAsync()
+    {
+        var categories = await DocumentService.GetCategoriesAsync();
+        var code = await DialogService.OpenAsync<DocumentRequestDialog>(
+            "Request Document",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentRequestDialog.Categories)] = categories.ToList()
+            },
+            new DialogOptions { Width = "420px" });
+
+        if (code is string documentCode && !string.IsNullOrWhiteSpace(documentCode))
+        {
+            var result = await DocumentService.RequestDocumentAsync(Entity, documentCode, required: true);
+            if (result.IsSuccess)
+            {
+                NotificationService.Notify(NotificationSeverity.Success, "Requested", $"Document {documentCode} requested.");
+                await LoadAsync();
+                await OnEntityChanged.InvokeAsync();
+            }
+            else
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Request failed", result.ErrorMessage ?? "Unknown error");
+            }
+        }
+    }
+
+    private async Task RemoveRequirementAsync(EntityDocumentViewModel row)
+    {
+        var confirm = await DialogService.Confirm(
+            $"Remove requirement for '{row.Title}'? Uploaded files are not deleted.",
+            "Remove requirement",
+            new ConfirmOptions { OkButtonText = "Remove", CancelButtonText = "Cancel" });
+
+        if (confirm != true) return;
+
+        var result = await DocumentService.RemoveRequirementAsync(Entity, row.DocumentCode);
+        if (result.IsSuccess)
+        {
+            NotificationService.Notify(NotificationSeverity.Success, "Removed", "Requirement removed.");
+            await LoadAsync();
+            await OnEntityChanged.InvokeAsync();
+        }
+        else
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Failed", result.ErrorMessage ?? "Unknown error");
+        }
+    }
+}

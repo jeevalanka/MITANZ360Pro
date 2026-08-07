@@ -1,16 +1,14 @@
 {
-  "EntityType": "Person",
-  "DisplayName": "Person",
+  "EntityType": "Employee",
+  "DisplayName": "Employee",
   "Fields": [
     { "Name": "FirstName", "Label": "First Name", "Type": "text", "Required": true, "MaxLength": 100 },
     { "Name": "LastName", "Label": "Last Name", "Type": "text", "Required": true, "MaxLength": 100 },
     { "Name": "Email", "Label": "Email", "Type": "email", "Required": true, "Pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
     { "Name": "Phone", "Label": "Phone", "Type": "text", "Required": false, "MaxLength": 30 },
-    { "Name": "DateOfBirth", "Label": "Date Of Birth", "Type": "date", "Required": false },
-    { "Name": "Gender", "Label": "Gender", "Type": "dropdown", "Required": false },
-    { "Name": "Nationality", "Label": "Nationality", "Type": "dropdown", "Required": false, "MaxLength": 100 },
-    { "Name": "PassportNo", "Label": "Passport Number", "Type": "text", "Required": false, "MaxLength": 50 },
-    { "Name": "Notes", "Label": "Notes", "Type": "textarea", "Required": false, "MaxLength": 2000 }
+    { "Name": "Department", "Label": "Department", "Type": "text", "Required": false, "MaxLength": 100 },
+    { "Name": "JobTitle", "Label": "Job Title", "Type": "text", "Required": false, "MaxLength": 100 },
+    { "Name": "NIC", "Label": "NIC", "Type": "text", "Required": false, "MaxLength": 20 }
   ],
   "RequiredDocuments": [
     { "Code": "NIC", "Required": true, "Status": "Requested" },

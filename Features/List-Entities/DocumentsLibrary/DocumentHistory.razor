@@ -1,0 +1,100 @@
+@namespace MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@inject IDocumentLibraryService DocumentService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+
+<link href="css/documents-library.css" rel="stylesheet" />
+
+@if (IsLoading)
+{
+    <div class="ms-docs-skeleton"></div>
+    <div class="ms-docs-skeleton"></div>
+}
+else if (Versions.Count == 0)
+{
+    <div class="ms-docs-empty">No version history.</div>
+}
+else
+{
+    <RadzenDataGrid Data="@Versions" TItem="DocumentVersionInfo" AllowSorting="true" Density="Density.Compact">
+        <Columns>
+            <RadzenDataGridColumn TItem="DocumentVersionInfo" Property="DocumentVersion" Title="Version" Width="90px">
+                <Template Context="v">
+                    v@(v.DocumentVersion) @if (v.IsLatest) { <span class="ms-docs-status" style="background:#16A34A">Latest</span> }
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="DocumentVersionInfo" Property="FileName" Title="File" />
+            <RadzenDataGridColumn TItem="DocumentVersionInfo" Property="Status" Title="Status" Width="120px" />
+            <RadzenDataGridColumn TItem="DocumentVersionInfo" Property="UploadedBy" Title="Uploaded By" Width="140px" />
+            <RadzenDataGridColumn TItem="DocumentVersionInfo" Title="Date" Width="140px">
+                <Template Context="v">@(v.UploadedDate?.ToString("g") ?? "—")</Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="DocumentVersionInfo" Title="Actions" Width="160px" Sortable="false">
+                <Template Context="v">
+                    <div class="ms-docs-actions">
+                        <RadzenButton Text="View" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                                      Click="@(() => ViewAsync(v))" />
+                        @if (!v.IsLatest)
+                        {
+                            <RadzenButton Text="Mark Latest" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                                          Click="@(() => MarkLatestAsync(v))" />
+                        }
+                    </div>
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    [Parameter] public string EntityType { get; set; } = "";
+    [Parameter] public string EntityNumber { get; set; } = "";
+    [Parameter] public string DocumentCode { get; set; } = "";
+
+    private List<DocumentVersionInfo> Versions = [];
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var history = await DocumentService.GetVersionHistoryAsync(EntityType, EntityNumber, DocumentCode);
+            Versions = history.ToList();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "History", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task ViewAsync(DocumentVersionInfo v)
+    {
+        var doc = await DocumentService.GetDocumentAsync(v.DriveItemId);
+        if (doc == null) return;
+        await DialogService.OpenAsync<DocumentViewer>(
+            $"v{v.DocumentVersion}",
+            new Dictionary<string, object?> { [nameof(DocumentViewer.Document)] = doc },
+            new DialogOptions { Width = "80%", Height = "80%" });
+    }
+
+    private async Task MarkLatestAsync(DocumentVersionInfo v)
+    {
+        var result = await DocumentService.MarkLatestAsync(v.DriveItemId);
+        if (result.Success)
+        {
+            NotificationService.Notify(NotificationSeverity.Success, "Version", "Marked as latest.");
+            var history = await DocumentService.GetVersionHistoryAsync(EntityType, EntityNumber, DocumentCode);
+            Versions = history.ToList();
+        }
+        else
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Version", result.ErrorMessage ?? "Failed");
+        }
+    }
+}

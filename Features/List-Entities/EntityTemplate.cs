@@ -12,6 +12,25 @@ public sealed class EntityTemplate
 
     [JsonPropertyName("Fields")]
     public List<EntityTemplateField> Fields { get; set; } = [];
+
+    /// <summary>
+    /// Default RequiredDocuments[] seeded into Entity Metadata for new records of this type.
+    /// Source of required docs remains Metadata JSON at runtime; SharePoint stores uploaded files.
+    /// </summary>
+    [JsonPropertyName("RequiredDocuments")]
+    public List<EntityRequiredDocumentTemplate>? RequiredDocuments { get; set; }
+}
+
+public sealed class EntityRequiredDocumentTemplate
+{
+    [JsonPropertyName("Code")]
+    public string Code { get; set; } = "";
+
+    [JsonPropertyName("Required")]
+    public bool Required { get; set; } = true;
+
+    [JsonPropertyName("Status")]
+    public string Status { get; set; } = "Requested";
 }
 
 public sealed class EntityTemplateField

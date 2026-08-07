@@ -197,7 +197,8 @@ public static class EntityMapper
     }
 
     public static bool IsReservedMetaKey(string key)
-        => key.StartsWith("__", StringComparison.Ordinal);
+        => key.StartsWith("__", StringComparison.Ordinal)
+           || string.Equals(key, "RequiredDocuments", StringComparison.OrdinalIgnoreCase);
 
     private static string GetMetaString(Dictionary<string, object?> metadata, string key)
     {

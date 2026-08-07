@@ -1,0 +1,50 @@
+@namespace MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@inject IDocumentLibraryService DocumentService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<div class="ms-docs">
+    <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+        Rejection requires remarks. The student may replace the document afterwards.
+    </RadzenAlert>
+    <div class="form-row">
+        <label>Remarks <span class="required-indicator">*</span></label>
+        <RadzenTextArea @bind-Value="Remarks" Style="width:100%" Rows="4" />
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem">
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@(() => DialogService.Close(false))" />
+        <RadzenButton Text="Reject" Icon="cancel" ButtonStyle="ButtonStyle.Danger" Click="@RejectAsync" Disabled="@(IsBusy || string.IsNullOrWhiteSpace(Remarks))" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public string DriveItemId { get; set; } = "";
+    [Parameter] public string RejectedBy { get; set; } = "";
+
+    private string? Remarks;
+    private bool IsBusy;
+
+    private async Task RejectAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Remarks)) return;
+        IsBusy = true;
+        try
+        {
+            var result = await DocumentService.RejectDocumentAsync(DriveItemId, RejectedBy, Remarks!);
+            if (result.Success)
+            {
+                NotificationService.Notify(NotificationSeverity.Success, "Rejected", "Document rejected.");
+                DialogService.Close(true);
+            }
+            else
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Reject failed", result.ErrorMessage ?? "Unknown error");
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+}

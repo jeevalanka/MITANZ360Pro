@@ -9,6 +9,8 @@ public sealed class SharePointOptions
     public string SiteId { get; set; } = "";
 
     public SharePointListOptions Lists { get; set; } = new();
+
+    public SharePointLibraryOptions Libraries { get; set; } = new();
 }
 
 public sealed class SharePointListOptions
@@ -20,4 +22,18 @@ public sealed class SharePointListOptions
     public string WorkflowHistory { get; set; } = "";
 
     public string ReferenceData { get; set; } = "";
+
+    /// <summary>Underlying list id for the Documents document library (metadata queries).</summary>
+    public string Documents { get; set; } = "";
+}
+
+/// <summary>Document library drive identifiers (not separate SharePoint lists for entity files).</summary>
+public sealed class SharePointLibraryOptions
+{
+    /// <summary>Entity Documents library drive id (library name: Documents).</summary>
+    public string Documents { get; set; } = "";
+
+    public string LibDocuments { get; set; } = "";
+
+    public string ListId { get; set; } = "";
 }

@@ -1,0 +1,270 @@
+@namespace MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@page "/documents"
+@layout MainLayout
+@attribute [Authorize(Roles = "Admin,SysAdmin")]
+
+@using MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using System.Security.Claims
+@inject IDocumentLibraryService DocumentService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Documents</PageTitle>
+<link href="css/documents-library.css" rel="stylesheet" />
+
+<div class="ms-docs">
+    <div class="ms-docs-header">
+        <div>
+            <h1 class="ms-docs-title">Documents</h1>
+            <p class="ms-docs-subtitle">Entity document library — SharePoint Documents (no folders). Filter by student number, type, code, status.</p>
+        </div>
+        <div class="ms-docs-toolbar">
+            <RadzenButton Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@ReloadAsync" />
+            <RadzenButton Text="Upload" Icon="upload" ButtonStyle="ButtonStyle.Primary" Click="@UploadAsync" />
+        </div>
+    </div>
+
+    <div class="ms-docs-filters" role="search">
+        <RadzenTextBox @bind-Value="Filter.SearchText" Placeholder="Search title, file, entity #, code" Style="width:100%" Change="@(_ => ReloadAsync())" />
+        <RadzenTextBox @bind-Value="Filter.EntityNumber" Placeholder="Student / Entity Number" Style="width:100%" Change="@(_ => ReloadAsync())" />
+        <RadzenTextBox @bind-Value="Filter.EntityType" Placeholder="Entity Type" Style="width:100%" Change="@(_ => ReloadAsync())" />
+        <RadzenDropDown TValue="string" Data="@CategoryCodes" @bind-Value="Filter.DocumentCode" Placeholder="Document Code" AllowClear="true" Style="width:100%" Change="@(_ => ReloadAsync())" />
+        <RadzenDropDown TValue="string" Data="@StatusCodes" @bind-Value="Filter.Status" Placeholder="Status" AllowClear="true" Style="width:100%" Change="@(_ => ReloadAsync())" />
+        <RadzenDropDown TValue="string" Data="@CategoryGroups" @bind-Value="Filter.Category" Placeholder="Category" AllowClear="true" Style="width:100%" Change="@(_ => ReloadAsync())" />
+        <RadzenDropDown TValue="bool?" Data="@VerifiedOptions" TextProperty="Text" ValueProperty="Value" @bind-Value="Filter.Verified" Placeholder="Verified" AllowClear="true" Style="width:100%" Change="@(_ => ReloadAsync())" />
+        <RadzenDropDown TValue="bool?" Data="@ExpiredOptions" TextProperty="Text" ValueProperty="Value" @bind-Value="Filter.Expired" Placeholder="Expiry" AllowClear="true" Style="width:100%" Change="@(_ => ReloadAsync())" />
+    </div>
+
+    <div class="ms-docs-card">
+        @if (IsLoading)
+        {
+            <div class="ms-docs-skeleton"></div>
+            <div class="ms-docs-skeleton"></div>
+            <div class="ms-docs-skeleton"></div>
+        }
+
+        <RadzenDataGrid Data="@Items"
+                        TItem="DocumentMetadata"
+                        AllowPaging="true"
+                        PageSize="@Filter.PageSize"
+                        Count="@TotalCount"
+                        LoadData="@OnLoadData"
+                        IsLoading="@IsLoading"
+                        AllowSorting="true"
+                        Density="Density.Compact"
+                        EmptyText="No documents found">
+            <Columns>
+                <RadzenDataGridColumn TItem="DocumentMetadata" Property="Title" Title="Document" Width="180px">
+                    <Template Context="doc">
+                        <strong>@doc.Title</strong>
+                        <div style="font-size:.75rem;color:#605e5c">@doc.DocumentCode · v@(doc.DocumentVersion)</div>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="DocumentMetadata" Property="EntityNumber" Title="Entity #" Width="120px" />
+                <RadzenDataGridColumn TItem="DocumentMetadata" Property="EntityType" Title="Type" Width="100px" />
+                <RadzenDataGridColumn TItem="DocumentMetadata" Title="Status" Width="130px">
+                    <Template Context="doc">
+                        <span class="ms-docs-status" style="background:@GetColor(doc.Status)">@doc.Status</span>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="DocumentMetadata" Property="UploadedBy" Title="Uploaded By" Width="140px" />
+                <RadzenDataGridColumn TItem="DocumentMetadata" Title="Uploaded" Width="130px">
+                    <Template Context="doc">@(doc.UploadedDate?.ToString("g") ?? "—")</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="DocumentMetadata" Property="VerifiedBy" Title="Verified By" Width="120px" />
+                <RadzenDataGridColumn TItem="DocumentMetadata" Title="Expiry" Width="110px">
+                    <Template Context="doc">@(doc.ExpiryDate?.ToString("d") ?? "—")</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="DocumentMetadata" Title="Actions" Width="220px" Sortable="false">
+                    <Template Context="doc">
+                        <div class="ms-docs-actions">
+                            <RadzenButton Text="View" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => ViewAsync(doc))" />
+                            <RadzenButton Text="Verify" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Click="@(() => VerifyAsync(doc))" />
+                            <RadzenButton Text="Reject" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(() => RejectAsync(doc))" />
+                            <RadzenButton Icon="edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" title="Edit metadata" Click="@(() => EditMetaAsync(doc))" />
+                            <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Click="@(() => DeleteAsync(doc))" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+</div>
+
+@code {
+    private DocumentFilter Filter = new() { IsLatestOnly = true, Active = true, PageSize = 25 };
+    private List<DocumentMetadata> Items = [];
+    private int TotalCount;
+    private bool IsLoading;
+    private List<string> StatusCodes = [];
+    private List<string> CategoryCodes = [];
+    private List<string> CategoryGroups = [];
+    private Dictionary<string, string> StatusColors = new(StringComparer.OrdinalIgnoreCase);
+    private string CurrentUser = "unknown";
+
+    private readonly List<(string Text, bool? Value)> VerifiedOptions =
+    [
+        ("Verified", true),
+        ("Not verified", false)
+    ];
+
+    private readonly List<(string Text, bool? Value)> ExpiredOptions =
+    [
+        ("Expired", true),
+        ("Not expired", false)
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        CurrentUser = auth.User.FindFirst(ClaimTypes.Email)?.Value ?? auth.User.Identity?.Name ?? "unknown";
+
+        var statuses = await DocumentService.GetStatusesAsync();
+        StatusCodes = statuses.Select(s => s.Code).ToList();
+        StatusColors = statuses.ToDictionary(s => s.Code, s => s.Color, StringComparer.OrdinalIgnoreCase);
+
+        var cats = await DocumentService.GetCategoriesAsync();
+        CategoryCodes = cats.Select(c => c.Code).ToList();
+        CategoryGroups = cats.Select(c => c.Category).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+
+        await ReloadAsync();
+    }
+
+    private async Task OnLoadData(LoadDataArgs args)
+    {
+        Filter.PageNumber = (args.Skip ?? 0) / Math.Max(1, Filter.PageSize) + 1;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        IsLoading = true;
+        try
+        {
+            var result = await DocumentService.SearchAsync(Filter);
+            Items = result.Items.ToList();
+            TotalCount = result.TotalCount;
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Documents", ex.Message);
+            Items = [];
+            TotalCount = 0;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string GetColor(string status)
+        => StatusColors.TryGetValue(status ?? "", out var c) ? c : "#64748B";
+
+    private async Task UploadAsync()
+    {
+        var cats = await DocumentService.GetCategoriesAsync();
+        // Need entity context — prompt via dialog fields on upload when entity known from filter
+        if (string.IsNullOrWhiteSpace(Filter.EntityNumber) || string.IsNullOrWhiteSpace(Filter.EntityType))
+        {
+            NotificationService.Notify(NotificationSeverity.Info, "Upload",
+                "Set Entity Type and Entity Number filters first, then click Upload. Or open the entity and use the Documents tab.");
+            return;
+        }
+
+        var result = await DialogService.OpenAsync<DocumentUploadDialog>(
+            "Upload Document",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentUploadDialog.EntityType)] = Filter.EntityType,
+                [nameof(DocumentUploadDialog.EntityNumber)] = Filter.EntityNumber,
+                [nameof(DocumentUploadDialog.Categories)] = cats.ToList(),
+                [nameof(DocumentUploadDialog.UploadedBy)] = CurrentUser,
+                [nameof(DocumentUploadDialog.UploadedByRole)] = "Admin",
+                [nameof(DocumentUploadDialog.IsReplace)] = false
+            },
+            new DialogOptions { Width = "560px" });
+
+        if (result is true)
+            await ReloadAsync();
+    }
+
+    private async Task ViewAsync(DocumentMetadata doc)
+    {
+        await DialogService.OpenAsync<DocumentViewer>(
+            doc.Title,
+            new Dictionary<string, object?> { [nameof(DocumentViewer.Document)] = doc },
+            new DialogOptions { Width = "80%", Height = "85%" });
+    }
+
+    private async Task VerifyAsync(DocumentMetadata doc)
+    {
+        var result = await DialogService.OpenAsync<DocumentVerifyDialog>(
+            $"Verify — {doc.Title}",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentVerifyDialog.DriveItemId)] = doc.DriveItemId,
+                [nameof(DocumentVerifyDialog.VerifiedBy)] = CurrentUser
+            },
+            new DialogOptions { Width = "480px" });
+
+        if (result is true)
+            await ReloadAsync();
+    }
+
+    private async Task RejectAsync(DocumentMetadata doc)
+    {
+        var result = await DialogService.OpenAsync<DocumentRejectDialog>(
+            $"Reject — {doc.Title}",
+            new Dictionary<string, object?>
+            {
+                [nameof(DocumentRejectDialog.DriveItemId)] = doc.DriveItemId,
+                [nameof(DocumentRejectDialog.RejectedBy)] = CurrentUser
+            },
+            new DialogOptions { Width = "480px" });
+
+        if (result is true)
+            await ReloadAsync();
+    }
+
+    private async Task EditMetaAsync(DocumentMetadata doc)
+    {
+        await DialogService.OpenAsync<DocumentDetails>(
+            "Document Details",
+            new Dictionary<string, object?> { [nameof(DocumentDetails.Document)] = doc },
+            new DialogOptions { Width = "520px" });
+
+        // Lightweight metadata edit
+        var newTitle = await DialogService.OpenAsync<DocumentMetadataEditDialog>(
+            "Update Metadata",
+            new Dictionary<string, object?> { [nameof(DocumentMetadataEditDialog.Document)] = doc },
+            new DialogOptions { Width = "480px" });
+
+        if (newTitle is true)
+            await ReloadAsync();
+    }
+
+    private async Task DeleteAsync(DocumentMetadata doc)
+    {
+        var confirm = await DialogService.Confirm(
+            $"Delete '{doc.FileName}'?",
+            "Delete document",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Cancel" });
+
+        if (confirm != true) return;
+
+        var result = await DocumentService.DeleteFileAsync(doc.DriveItemId);
+        if (result.Success)
+        {
+            NotificationService.Notify(NotificationSeverity.Success, "Deleted", "Document deleted.");
+            await ReloadAsync();
+        }
+        else
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Delete failed", result.ErrorMessage ?? "Unknown error");
+        }
+    }
+}

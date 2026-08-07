@@ -29,5 +29,12 @@
     { "Name": "EmailVerified", "Label": "Email Verified", "Type": "text", "Required": false, "MaxLength": 10 },
     { "Name": "EmailVerifiedDate", "Label": "Email Verified Date", "Type": "text", "Required": false, "MaxLength": 50 },
     { "Name": "NIC", "Label": "NIC", "Type": "text", "Required": false, "MaxLength": 20 }
+  ],
+  "RequiredDocuments": [
+    { "Code": "PASSPORT", "Required": true, "Status": "Requested" },
+    { "Code": "DEGREE", "Required": true, "Status": "Requested" },
+    { "Code": "IELTS", "Required": false, "Status": "NotRequired" },
+    { "Code": "CV", "Required": true, "Status": "Requested" },
+    { "Code": "PHOTO", "Required": true, "Status": "Requested" }
   ]
 }

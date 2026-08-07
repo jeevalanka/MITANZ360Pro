@@ -64,3 +64,12 @@ Apply these patterns for modals, drawers, and action forms project-wide:
 - Import Defaults skips duplicate `Category`+`Code`; does not overwrite.
 - App consumers: Student Visa (`/student-visa`) and Entity `DynamicMetadataRenderer` load active options via `GetLookupOptionsAsync(category)` where category matches field name (Gender, Nationality, Country, PreferredCountry, etc.).
 - After adding/editing Reference Data, re-open forms (5‑minute lookup cache). Re-run **Import Defaults** to seed Gender / PreferredContactMethod / EnglishTest if missing.
+
+### Entity Documents Library
+- All document code lives under `Features/List-Entities/DocumentsLibrary/`. Shared lookups: `Features/Shared/DocumentCategories.json` and `DocumentStatus.json` (do not hardcode status/category codes).
+- Files are stored in the SharePoint **Documents** document library (flat — **no folders**). Relationship columns: `EntityType`, `EntityNumber` (= Entity.EntityId), `DocumentCode`, plus Status / versioning (`DocumentVersion`, `IsLatest`).
+- Config: `SharePoint:Libraries:Documents` (drive id) and `SharePoint:Lists:Documents` (library list id for metadata queries). Do **not** create a separate list for file storage.
+- UI → `IDocumentLibraryService` → Graph via existing `SharePointService.GraphClient` (no second SharePoint connector). Admin page: `/documents`. Entity editor/drawer embeds `EntityDocumentsPanel`.
+- **Sources of truth:** Entity `Metadata.RequiredDocuments[]` = required docs; SharePoint library = uploaded files. Match by `DocumentCode`. Replace always uploads a new file and flips `IsLatest` (never overwrite).
+- Download/preview API: `GET /api/entity-documents/{driveItemId}?inline=true` (authorized). LMS preview remains `/api/documents/render/{id}`.
+- Permissions: pass `IsAdminMode=false` on `EntityDocumentsPanel` for student UX (upload/replace requested only; no verify/delete/metadata).

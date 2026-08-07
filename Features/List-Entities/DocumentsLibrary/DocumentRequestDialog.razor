@@ -1,0 +1,27 @@
+@namespace MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@inject DialogService DialogService
+
+<div class="ms-docs">
+    <div class="form-row">
+        <label>Document Type</label>
+        <RadzenDropDown TValue="string"
+                        Data="@Categories"
+                        TextProperty="Title"
+                        ValueProperty="Code"
+                        @bind-Value="SelectedCode"
+                        Placeholder="Select document to request"
+                        Style="width:100%" />
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem">
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@(() => DialogService.Close(null))" />
+        <RadzenButton Text="Request" Icon="playlist_add" ButtonStyle="ButtonStyle.Primary"
+                      Disabled="@string.IsNullOrWhiteSpace(SelectedCode)"
+                      Click="@(() => DialogService.Close(SelectedCode))" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<DocumentCategoryDefinition> Categories { get; set; } = [];
+    private string? SelectedCode;
+}

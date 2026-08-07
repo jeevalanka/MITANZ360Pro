@@ -166,6 +166,8 @@ public sealed class EntityService : IEntityService
 
             if (template != null)
             {
+                SeedRequiredDocumentsFromTemplate(entity, template);
+
                 var validation = _templateService.ValidateMetadata(template, entity.Metadata);
 
                 if (!validation.IsSuccess)
@@ -649,6 +651,24 @@ public sealed class EntityService : IEntityService
         }
 
         entity.ModifiedBy = display;
+    }
+
+    private static void SeedRequiredDocumentsFromTemplate(Entity entity, EntityTemplate template)
+    {
+        if (entity.Metadata.ContainsKey("RequiredDocuments"))
+            return;
+
+        if (template.RequiredDocuments is not { Count: > 0 })
+            return;
+
+        entity.Metadata["RequiredDocuments"] = template.RequiredDocuments
+            .Select(d => new Dictionary<string, object?>
+            {
+                ["Code"] = d.Code,
+                ["Required"] = d.Required,
+                ["Status"] = d.Status
+            })
+            .ToList();
     }
 
     private async Task<string> ResolveAppUserDisplayAsync()

@@ -182,6 +182,8 @@ builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntitySequenceServ
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityActivityService, MITANZ360Pro.Web.Modules.Entities.EntityActivityService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityWorkflowService, MITANZ360Pro.Web.Modules.Entities.EntityWorkflowService>();
 builder.Services.AddSingleton<MITANZ360Pro.Web.Modules.Entities.IStudentVisaRateLimiter, MITANZ360Pro.Web.Modules.Entities.StudentVisaRateLimiter>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.DocumentLookupDataService>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.IDocumentLibraryService, MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.DocumentLibraryService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.ReferenceData.IReferenceDataRepository, MITANZ360Pro.Web.Modules.ReferenceData.ReferenceDataRepository>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.ReferenceData.IReferenceDataService, MITANZ360Pro.Web.Modules.ReferenceData.ReferenceDataService>();
 #endregion
@@ -286,6 +288,38 @@ app.MapGet("/api/documents/render/{id}", async (
     catch (Exception ex)
     {
         return Results.Problem($"Document render failed: {ex.Message}");
+    }
+})
+.RequireAuthorization();
+
+app.MapGet("/api/entity-documents/{id}", async (
+    string id,
+    bool? inline,
+    MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.IDocumentLibraryService docs,
+    HttpContext context) =>
+{
+    if (string.IsNullOrWhiteSpace(id))
+        return Results.BadRequest("Missing document id.");
+
+    try
+    {
+        var content = await docs.DownloadAsync(id, context.RequestAborted);
+        if (content == null)
+            return Results.NotFound();
+
+        var disposition = inline == true ? "inline" : "attachment";
+        context.Response.Headers.ContentDisposition =
+            $"{disposition}; filename=\"{content.FileName.Replace("\"", "")}\"";
+
+        return Results.File(
+            content.Stream,
+            content.ContentType,
+            fileDownloadName: inline == true ? null : content.FileName,
+            enableRangeProcessing: true);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Entity document download failed: {ex.Message}");
     }
 })
 .RequireAuthorization();

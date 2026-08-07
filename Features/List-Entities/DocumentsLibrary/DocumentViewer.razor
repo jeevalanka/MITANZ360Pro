@@ -1,0 +1,133 @@
+@namespace MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@inject IDocumentLibraryService DocumentService
+@inject NotificationService NotificationService
+@inject NavigationManager Navigation
+
+<link href="css/documents-library.css" rel="stylesheet" />
+
+@if (Document == null)
+{
+    <p>No document selected.</p>
+}
+else
+{
+    <div class="ms-docs">
+        <div style="display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+            <div>
+                <strong>@Document.Title</strong>
+                <div style="font-size:.85rem;color:#605e5c">
+                    @Document.FileName · v@(Document.DocumentVersion)
+                    · <span class="ms-docs-status" style="background:@(StatusColor)">@Document.Status</span>
+                </div>
+            </div>
+            <div class="ms-docs-actions">
+                <RadzenButton Text="Download" Icon="download" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@DownloadAsync" />
+                @if (!string.IsNullOrWhiteSpace(Document.WebUrl))
+                {
+                    <RadzenButton Text="Open" Icon="open_in_new" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined"
+                                  Click="@(() => Navigation.NavigateTo(Document.WebUrl!, forceLoad: true))" />
+                }
+                <RadzenButton Text="Details" Icon="info" ButtonStyle="ButtonStyle.Light" Click="@ShowDetailsAsync" />
+            </div>
+        </div>
+
+        @if (IsImage)
+        {
+            @if (!string.IsNullOrWhiteSpace(PreviewObjectUrl))
+            {
+                <img src="@PreviewObjectUrl" alt="@Document.Title" class="ms-docs-preview-img" />
+            }
+            else if (IsLoadingPreview)
+            {
+                <div class="ms-docs-skeleton" style="height:240px"></div>
+            }
+        }
+        else if (IsPdf)
+        {
+            <iframe class="ms-docs-preview" src="@PreviewApiUrl" title="@Document.Title"></iframe>
+        }
+        else
+        {
+            <div class="ms-docs-card ms-docs-empty">
+                <RadzenIcon Icon="description" />
+                <p>Preview is not available for this Office file type in-browser.</p>
+                <p>Download the file or open it in SharePoint.</p>
+                <RadzenButton Text="Download" Icon="download" ButtonStyle="ButtonStyle.Primary" Click="@DownloadAsync" />
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public DocumentMetadata? Document { get; set; }
+    [Inject] DialogService DialogService { get; set; } = default!;
+
+    private bool IsLoadingPreview;
+    private string? PreviewObjectUrl;
+    private string StatusColor = "#2563EB";
+
+    private bool IsImage => HasExt(".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp");
+    private bool IsPdf => HasExt(".pdf");
+
+    private string PreviewApiUrl =>
+        Document == null ? "" : $"/api/entity-documents/{Uri.EscapeDataString(Document.DriveItemId)}?inline=true";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Document == null) return;
+
+        var status = DocumentService.GetStatusDefinition(Document.Status);
+        StatusColor = status?.Color ?? "#2563EB";
+
+        if (IsImage)
+            await LoadImagePreviewAsync();
+    }
+
+    private async Task LoadImagePreviewAsync()
+    {
+        if (Document == null) return;
+        IsLoadingPreview = true;
+        try
+        {
+            var content = await DocumentService.PreviewAsync(Document.DriveItemId);
+            if (content == null) return;
+
+            await using var ms = new MemoryStream();
+            await content.Stream.CopyToAsync(ms);
+            var b64 = Convert.ToBase64String(ms.ToArray());
+            PreviewObjectUrl = $"data:{content.ContentType};base64,{b64}";
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Preview", ex.Message);
+        }
+        finally
+        {
+            IsLoadingPreview = false;
+        }
+    }
+
+    private async Task DownloadAsync()
+    {
+        if (Document == null) return;
+        Navigation.NavigateTo($"/api/entity-documents/{Uri.EscapeDataString(Document.DriveItemId)}", forceLoad: true);
+        await Task.CompletedTask;
+    }
+
+    private async Task ShowDetailsAsync()
+    {
+        if (Document == null) return;
+        await DialogService.OpenAsync<DocumentDetails>(
+            "Document Details",
+            new Dictionary<string, object?> { [nameof(DocumentDetails.Document)] = Document },
+            new DialogOptions { Width = "520px" });
+    }
+
+    private bool HasExt(params string[] exts)
+    {
+        var name = Document?.FileName ?? "";
+        var ext = Path.GetExtension(name);
+        return exts.Any(e => string.Equals(e, ext, StringComparison.OrdinalIgnoreCase));
+    }
+}
