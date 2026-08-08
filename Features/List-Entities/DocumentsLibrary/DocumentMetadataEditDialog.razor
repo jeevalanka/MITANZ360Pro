@@ -1,0 +1,91 @@
+@namespace MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@inject IDocumentLibraryService DocumentService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<div class="ms-docs">
+    <div class="form-row">
+        <label>Title</label>
+        <RadzenTextBox @bind-Value="Title" Style="width:100%" />
+    </div>
+    <div class="form-row">
+        <label>Description</label>
+        <RadzenTextArea @bind-Value="Description" Style="width:100%" Rows="2" />
+    </div>
+    <div class="form-row">
+        <label>Status</label>
+        <RadzenDropDown TValue="string" Data="@Statuses" TextProperty="Title" ValueProperty="Code" @bind-Value="Status" Style="width:100%" />
+    </div>
+    <div class="form-row">
+        <label>Expiry Date</label>
+        <RadzenDatePicker @bind-Value="ExpiryDate" Style="width:100%" AllowClear="true" />
+    </div>
+    <div class="form-row">
+        <label>Remarks</label>
+        <RadzenTextArea @bind-Value="Remarks" Style="width:100%" Rows="2" />
+    </div>
+    <div class="form-row form-row-inline">
+        <RadzenCheckBox @bind-Value="Active" Name="doc-active" />
+        <label for="doc-active">Active</label>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem">
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@(() => DialogService.Close(false))" />
+        <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="@SaveAsync" Disabled="@IsBusy" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public DocumentMetadata Document { get; set; } = new();
+
+    private string Title = "";
+    private string? Description;
+    private string Status = "Uploaded";
+    private DateTime? ExpiryDate;
+    private string? Remarks;
+    private bool Active = true;
+    private bool IsBusy;
+    private List<DocumentStatusDefinition> Statuses = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        Statuses = (await DocumentService.GetStatusesAsync()).ToList();
+        Title = Document.Title;
+        Description = Document.Description;
+        Status = Document.Status;
+        ExpiryDate = Document.ExpiryDate;
+        Remarks = Document.Remarks;
+        Active = Document.Active;
+    }
+
+    private async Task SaveAsync()
+    {
+        IsBusy = true;
+        try
+        {
+            var result = await DocumentService.UpdateMetadataAsync(Document.DriveItemId, new DocumentMetadataUpdate
+            {
+                Title = Title,
+                Description = Description,
+                Status = Status,
+                ExpiryDate = ExpiryDate,
+                Remarks = Remarks,
+                Active = Active
+            });
+
+            if (result.Success)
+            {
+                NotificationService.Notify(NotificationSeverity.Success, "Saved", "Metadata updated.");
+                DialogService.Close(true);
+            }
+            else
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Save failed", result.ErrorMessage ?? "Unknown error");
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+}

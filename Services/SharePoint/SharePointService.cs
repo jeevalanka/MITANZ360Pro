@@ -11,6 +11,9 @@ public partial class SharePointService
     private readonly ILogger<SharePointService> _logger;
     protected readonly GraphServiceClient _graphClient;
 
+    /// <summary>Shared Graph client for feature services that reuse this SharePoint connector.</summary>
+    public GraphServiceClient GraphClient => _graphClient;
+
     // ✅ CANONICAL GRAPH IDENTIFIER (USE THIS EVERYWHERE)
     protected readonly string SiteId;
     protected readonly string LmsLibraryListId;

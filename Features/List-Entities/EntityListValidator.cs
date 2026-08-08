@@ -1,11 +1,14 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
-using MITANZ360Pro.Web.Modules.Entities;
+using MITANZ360Pro.Web.Infrastructure.SharePoint;
 
-namespace MITANZ360Pro.Web.Infrastructure.SharePoint;
+namespace MITANZ360Pro.Web.Modules.Entities;
 
-public sealed class SharePointListValidator
+/// <summary>
+/// Startup validation for the SharePoint Entities list used by this feature.
+/// </summary>
+public sealed class EntityListValidator
 {
     private static readonly string[] RequiredIndexedFields =
     [
@@ -17,12 +20,12 @@ public sealed class SharePointListValidator
 
     private readonly GraphServiceClient _graphClient;
     private readonly SharePointOptions _options;
-    private readonly ILogger<SharePointListValidator> _logger;
+    private readonly ILogger<EntityListValidator> _logger;
 
-    public SharePointListValidator(
+    public EntityListValidator(
         GraphServiceClient graphClient,
         IOptions<SharePointOptions> options,
-        ILogger<SharePointListValidator> logger)
+        ILogger<EntityListValidator> logger)
     {
         _graphClient = graphClient;
         _options = options.Value;

@@ -14,6 +14,10 @@
 @inject NavigationManager Navigation
 @inject HttpClient Http
 
+@{
+    RenderFragment? bodyContent = Body;
+}
+
 <ErrorBoundary>
     <ChildContent>
 
@@ -88,7 +92,7 @@
 
                     <!-- MAIN CONTENT -->
                     <article class="content">
-                        @Body
+                        @bodyContent
                     </article>
 
                 </div>

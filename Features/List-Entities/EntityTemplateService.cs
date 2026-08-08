@@ -1,8 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-using MITANZ360Pro.Web.Common;
-
 namespace MITANZ360Pro.Web.Modules.Entities;
 
 public interface IEntityTemplateService
@@ -34,7 +32,22 @@ public sealed class EntityTemplateService : IEntityTemplateService
 
     public async Task<IReadOnlyList<EntityTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default)
     {
-        var directory = Path.Combine(_environment.WebRootPath, "Data", "EntityTemplates");
+        // Templates live with the feature: Features/List-Entities/Templates
+        var directory = Path.Combine(
+            _environment.ContentRootPath,
+            "Features",
+            "List-Entities",
+            "Templates");
+
+        if (!Directory.Exists(directory))
+        {
+            // Published output copy (see csproj CopyToOutputDirectory)
+            directory = Path.Combine(
+                AppContext.BaseDirectory,
+                "Features",
+                "List-Entities",
+                "Templates");
+        }
 
         if (!Directory.Exists(directory))
         {
@@ -87,6 +100,11 @@ public sealed class EntityTemplateService : IEntityTemplateService
 
         foreach (var key in metadata.Keys)
         {
+            if (EntityMapper.IsReservedMetaKey(key))
+            {
+                continue;
+            }
+
             if (!allowed.Contains(key))
             {
                 return ServiceResult.Failure($"Unknown metadata field '{key}' for template '{template.EntityType}'.");

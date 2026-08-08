@@ -1,5 +1,6 @@
 @page "/entities"
-@layout MainLayout
+@layout MainLayout_No_Left_RightPan
+
 @attribute [Authorize(Roles = "Admin,SysAdmin")]
 @implements IDisposable
 
@@ -16,33 +17,36 @@
 
 <PageTitle>Entities</PageTitle>
 
-<RadzenCard class="entity-page" aria-label="Entity management">
-    <div class="entity-header">
+<div class="ms-entities">
+    <div class="ms-entities-header">
         <div>
-            <h2>Entities</h2>
-            <p class="text-muted">Manage metadata-driven entity records.</p>
+            <h1 class="ms-entities-title">Entities</h1>
+            <p class="ms-entities-subtitle">Manage metadata-driven entity records.</p>
         </div>
 
-        <div class="entity-toolbar" role="toolbar" aria-label="Entity actions">
+        <div class="ms-entities-toolbar" role="toolbar" aria-label="Entity actions">
             <RadzenButton Text="New"
                           Icon="add"
+                          ButtonStyle="ButtonStyle.Primary"
                           Click="@BeginCreate"
                           aria-label="Create new entity" />
             <RadzenButton Text="Refresh"
                           Icon="refresh"
-                          ButtonStyle="ButtonStyle.Light"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Variant="Variant.Outlined"
                           Click="@RefreshGridAsync"
                           aria-label="Refresh entity list" />
             <RadzenButton Text="Export"
                           Icon="download"
-                          ButtonStyle="ButtonStyle.Light"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Variant="Variant.Outlined"
                           Click="@ExportCurrentPage"
                           Disabled="@(!PagedItems.Any())"
                           aria-label="Export current page" />
         </div>
     </div>
 
-    <div class="entity-filters" role="search" aria-label="Entity filters">
+    <div class="ms-entities-filters" role="search" aria-label="Entity filters">
         <RadzenTextBox Value="@Filter.SearchText"
                        ValueChanged="@OnSearchTextChanged"
                        Placeholder="Search title, ID, type, or metadata"
@@ -95,239 +99,294 @@
                           aria-label="Created to date" />
     </div>
 
-    @if (IsGridLoading)
+    @if (IsGridLoading && !HasLoadedOnce)
     {
-        <div class="entity-loading" role="status" aria-live="polite">
+        <div class="ms-entities-loading" role="status" aria-live="polite">
             <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width:100%" />
             <span>Loading entities...</span>
         </div>
     }
 
-    @if (!IsGridLoading && TotalCount == 0)
-    {
-        <div class="entity-empty" role="status">
-            <p>No entities found.</p>
-            <RadzenButton Text="Create First Entity"
-                          Icon="add"
-                          Click="@BeginCreate"
-                          aria-label="Create first entity" />
-        </div>
-    }
-    else if (!IsGridLoading)
-    {
+    <div class="ms-entities-grid-wrap @(IsGridLoading ? "is-loading" : null)">
         <RadzenDataGrid @ref="Grid"
                         TItem="Entity"
                         Data="@PagedItems"
                         Count="@TotalCount"
                         LoadData="@LoadGridData"
+                        IsLoading="@IsGridLoading"
                         AllowPaging="true"
                         PageSize="25"
-                        AllowSorting="true"
+                        AllowSorting="false"
                         Responsive="true"
+                        Density="Density.Compact"
+                        class="ms-entities-grid"
                         aria-label="Entity list">
             <Columns>
-                <RadzenDataGridColumn Property="EntityId" Title="Entity ID" Width="140px" />
                 <RadzenDataGridColumn Property="Title" Title="Title" />
+                <RadzenDataGridColumn Property="EntityId" Title="Entity ID" Width="140px" />
                 <RadzenDataGridColumn Property="EntityType" Title="Type" Width="120px" />
-                <RadzenDataGridColumn Property="Status" Title="Status" Width="110px" />
+                <RadzenDataGridColumn Property="Status" Title="Status" Width="110px">
+                    <Template Context="item">
+                        <span class="ms-status ms-status-@item.Status.ToLowerInvariant()">@item.Status</span>
+                    </Template>
+                </RadzenDataGridColumn>
                 <RadzenDataGridColumn Title="Active" Width="90px">
                     <Template Context="item">
                         @(item.IsActive ? "Yes" : "No")
                     </Template>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn Property="Created" Title="Created" Width="160px" FormatString="{0:g}" />
-                <RadzenDataGridColumn Title="Actions" Width="120px" Sortable="false" Filterable="false">
+                <RadzenDataGridColumn Title="Actions" Width="140px" Sortable="false" Filterable="false">
                     <Template Context="item">
-                        <RadzenDropDownButton Text="Actions"
-                                              Icon="more_vert"
-                                              aria-label="@($"Actions for {item.EntityId}")">
-                            <ChildContent>
-                                <RadzenDropDownButtonItem Text="View" Icon="visibility" Click="@(() => OpenDrawer(item))" />
-                                <RadzenDropDownButtonItem Text="Edit" Icon="edit" Click="@(() => BeginEdit(item))" />
-                                <RadzenDropDownButtonItem Text="Archive" Icon="archive" Click="@(() => ArchiveEntity(item))" />
-                            </ChildContent>
-                        </RadzenDropDownButton>
+                        <div class="ms-row-actions">
+                            <RadzenButton Icon="edit"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Size="ButtonSize.Small"
+                                          class="ms-action-btn"
+                                          title="Edit"
+                                          Click="@(() => BeginEdit(item))"
+                                          aria-label="@($"Edit {item.EntityId}")" />
+                            <RadzenButton Icon="visibility"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Size="ButtonSize.Small"
+                                          class="ms-action-btn"
+                                          title="View"
+                                          Click="@(() => OpenDrawer(item))"
+                                          aria-label="@($"View {item.EntityId}")" />
+                            <RadzenButton Icon="delete"
+                                          ButtonStyle="ButtonStyle.Danger"
+                                          Variant="Variant.Text"
+                                          Size="ButtonSize.Small"
+                                          class="ms-action-btn"
+                                          title="Delete"
+                                          Click="@(() => DeleteEntity(item))"
+                                          aria-label="@($"Delete {item.EntityId}")" />
+                        </div>
                     </Template>
                 </RadzenDataGridColumn>
             </Columns>
         </RadzenDataGrid>
-    }
+
+        @if (HasLoadedOnce && !IsGridLoading && TotalCount == 0)
+        {
+            <div class="ms-entities-empty" role="status">
+                <p>No entities found.</p>
+                <RadzenButton Text="Create First Entity"
+                              Icon="add"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Click="@BeginCreate"
+                              aria-label="Create first entity" />
+            </div>
+        }
+    </div>
+
 
     @if (ShowEditor)
     {
-        <div class="entity-editor-overlay" role="dialog" aria-modal="true" aria-labelledby="entity-editor-title">
-            <RadzenCard class="entity-editor">
-                <div class="entity-editor-header">
+        <div class="ms-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="entity-editor-title">
+            <div class="ms-modal-card entity-editor">
+                <div class="ms-modal-header">
                     <h3 id="entity-editor-title">@(IsCreateMode ? "Create Entity" : "Edit Entity")</h3>
                     <RadzenButton Icon="close"
                                   ButtonStyle="ButtonStyle.Light"
+                                  Variant="Variant.Text"
+                                  class="ms-modal-close"
                                   Click="@CloseEditor"
                                   aria-label="Close editor" />
                 </div>
 
-                @if (IsSaving)
-                {
-                    <div class="entity-loading" role="status" aria-live="polite">
-                        <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width:100%" />
-                        <span>@(IsCreateMode ? "Creating entity..." : "Saving entity...")</span>
-                    </div>
-                }
-
-                <fieldset class="entity-section" disabled="@IsSaving">
-                    <legend>Basic Information</legend>
-
-                    <div class="form-row">
-                        <label for="entity-id">
-                            Entity ID <span class="required-indicator" aria-hidden="true">*</span>
-                        </label>
-                        <div class="entity-id-row">
-                            <RadzenTextBox id="entity-id"
-                                           Value="@EditorModel.EntityId"
-                                           ValueChanged="@OnEntityIdChanged"
-                                           Style="width:100%"
-                                           Disabled="@(!IsCreateMode)"
-                                           aria-required="true"
-                                           aria-describedby="entity-id-status" />
-                            @if (IsCreateMode)
-                            {
-                                <RadzenButton Text="Generate"
-                                              Icon="autorenew"
-                                              ButtonStyle="ButtonStyle.Light"
-                                              Click="@GenerateEntityIdAsync"
-                                              aria-label="Generate entity ID" />
-                            }
-                        </div>
-                        <div id="entity-id-status" class="entity-id-status" aria-live="polite">
-                            @if (IdAvailability == EntityIdAvailability.Checking)
-                            {
-                                <span>Checking availability...</span>
-                            }
-                            else if (IdAvailability == EntityIdAvailability.Available)
-                            {
-                                <span class="status-ok">Available</span>
-                            }
-                            else if (IdAvailability == EntityIdAvailability.Duplicate)
-                            {
-                                <span class="status-warn">Already exists</span>
-                            }
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <label for="entity-title">
-                            Title <span class="required-indicator" aria-hidden="true">*</span>
-                        </label>
-                        <RadzenTextBox id="entity-title"
-                                       @bind-Value="EditorModel.Title"
-                                       Style="width:100%"
-                                       Change="@(_ => MarkDirty())"
-                                       aria-required="true" />
-                    </div>
-
-                    <div class="form-row">
-                        <label for="entity-type">
-                            Entity Type <span class="required-indicator" aria-hidden="true">*</span>
-                        </label>
-                        <RadzenDropDown id="entity-type"
-                                        TValue="string"
-                                        Data="@EntityTypeOptions"
-                                        TextProperty="DisplayName"
-                                        ValueProperty="EntityType"
-                                        @bind-Value="EditorModel.EntityType"
-                                        Change="@OnEntityTypeChanged"
-                                        Style="width:100%"
-                                        aria-required="true" />
-                    </div>
-
-                    <div class="form-row">
-                        <label for="entity-status">Status</label>
-                        <RadzenDropDown id="entity-status"
-                                        TValue="string"
-                                        Data="@StatusOptions"
-                                        @bind-Value="EditorModel.Status"
-                                        Style="width:100%" />
-                    </div>
-
-                    <div class="form-row">
-                        <RadzenCheckBox @bind-Value="EditorModel.IsActive" Name="entity-active" />
-                        <label for="entity-active">Active</label>
-                    </div>
-                </fieldset>
-
-                <fieldset class="entity-section" disabled="@IsSaving">
-                    <legend>Metadata</legend>
-
-                    @if (IsTemplateLoading)
+                <div class="ms-modal-body">
+                    @if (IsSaving)
                     {
-                        <div class="entity-loading" role="status" aria-live="polite">
+                        <div class="ms-entities-loading" role="status" aria-live="polite">
                             <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width:100%" />
-                            <span>Loading template...</span>
+                            <span>@(IsCreateMode ? "Creating entity..." : "Saving entity...")</span>
                         </div>
                     }
-                    else
+
+                    <section class="ms-section-card" disabled="@IsSaving">
+                        <h4 class="ms-section-title">Basic Information</h4>
+
+                        <div class="form-row">
+                            <label for="entity-id">
+                                Entity ID <span class="required-indicator" aria-hidden="true">*</span>
+                            </label>
+                            <div class="entity-id-row">
+                                <RadzenTextBox id="entity-id"
+                                               Value="@EditorModel.EntityId"
+                                               ValueChanged="@OnEntityIdChanged"
+                                               Style="width:100%"
+                                               Disabled="@(!IsCreateMode)"
+                                               aria-required="true"
+                                               aria-describedby="entity-id-status" />
+                                @if (IsCreateMode)
+                                {
+                                    <RadzenButton Text="Generate"
+                                                  Icon="autorenew"
+                                                  ButtonStyle="ButtonStyle.Secondary"
+                                                  Variant="Variant.Outlined"
+                                                  class="ms-action-btn"
+                                                  Click="@GenerateEntityIdAsync"
+                                                  aria-label="Generate entity ID" />
+                                }
+                            </div>
+                            <div id="entity-id-status" class="entity-id-status" aria-live="polite">
+                                @if (IdAvailability == EntityIdAvailability.Checking)
+                                {
+                                    <span>Checking availability...</span>
+                                }
+                                else if (IdAvailability == EntityIdAvailability.Available)
+                                {
+                                    <span class="status-ok">Available</span>
+                                }
+                                else if (IdAvailability == EntityIdAvailability.Duplicate)
+                                {
+                                    <span class="status-warn">Already exists</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="entity-title">
+                                Title <span class="required-indicator" aria-hidden="true">*</span>
+                            </label>
+                            <RadzenTextBox id="entity-title"
+                                           @bind-Value="EditorModel.Title"
+                                           Style="width:100%"
+                                           Change="@(_ => MarkDirty())"
+                                           aria-required="true" />
+                        </div>
+
+                        <div class="form-row">
+                            <label for="entity-type">
+                                Entity Type <span class="required-indicator" aria-hidden="true">*</span>
+                            </label>
+                            <RadzenDropDown id="entity-type"
+                                            TValue="string"
+                                            Data="@EntityTypeOptions"
+                                            TextProperty="DisplayName"
+                                            ValueProperty="EntityType"
+                                            @bind-Value="EditorModel.EntityType"
+                                            Change="@OnEntityTypeChanged"
+                                            Style="width:100%"
+                                            aria-required="true" />
+                            @if (!IsCreateMode && EntityTypeChanged)
+                            {
+                                <p class="ms-hint">Type changed — previous type metadata will be removed on Save (you will be asked to confirm).</p>
+                            }
+                        </div>
+
+                        <div class="form-row">
+                            <label for="entity-status">Status</label>
+                            <RadzenDropDown id="entity-status"
+                                            TValue="string"
+                                            Data="@StatusOptions"
+                                            @bind-Value="EditorModel.Status"
+                                            Change="@(_ => MarkDirty())"
+                                            Style="width:100%" />
+                        </div>
+
+                        <div class="form-row form-row-inline">
+                            <RadzenCheckBox @bind-Value="EditorModel.IsActive" Name="entity-active" Change="@((bool _) => MarkDirty())" />
+                            <label for="entity-active">Active</label>
+                        </div>
+                    </section>
+
+                    <section class="ms-section-card" disabled="@IsSaving">
+                        <h4 class="ms-section-title">Metadata</h4>
+
+                        @if (IsTemplateLoading)
+                        {
+                            <div class="ms-entities-loading" role="status" aria-live="polite">
+                                <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width:100%" />
+                                <span>Loading template...</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <DynamicMetadataRenderer Template="@SelectedTemplate"
+                                                     Metadata="@EditorModel.Metadata"
+                                                     MetadataChanged="@OnMetadataChanged" />
+                        }
+                    </section>
+
+                    @if (!IsCreateMode)
                     {
-                        <DynamicMetadataRenderer Template="@SelectedTemplate"
-                                                 Metadata="@EditorModel.Metadata"
-                                                 MetadataChanged="@OnMetadataChanged" />
+                        <section class="ms-section-card" disabled="@IsSaving" aria-label="Documents">
+                            <EntityDocumentsPanel Entity="@EditorModel"
+                                                  IsAdminMode="true"
+                                                  OnEntityChanged="@OnDocumentsEntityChanged" />
+                        </section>
+
+                        <section class="ms-audit-card" aria-label="Audit Information">
+                            <h4 class="ms-section-title">Audit Information</h4>
+                            <div class="audit-grid">
+                                <div><span class="ms-audit-label">Created</span><strong>@EditorModel.Created?.ToString("g")</strong></div>
+                                <div><span class="ms-audit-label">Created By</span><strong>@(EditorModel.CreatedBy ?? "—")</strong></div>
+                                <div><span class="ms-audit-label">Modified</span><strong>@EditorModel.Modified?.ToString("g")</strong></div>
+                                <div><span class="ms-audit-label">Modified By</span><strong>@(EditorModel.ModifiedBy ?? "—")</strong></div>
+                            </div>
+                        </section>
                     }
-                </fieldset>
+                </div>
 
-                @if (!IsCreateMode)
-                {
-                    <fieldset class="entity-section" disabled="true">
-                        <legend>Audit Information</legend>
-                        <div class="audit-grid">
-                            <div><strong>Created:</strong> @EditorModel.Created?.ToString("g")</div>
-                            <div><strong>Created By:</strong> @EditorModel.CreatedBy</div>
-                            <div><strong>Modified:</strong> @EditorModel.Modified?.ToString("g")</div>
-                            <div><strong>Modified By:</strong> @EditorModel.ModifiedBy</div>
-                        </div>
-                    </fieldset>
-                }
-
-                <div class="entity-editor-actions">
+                <div class="ms-modal-footer">
                     <RadzenButton Text="Cancel"
-                                  ButtonStyle="ButtonStyle.Light"
+                                  ButtonStyle="ButtonStyle.Secondary"
+                                  Variant="Variant.Outlined"
+                                  class="ms-action-btn"
                                   Click="@CloseEditor"
                                   aria-label="Cancel editing" />
                     <RadzenButton Text="@(IsCreateMode ? "Create" : "Save")"
                                   Icon="save"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  class="ms-action-btn ms-action-primary"
                                   Click="@SaveAsync"
                                   Disabled="@IsSaving"
                                   aria-label="@(IsCreateMode ? "Create entity" : "Save entity")" />
                 </div>
-            </RadzenCard>
+            </div>
         </div>
     }
 
     @if (DrawerEntity != null)
     {
-        <aside class="entity-drawer" role="complementary" aria-label="Entity details">
-            <div class="entity-drawer-header">
+        <aside class="ms-drawer-card" role="complementary" aria-label="Entity details">
+            <div class="ms-modal-header">
                 <h3>@DrawerEntity.EntityId</h3>
                 <RadzenButton Icon="close"
                               ButtonStyle="ButtonStyle.Light"
+                              Variant="Variant.Text"
+                              class="ms-modal-close"
                               Click="@CloseDrawer"
                               aria-label="Close details drawer" />
             </div>
-            <p><strong>Title:</strong> @DrawerEntity.Title</p>
-            <p><strong>Type:</strong> @DrawerEntity.EntityType</p>
-            <p><strong>Status:</strong> @DrawerEntity.Status</p>
-            <p><strong>Active:</strong> @(DrawerEntity.IsActive ? "Yes" : "No")</p>
+            <div class="ms-modal-body">
+                <p><strong>Title:</strong> @DrawerEntity.Title</p>
+                <p><strong>Type:</strong> @DrawerEntity.EntityType</p>
+                <p><strong>Status:</strong> @DrawerEntity.Status</p>
+                <p><strong>Active:</strong> @(DrawerEntity.IsActive ? "Yes" : "No")</p>
+                <p><strong>Created By:</strong> @(DrawerEntity.CreatedBy ?? "—")</p>
+                <p><strong>Modified By:</strong> @(DrawerEntity.ModifiedBy ?? "—")</p>
 
-            @if (DrawerEntity.Metadata.Any())
-            {
-                <h4>Metadata</h4>
-                <ul>
-                    @foreach (var entry in DrawerEntity.Metadata)
-                    {
-                        <li><strong>@entry.Key:</strong> @entry.Value</li>
-                    }
-                </ul>
-            }
+                @if (DrawerEntity.Metadata.Any(kv => !EntityMapper.IsReservedMetaKey(kv.Key)))
+                {
+                    <h4>Metadata</h4>
+                    <ul>
+                        @foreach (var entry in DrawerEntity.Metadata.Where(kv => !EntityMapper.IsReservedMetaKey(kv.Key)))
+                        {
+                            <li><strong>@entry.Key:</strong> @entry.Value</li>
+                        }
+                    </ul>
+                }
+
+                <div style="margin-top:1rem">
+                    <EntityDocumentsPanel Entity="@DrawerEntity" IsAdminMode="true" />
+                </div>
+            </div>
         </aside>
     }
-</RadzenCard>
+</div>
 
 @code {
     private enum EntityIdAvailability
@@ -342,13 +401,24 @@
     private List<Entity> PagedItems = [];
     private int TotalCount;
     private bool IsGridLoading;
+    private bool HasLoadedOnce;
     private bool IsSaving;
     private bool IsTemplateLoading;
     private bool ShowEditor;
     private bool IsCreateMode;
     private bool IsDirty;
+    private string OriginalEntityType = "";
+    private Dictionary<string, object?> OriginalMetadata = new();
 
-    private EntityFilter Filter = new();
+    private bool EntityTypeChanged =>
+        !IsCreateMode &&
+        !string.Equals(OriginalEntityType, EditorModel.EntityType, StringComparison.OrdinalIgnoreCase);
+
+    private EntityFilter Filter = new()
+    {
+        Status = EntityStatuses.Active,
+        IsActive = true
+    };
     private Entity EditorModel = new();
     private Entity? DrawerEntity;
     private EntityTemplate? SelectedTemplate;
@@ -370,17 +440,28 @@
     protected override async Task OnInitializedAsync()
     {
         EntityTypeOptions = (await TemplateService.GetTemplatesAsync()).ToList();
+
+        // Load immediately — do not wait for the grid LoadData callback
+        // (empty-state used to hide the grid and LoadData never fired).
+        await LoadEntitiesAsync(pageNumber: 1, pageSize: 25);
     }
 
     private async Task LoadGridData(LoadDataArgs args)
+    {
+        var pageNumber = (args.Skip ?? 0) / (args.Top ?? 25) + 1;
+        var pageSize = args.Top ?? 25;
+        await LoadEntitiesAsync(pageNumber, pageSize);
+    }
+
+    private async Task LoadEntitiesAsync(int pageNumber, int pageSize)
     {
         IsGridLoading = true;
         StateHasChanged();
 
         try
         {
-            Filter.PageNumber = (args.Skip ?? 0) / (args.Top ?? 25) + 1;
-            Filter.PageSize = args.Top ?? 25;
+            Filter.PageNumber = pageNumber;
+            Filter.PageSize = pageSize;
 
             var result = await EntityService.GetPagedAsync(Filter);
             PagedItems = result.Items.ToList();
@@ -388,17 +469,27 @@
         }
         catch (Exception ex)
         {
+            PagedItems = [];
+            TotalCount = 0;
             NotificationService.Notify(NotificationSeverity.Error, "Load Failed", ex.Message);
         }
         finally
         {
+            HasLoadedOnce = true;
             IsGridLoading = false;
+            StateHasChanged();
         }
     }
 
-    private Task RefreshGridAsync()
+    private async Task RefreshGridAsync()
     {
-        return Grid?.Reload() ?? Task.CompletedTask;
+        if (Grid != null)
+        {
+            await Grid.Reload();
+            return;
+        }
+
+        await LoadEntitiesAsync(Filter.PageNumber <= 0 ? 1 : Filter.PageNumber, Filter.PageSize <= 0 ? 25 : Filter.PageSize);
     }
 
     private Task ReloadGrid()
@@ -448,6 +539,8 @@
             Metadata = new Dictionary<string, object?>()
         };
 
+        OriginalEntityType = "";
+        OriginalMetadata = new();
         IsCreateMode = true;
         ShowEditor = true;
         IsDirty = false;
@@ -457,9 +550,31 @@
 
     private async Task BeginEdit(Entity entity)
     {
-        var loaded = await EntityService.GetByIdAsync(entity.Id);
+        Entity? loaded = null;
 
-        EditorModel = loaded ?? entity;
+        if (entity.Id > 0)
+        {
+            loaded = await EntityService.GetByIdAsync(entity.Id);
+        }
+
+        if (loaded == null && !string.IsNullOrWhiteSpace(entity.EntityId))
+        {
+            loaded = await EntityService.GetByEntityIdAsync(entity.EntityId);
+        }
+
+        EditorModel = CloneEntity(loaded ?? entity);
+
+        if (EditorModel.Id <= 0)
+        {
+            NotificationService.Notify(
+                NotificationSeverity.Error,
+                "Edit Failed",
+                "Could not resolve the SharePoint list item Id for this entity. Refresh the grid and try again.");
+            return;
+        }
+
+        OriginalEntityType = EditorModel.EntityType;
+        OriginalMetadata = new Dictionary<string, object?>(EditorModel.Metadata);
         IsCreateMode = false;
         ShowEditor = true;
         IsDirty = false;
@@ -499,6 +614,21 @@
             return;
         }
 
+        if (!IsCreateMode && EntityTypeChanged)
+        {
+            var confirmed = await DialogService.Confirm(
+                "Changing Entity Type will remove previous type-specific metadata that is not used by the new type. Continue?",
+                "Confirm Entity Type Change",
+                new ConfirmOptions { OkButtonText = "Continue", CancelButtonText = "Cancel" });
+
+            if (confirmed != true)
+            {
+                return;
+            }
+
+            PruneMetadataToCurrentTemplate();
+        }
+
         IsSaving = true;
         StateHasChanged();
 
@@ -528,6 +658,24 @@
             }
             else
             {
+                if (EditorModel.Id <= 0 && !string.IsNullOrWhiteSpace(EditorModel.EntityId))
+                {
+                    var existing = await EntityService.GetByEntityIdAsync(EditorModel.EntityId);
+                    if (existing != null)
+                    {
+                        EditorModel.Id = existing.Id;
+                    }
+                }
+
+                if (EditorModel.Id <= 0)
+                {
+                    NotificationService.Notify(
+                        NotificationSeverity.Error,
+                        "Save Failed",
+                        "Cannot update: missing SharePoint item Id. Close the editor, refresh, and open Edit again.");
+                    return;
+                }
+
                 var result = await EntityService.UpdateAsync(EditorModel);
 
                 if (!result.IsSuccess)
@@ -552,6 +700,53 @@
         finally
         {
             IsSaving = false;
+        }
+    }
+
+    private async Task DeleteEntity(Entity entity)
+    {
+        if (await EntityService.IsReferencedAsync(entity.EntityId, entity.Id))
+        {
+            NotificationService.Notify(
+                NotificationSeverity.Warning,
+                "Delete blocked",
+                $"Cannot delete '{entity.EntityId}' because it is referenced by other records.");
+            return;
+        }
+
+        var confirmed = await DialogService.Confirm(
+            $"Permanently delete entity {entity.EntityId} ({entity.Title})? This cannot be undone.",
+            "Delete Entity",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Cancel" });
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        IsGridLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await EntityService.DeleteAsync(entity.Id);
+
+            if (!result.IsSuccess)
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Delete Failed", result.ErrorMessage);
+                return;
+            }
+
+            NotificationService.Notify(
+                NotificationSeverity.Success,
+                "Success",
+                "Entity deleted successfully.");
+
+            await RefreshGridAsync();
+        }
+        finally
+        {
+            IsGridLoading = false;
         }
     }
 
@@ -634,7 +829,64 @@
     private async Task OnEntityTypeChanged(object? value)
     {
         MarkDirty();
-        await LoadTemplateAsync(value?.ToString() ?? EditorModel.EntityType);
+        var newType = value?.ToString() ?? EditorModel.EntityType;
+        EditorModel.EntityType = newType;
+
+        // Gate metadata to the selected type: keep overlapping field values, drop others (except reserved).
+        var previous = new Dictionary<string, object?>(EditorModel.Metadata);
+        await LoadTemplateAsync(newType);
+
+        var next = new Dictionary<string, object?>();
+
+        foreach (var kv in previous)
+        {
+            if (EntityMapper.IsReservedMetaKey(kv.Key))
+            {
+                next[kv.Key] = kv.Value;
+            }
+        }
+
+        if (SelectedTemplate != null)
+        {
+            foreach (var field in SelectedTemplate.Fields)
+            {
+                next[field.Name] = previous.TryGetValue(field.Name, out var existing)
+                    ? existing
+                    : null;
+            }
+        }
+
+        EditorModel.Metadata = next;
+    }
+
+    private void PruneMetadataToCurrentTemplate()
+    {
+        var kept = new Dictionary<string, object?>();
+
+        foreach (var kv in EditorModel.Metadata)
+        {
+            if (EntityMapper.IsReservedMetaKey(kv.Key))
+            {
+                kept[kv.Key] = kv.Value;
+            }
+        }
+
+        if (SelectedTemplate != null)
+        {
+            foreach (var field in SelectedTemplate.Fields)
+            {
+                if (EditorModel.Metadata.TryGetValue(field.Name, out var value))
+                {
+                    kept[field.Name] = value;
+                }
+                else
+                {
+                    kept[field.Name] = null;
+                }
+            }
+        }
+
+        EditorModel.Metadata = kept;
     }
 
     private async Task LoadTemplateAsync(string? entityType)
@@ -678,6 +930,39 @@
         IsDirty = true;
     }
 
+    private async Task OnDocumentsEntityChanged()
+    {
+        if (EditorModel.Id <= 0)
+            return;
+
+        var refreshed = await EntityService.GetByIdAsync(EditorModel.Id);
+        if (refreshed != null)
+        {
+            EditorModel = refreshed;
+            IsDirty = false;
+        }
+    }
+
+    private static Entity CloneEntity(Entity source)
+    {
+        return new Entity
+        {
+            Id = source.Id,
+            Title = source.Title,
+            EntityId = source.EntityId,
+            EntityType = source.EntityType,
+            Status = source.Status,
+            IsActive = source.IsActive,
+            Metadata = source.Metadata != null
+                ? new Dictionary<string, object?>(source.Metadata)
+                : new Dictionary<string, object?>(),
+            Created = source.Created,
+            Modified = source.Modified,
+            CreatedBy = source.CreatedBy,
+            ModifiedBy = source.ModifiedBy
+        };
+    }
+
     private void OpenDrawer(Entity entity)
     {
         DrawerEntity = entity;
@@ -714,80 +999,220 @@
 }
 
 <style>
-    .entity-page {
-        position: relative;
+    .ms-entities {
+        --ms-brand: #0078d4;
+        --ms-brand-hover: #106ebe;
+        --ms-brand-pressed: #005a9e;
+        --ms-border: #edebe9;
+        --ms-text: #323130;
+        --ms-text-secondary: #605e5c;
+        --ms-surface: #ffffff;
+        --ms-surface-alt: #faf9f8;
+        --ms-success: #107c10;
+        --ms-warning: #797775;
+        --ms-danger: #a4262c;
+        --ms-radius: 12px;
+        font-family: "Segoe UI", Segoe UI, system-ui, -apple-system, sans-serif;
+        color: var(--ms-text);
+        background: var(--ms-surface);
+        border: 1px solid var(--ms-border);
+        border-radius: var(--ms-radius);
+        padding: 1.25rem 1.5rem 1.5rem;
     }
 
-    .entity-header {
+    .ms-entities-header {
         display: flex;
         justify-content: space-between;
         gap: 1rem;
         flex-wrap: wrap;
         margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--ms-border);
     }
 
-    .entity-toolbar {
+    .ms-entities-title {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--ms-text);
+    }
+
+    .ms-entities-subtitle {
+        margin: 0.25rem 0 0;
+        color: var(--ms-text-secondary);
+        font-size: 0.875rem;
+    }
+
+    .ms-entities-toolbar {
         display: flex;
         gap: 0.5rem;
         flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
     }
 
-    .entity-filters {
+    .ms-entities-filters {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 0.75rem;
         margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: var(--ms-surface-alt);
+        border: 1px solid var(--ms-border);
+        border-radius: var(--ms-radius);
     }
 
-    .entity-loading {
+    .ms-entities-loading {
         display: grid;
         gap: 0.5rem;
         margin: 1rem 0;
+        color: var(--ms-text-secondary);
+        font-size: 0.875rem;
     }
 
-    .entity-empty {
+    .ms-entities-grid-wrap {
+        position: relative;
+        min-height: 160px;
+    }
+
+    .ms-entities-grid-wrap.is-loading {
+        opacity: 0.7;
+    }
+
+    .ms-entities-empty {
         text-align: center;
-        padding: 2rem 1rem;
+        padding: 2.5rem 1rem;
+        color: var(--ms-text-secondary);
     }
 
-    .entity-editor-overlay {
+    .ms-row-actions {
+        display: flex;
+        gap: 0.25rem;
+        justify-content: flex-end;
+    }
+
+    .ms-status {
+        display: inline-block;
+        padding: 0.1rem 0.45rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #f3f2f1;
+        color: var(--ms-text);
+    }
+
+    .ms-status-active { background: #dff6dd; color: var(--ms-success); }
+    .ms-status-draft { background: #fff4ce; color: #8a6116; }
+    .ms-status-archived { background: #f3f2f1; color: var(--ms-warning); }
+
+    /* Modal / dialog — always on top, responsive, rounded card */
+    .ms-modal-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.35);
+        background: rgba(0, 0, 0, 0.45);
         display: flex;
         justify-content: center;
         align-items: flex-start;
-        padding: 2rem 1rem;
-        z-index: 1000;
+        padding: clamp(0.75rem, 3vw, 2rem);
+        z-index: 2000;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
-    .entity-editor {
+    .ms-modal-card {
         width: min(960px, 100%);
+        max-height: calc(100vh - 2rem);
+        display: flex;
+        flex-direction: column;
+        background: var(--ms-surface);
+        border: 1px solid var(--ms-border);
+        border-radius: var(--ms-radius);
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+        overflow: hidden;
     }
 
-    .entity-editor-header,
-    .entity-editor-actions,
-    .entity-drawer-header {
+    .ms-modal-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 0.75rem;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid var(--ms-border);
+        background: var(--ms-surface-alt);
+        flex-shrink: 0;
     }
 
-    .entity-section {
-        border: 0;
-        margin: 1rem 0;
-        padding: 0;
+    .ms-modal-header h3 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
     }
 
-    .entity-section legend {
-        font-weight: 700;
-        margin-bottom: 0.75rem;
+    .ms-modal-close {
+        margin-left: auto;
+    }
+
+    .ms-modal-body {
+        padding: 1rem;
+        overflow-y: auto;
+        flex: 1 1 auto;
+    }
+
+    .ms-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        padding: 0.85rem 1rem;
+        border-top: 1px solid var(--ms-border);
+        background: var(--ms-surface);
+        flex-shrink: 0;
+    }
+
+    .ms-section-card {
+        border: 1px solid var(--ms-border);
+        border-radius: var(--ms-radius);
+        padding: 0.85rem 1rem;
+        margin-bottom: 0.85rem;
+        background: #fff;
+    }
+
+    .ms-section-title {
+        margin: 0 0 0.75rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--ms-text);
+    }
+
+    .ms-audit-card {
+        border: 1px solid #c7e0f4;
+        border-radius: var(--ms-radius);
+        padding: 0.85rem 1rem;
+        margin-bottom: 0.85rem;
+        background: linear-gradient(180deg, #f3f9fd 0%, #eaf4fc 100%);
+    }
+
+    .ms-audit-label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--ms-text-secondary);
+        margin-bottom: 0.15rem;
+    }
+
+    .audit-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.75rem;
     }
 
     .form-row {
         margin-bottom: 0.85rem;
+    }
+
+    .form-row-inline {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .entity-id-row {
@@ -796,44 +1221,81 @@
         align-items: center;
     }
 
-    .entity-id-status .status-ok {
-        color: #1e7e34;
+    .entity-id-status .status-ok { color: var(--ms-success); }
+    .entity-id-status .status-warn { color: var(--ms-danger); }
+    .required-indicator { color: var(--ms-danger); }
+
+    .ms-hint {
+        margin: 0.35rem 0 0;
+        font-size: 0.8rem;
+        color: #8a6116;
     }
 
-    .entity-id-status .status-warn {
-        color: #c0392b;
+    .ms-action-btn {
+        border-radius: 8px !important;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     }
 
-    .required-indicator {
-        color: #c0392b;
+    .ms-action-primary:hover,
+    .ms-entities .rz-button-primary:hover {
+        background-color: var(--ms-brand-hover) !important;
+        border-color: var(--ms-brand-hover) !important;
     }
 
-    .audit-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 0.5rem;
+    .ms-action-btn:hover {
+        filter: brightness(0.96);
     }
 
-    .entity-drawer {
+    .ms-drawer-card {
         position: fixed;
-        top: 0;
-        right: 0;
-        width: min(360px, 100%);
-        height: 100vh;
-        background: var(--rz-base-background-color, #fff);
-        box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
-        padding: 1rem;
-        z-index: 1100;
+        top: 0.75rem;
+        right: 0.75rem;
+        bottom: 0.75rem;
+        width: min(380px, calc(100vw - 1.5rem));
+        background: var(--ms-surface);
+        border: 1px solid var(--ms-border);
+        border-radius: var(--ms-radius);
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+        z-index: 2100;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        font-family: "Segoe UI", Segoe UI, system-ui, sans-serif;
+    }
+
+    .ms-drawer-card .ms-modal-body {
+        flex: 1;
         overflow-y: auto;
     }
 
     @@media (max-width: 768px) {
-        .entity-header,
-        .entity-toolbar,
+        .ms-entities {
+            padding: 0.85rem;
+            border-radius: 10px;
+        }
+
+        .ms-entities-header,
+        .ms-entities-toolbar,
         .entity-id-row,
-        .entity-editor-actions {
+        .ms-modal-footer {
             flex-direction: column;
             align-items: stretch;
+        }
+
+        .ms-modal-overlay {
+            padding: 0.5rem;
+            align-items: stretch;
+        }
+
+        .ms-modal-card {
+            width: 100%;
+            max-height: calc(100vh - 1rem);
+            border-radius: 10px;
+        }
+
+        .ms-drawer-card {
+            inset: 0.5rem;
+            width: auto;
         }
     }
 </style>

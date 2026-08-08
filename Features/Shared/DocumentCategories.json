@@ -1,0 +1,102 @@
+[
+  {
+    "Code": "PASSPORT",
+    "Title": "Passport",
+    "Category": "Identity",
+    "Description": "Valid passport bio page",
+    "AllowedExtensions": [".pdf", ".jpg", ".jpeg", ".png"],
+    "MaxSizeMb": 10,
+    "SortOrder": 10,
+    "Active": true
+  },
+  {
+    "Code": "NIC",
+    "Title": "National ID",
+    "Category": "Identity",
+    "Description": "National identity card",
+    "AllowedExtensions": [".pdf", ".jpg", ".jpeg", ".png"],
+    "MaxSizeMb": 10,
+    "SortOrder": 20,
+    "Active": true
+  },
+  {
+    "Code": "DEGREE",
+    "Title": "Degree Certificate",
+    "Category": "Education",
+    "Description": "Highest qualification certificate",
+    "AllowedExtensions": [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"],
+    "MaxSizeMb": 15,
+    "SortOrder": 30,
+    "Active": true
+  },
+  {
+    "Code": "TRANSCRIPT",
+    "Title": "Academic Transcript",
+    "Category": "Education",
+    "Description": "Official academic transcript",
+    "AllowedExtensions": [".pdf", ".doc", ".docx"],
+    "MaxSizeMb": 15,
+    "SortOrder": 40,
+    "Active": true
+  },
+  {
+    "Code": "IELTS",
+    "Title": "IELTS / English Test",
+    "Category": "English",
+    "Description": "English language test result",
+    "AllowedExtensions": [".pdf", ".jpg", ".jpeg", ".png"],
+    "MaxSizeMb": 10,
+    "SortOrder": 50,
+    "Active": true
+  },
+  {
+    "Code": "CV",
+    "Title": "Curriculum Vitae",
+    "Category": "Employment",
+    "Description": "Current CV / resume",
+    "AllowedExtensions": [".pdf", ".doc", ".docx"],
+    "MaxSizeMb": 10,
+    "SortOrder": 60,
+    "Active": true
+  },
+  {
+    "Code": "PHOTO",
+    "Title": "Passport Photo",
+    "Category": "Identity",
+    "Description": "Passport-style photograph",
+    "AllowedExtensions": [".jpg", ".jpeg", ".png"],
+    "MaxSizeMb": 5,
+    "SortOrder": 70,
+    "Active": true
+  },
+  {
+    "Code": "BANK",
+    "Title": "Bank Statement",
+    "Category": "Finance",
+    "Description": "Recent bank statement",
+    "AllowedExtensions": [".pdf", ".xls", ".xlsx", ".jpg", ".jpeg", ".png"],
+    "MaxSizeMb": 15,
+    "SortOrder": 80,
+    "Active": true
+  },
+  {
+    "Code": "OFFER",
+    "Title": "Offer Letter",
+    "Category": "Admission",
+    "Description": "University / college offer letter",
+    "AllowedExtensions": [".pdf", ".doc", ".docx"],
+    "MaxSizeMb": 10,
+    "SortOrder": 90,
+    "Active": true
+  },
+  {
+    "Code": "OTHER",
+    "Title": "Other Document",
+    "Category": "General",
+    "Description": "Supporting document",
+    "AllowedExtensions": [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png"],
+    "MaxSizeMb": 20,
+    "SortOrder": 100,
+    "Active": true
+  }
+]

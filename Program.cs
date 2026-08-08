@@ -174,14 +174,18 @@ builder.Services.AddScoped<SharePointService>();
 builder.Services.Configure<MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointOptions>(
     builder.Configuration.GetSection(MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointOptions.SectionName));
 builder.Services.AddScoped<MITANZ360Pro.Web.Infrastructure.SharePoint.ISharePointListClient, MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointListClient>();
-builder.Services.AddScoped<MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointListValidator>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.EntityListValidator>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityRepository, MITANZ360Pro.Web.Modules.Entities.EntityRepository>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityService, MITANZ360Pro.Web.Modules.Entities.EntityService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityTemplateService, MITANZ360Pro.Web.Modules.Entities.EntityTemplateService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntitySequenceService, MITANZ360Pro.Web.Modules.Entities.EntitySequenceService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityActivityService, MITANZ360Pro.Web.Modules.Entities.EntityActivityService>();
 builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.IEntityWorkflowService, MITANZ360Pro.Web.Modules.Entities.EntityWorkflowService>();
-
+builder.Services.AddSingleton<MITANZ360Pro.Web.Modules.Entities.IStudentVisaRateLimiter, MITANZ360Pro.Web.Modules.Entities.StudentVisaRateLimiter>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.DocumentLookupDataService>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.IDocumentLibraryService, MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.DocumentLibraryService>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.ReferenceData.IReferenceDataRepository, MITANZ360Pro.Web.Modules.ReferenceData.ReferenceDataRepository>();
+builder.Services.AddScoped<MITANZ360Pro.Web.Modules.ReferenceData.IReferenceDataService, MITANZ360Pro.Web.Modules.ReferenceData.ReferenceDataService>();
 #endregion
 
 #region Document Processing
@@ -288,6 +292,38 @@ app.MapGet("/api/documents/render/{id}", async (
 })
 .RequireAuthorization();
 
+app.MapGet("/api/entity-documents/{id}", async (
+    string id,
+    bool? inline,
+    MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.IDocumentLibraryService docs,
+    HttpContext context) =>
+{
+    if (string.IsNullOrWhiteSpace(id))
+        return Results.BadRequest("Missing document id.");
+
+    try
+    {
+        var content = await docs.DownloadAsync(id, context.RequestAborted);
+        if (content == null)
+            return Results.NotFound();
+
+        var disposition = inline == true ? "inline" : "attachment";
+        context.Response.Headers.ContentDisposition =
+            $"{disposition}; filename=\"{content.FileName.Replace("\"", "")}\"";
+
+        return Results.File(
+            content.Stream,
+            content.ContentType,
+            fileDownloadName: inline == true ? null : content.FileName,
+            enableRangeProcessing: true);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Entity document download failed: {ex.Message}");
+    }
+})
+.RequireAuthorization();
+
 #endregion
 
 #region 🧱 DATABASE INITIALIZATION
@@ -304,7 +340,7 @@ using (var scope = app.Services.CreateScope())
     await DbInitializer.SeedAsync(services);
     await EnsureSysAdminAsync(services);
 
-    var listValidator = services.GetRequiredService<MITANZ360Pro.Web.Infrastructure.SharePoint.SharePointListValidator>();
+    var listValidator = services.GetRequiredService<MITANZ360Pro.Web.Modules.Entities.EntityListValidator>();
     await listValidator.ValidateEntityListAsync();
 }
 
@@ -341,6 +377,16 @@ app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
 
 #endregion
+
+if (string.Equals(Environment.GetEnvironmentVariable("DOC_SMOKE"), "1", StringComparison.Ordinal))
+{
+    using var smokeScope = app.Services.CreateScope();
+    var docs = smokeScope.ServiceProvider.GetRequiredService<MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.IDocumentLibraryService>();
+    var entities = smokeScope.ServiceProvider.GetRequiredService<MITANZ360Pro.Web.Modules.Entities.IEntityService>();
+    var smokeResult = await MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary.DocumentLibrarySmokeHelpers.RunAsync(docs, entities);
+    Console.WriteLine("DOC_SMOKE_RESULT=" + smokeResult);
+    return;
+}
 
 app.Run();
 

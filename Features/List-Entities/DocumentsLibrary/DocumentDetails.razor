@@ -1,0 +1,35 @@
+@namespace MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+
+<link href="css/documents-library.css" rel="stylesheet" />
+
+@if (Document == null)
+{
+    <p>No document.</p>
+}
+else
+{
+    <div class="ms-docs-card">
+        <div class="audit-grid" style="display:grid;grid-template-columns:140px 1fr;gap:.5rem">
+            <span class="ms-audit-label">Title</span><strong>@Document.Title</strong>
+            <span class="ms-audit-label">File</span><strong>@Document.FileName</strong>
+            <span class="ms-audit-label">Entity</span><strong>@Document.EntityType / @Document.EntityNumber</strong>
+            <span class="ms-audit-label">Code</span><strong>@Document.DocumentCode</strong>
+            <span class="ms-audit-label">Status</span><strong>@Document.Status</strong>
+            <span class="ms-audit-label">Version</span><strong>v@(Document.DocumentVersion) @(Document.IsLatest ? "(latest)" : "")</strong>
+            <span class="ms-audit-label">Uploaded By</span><strong>@(Document.UploadedBy ?? "—") (@(Document.UploadedByRole ?? "—"))</strong>
+            <span class="ms-audit-label">Uploaded</span><strong>@(Document.UploadedDate?.ToString("g") ?? "—")</strong>
+            <span class="ms-audit-label">Verified By</span><strong>@(Document.VerifiedBy ?? "—")</strong>
+            <span class="ms-audit-label">Verified</span><strong>@(Document.VerifiedDate?.ToString("g") ?? "—")</strong>
+            <span class="ms-audit-label">Expiry</span><strong>@(Document.ExpiryDate?.ToString("d") ?? "—")</strong>
+            <span class="ms-audit-label">Size</span><strong>@(Document.SizeBytes.HasValue ? $"{Document.SizeBytes / 1024.0:0.#} KB" : "—")</strong>
+            <span class="ms-audit-label">Active</span><strong>@(Document.Active ? "Yes" : "No")</strong>
+            <span class="ms-audit-label">Remarks</span><strong>@(Document.Remarks ?? "—")</strong>
+            <span class="ms-audit-label">Description</span><strong>@(Document.Description ?? "—")</strong>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public DocumentMetadata? Document { get; set; }
+}

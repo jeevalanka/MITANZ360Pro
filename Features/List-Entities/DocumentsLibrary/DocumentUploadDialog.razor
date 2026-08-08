@@ -1,0 +1,260 @@
+@namespace MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@using MITANZ360Pro.Web.Modules.Entities.DocumentsLibrary
+@inject IDocumentLibraryService DocumentService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<link href="css/documents-library.css" rel="stylesheet" />
+
+<div class="ms-docs">
+    <div class="form-row">
+        <label>Document Type <span class="required-indicator">*</span></label>
+        <RadzenDropDown TValue="string"
+                        Data="@Categories"
+                        TextProperty="Title"
+                        ValueProperty="Code"
+                        @bind-Value="SelectedDocumentCode"
+                        Placeholder="Select document"
+                        Style="width:100%"
+                        Disabled="@(!string.IsNullOrWhiteSpace(LockedCode))"
+                        Change="@OnDocumentCodeChanged" />
+    </div>
+
+    <div class="form-row">
+        <label>Title</label>
+        <RadzenTextBox @bind-Value="Title" Style="width:100%" Placeholder="Optional title" />
+    </div>
+
+    <div class="form-row">
+        <label>Description</label>
+        <RadzenTextArea @bind-Value="Description" Style="width:100%" Rows="2" />
+    </div>
+
+    <div class="form-row">
+        <label>Expiry Date</label>
+        <RadzenDatePicker @bind-Value="ExpiryDate" Style="width:100%" AllowClear="true" />
+    </div>
+
+    <div class="form-row">
+        <label>Remarks</label>
+        <RadzenTextBox @bind-Value="Remarks" Style="width:100%" />
+    </div>
+
+    @if (IsReplace)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+            Replacing creates a <strong>new version</strong>. The previous file is kept with IsLatest = false.
+        </RadzenAlert>
+    }
+
+    <div class="ms-docs-dropzone @(IsDragOver ? "dragover" : null)"
+         @ondragover:preventDefault
+         @ondragenter="() => IsDragOver = true"
+         @ondragleave="() => IsDragOver = false"
+         @ondrop="OnDrop"
+         @ondrop:preventDefault>
+        <RadzenIcon Icon="cloud_upload" Style="font-size:2rem;color:#0078d4" />
+        <p><strong>Drag & drop</strong> a file here, or browse</p>
+        <p style="font-size:.8rem">PDF, Word, Excel, Images · max per category</p>
+        <InputFile OnChange="OnFileSelected" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp" />
+        @if (!string.IsNullOrWhiteSpace(SelectedFileName))
+        {
+            <p style="margin-top:.75rem"><strong>@SelectedFileName</strong> (@FormatSize(SelectedSize))</p>
+        }
+    </div>
+
+    @if (UploadProgress > 0 && UploadProgress < 100)
+    {
+        <RadzenProgressBar Value="@UploadProgress" Style="width:100%;margin-top:1rem" />
+    }
+
+    @if (!string.IsNullOrWhiteSpace(ValidationError))
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false" Style="margin-top:1rem">
+            @ValidationError
+        </RadzenAlert>
+    }
+
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1.25rem">
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined" Click="@Cancel" />
+        <RadzenButton Text="@(IsReplace ? "Replace" : "Upload")"
+                      Icon="upload"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Click="@UploadAsync"
+                      Disabled="@(!CanUpload)" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public string EntityType { get; set; } = "";
+    [Parameter] public string EntityNumber { get; set; } = "";
+    [Parameter] public string? DocumentCode { get; set; }
+    [Parameter] public string? ExistingDriveItemId { get; set; }
+    [Parameter] public List<DocumentCategoryDefinition> Categories { get; set; } = [];
+    [Parameter] public string UploadedBy { get; set; } = "";
+    [Parameter] public string UploadedByRole { get; set; } = "Admin";
+    [Parameter] public bool IsReplace { get; set; }
+
+    private string? LockedCode;
+    private string? SelectedDocumentCode;
+    private string Title = "";
+    private string? Description;
+    private string? Remarks;
+    private DateTime? ExpiryDate;
+    private IBrowserFile? SelectedFile;
+    private string? SelectedFileName;
+    private long SelectedSize;
+    private bool IsDragOver;
+    private bool IsUploading;
+    private double UploadProgress;
+    private string? ValidationError;
+
+    private bool CanUpload =>
+        !IsUploading
+        && SelectedFile != null
+        && !string.IsNullOrWhiteSpace(SelectedDocumentCode)
+        && !string.IsNullOrWhiteSpace(EntityType)
+        && !string.IsNullOrWhiteSpace(EntityNumber);
+
+    protected override void OnInitialized()
+    {
+        SelectedDocumentCode = DocumentCode;
+        if (!string.IsNullOrWhiteSpace(DocumentCode))
+            LockedCode = DocumentCode;
+
+        var cat = Categories.FirstOrDefault(c =>
+            string.Equals(c.Code, SelectedDocumentCode, StringComparison.OrdinalIgnoreCase));
+        if (cat != null && string.IsNullOrWhiteSpace(Title))
+            Title = cat.Title;
+    }
+
+    private void OnDocumentCodeChanged()
+    {
+        ValidationError = null;
+        var cat = Categories.FirstOrDefault(c =>
+            string.Equals(c.Code, SelectedDocumentCode, StringComparison.OrdinalIgnoreCase));
+        if (cat != null && string.IsNullOrWhiteSpace(Title))
+            Title = cat.Title;
+
+        if (SelectedFile != null && !string.IsNullOrWhiteSpace(SelectedDocumentCode))
+        {
+            if (!DocumentService.IsAllowedFile(SelectedDocumentCode!, SelectedFile.Name, SelectedFile.Size, out var err))
+                ValidationError = err;
+        }
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        SetFile(e.File);
+    }
+
+    private async Task OnDrop(DragEventArgs _)
+    {
+        IsDragOver = false;
+        await Task.CompletedTask;
+    }
+
+    private void SetFile(IBrowserFile file)
+    {
+        ValidationError = null;
+        SelectedFile = file;
+        SelectedFileName = file.Name;
+        SelectedSize = file.Size;
+
+        if (string.IsNullOrWhiteSpace(SelectedDocumentCode))
+        {
+            ValidationError = "Select a document type first.";
+            return;
+        }
+
+        if (!DocumentService.IsAllowedFile(SelectedDocumentCode!, file.Name, file.Size, out var err))
+            ValidationError = err;
+    }
+
+    private async Task UploadAsync()
+    {
+        if (SelectedFile == null || string.IsNullOrWhiteSpace(SelectedDocumentCode))
+            return;
+
+        if (string.IsNullOrWhiteSpace(EntityType) || string.IsNullOrWhiteSpace(EntityNumber))
+        {
+            ValidationError = "Entity Type and Entity Number are required. Set them in the Documents filters, or upload from the Entity page.";
+            return;
+        }
+
+        if (!DocumentService.IsAllowedFile(SelectedDocumentCode, SelectedFile.Name, SelectedFile.Size, out var err))
+        {
+            ValidationError = err;
+            return;
+        }
+
+        IsUploading = true;
+        UploadProgress = 15;
+        ValidationError = null;
+
+        try
+        {
+            await using var stream = SelectedFile.OpenReadStream(maxAllowedSize: 25 * 1024 * 1024);
+            await using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+            UploadProgress = 55;
+
+            var request = new DocumentUploadRequest
+            {
+                EntityType = EntityType,
+                EntityNumber = EntityNumber,
+                DocumentCode = SelectedDocumentCode!,
+                Title = string.IsNullOrWhiteSpace(Title) ? Path.GetFileNameWithoutExtension(SelectedFile.Name) : Title,
+                Description = Description,
+                FileName = SelectedFile.Name,
+                Content = ms,
+                ContentType = SelectedFile.ContentType,
+                SizeBytes = SelectedFile.Size,
+                UploadedBy = UploadedBy,
+                UploadedByRole = UploadedByRole,
+                ExpiryDate = ExpiryDate,
+                Remarks = Remarks,
+                ReplaceExisting = IsReplace
+            };
+
+            DocumentResult result;
+            if (IsReplace && !string.IsNullOrWhiteSpace(ExistingDriveItemId))
+                result = await DocumentService.ReplaceFileAsync(ExistingDriveItemId!, request);
+            else
+                result = await DocumentService.UploadFileAsync(request);
+
+            UploadProgress = 100;
+
+            if (result.Success)
+            {
+                NotificationService.Notify(NotificationSeverity.Success, "Success",
+                    IsReplace ? "New document version uploaded." : "Document uploaded.");
+                DialogService.Close(true);
+            }
+            else
+            {
+                ValidationError = result.ErrorMessage;
+                NotificationService.Notify(NotificationSeverity.Error, "Upload failed", result.ErrorMessage ?? "Unknown error");
+            }
+        }
+        catch (Exception ex)
+        {
+            ValidationError = ex.Message;
+            NotificationService.Notify(NotificationSeverity.Error, "Upload failed", ex.Message);
+        }
+        finally
+        {
+            IsUploading = false;
+        }
+    }
+
+    private void Cancel() => DialogService.Close(false);
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes / (1024.0 * 1024.0):0.##} MB";
+    }
+}

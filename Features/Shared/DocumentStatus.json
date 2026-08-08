@@ -1,0 +1,58 @@
+[
+  {
+    "Code": "Pending",
+    "Title": "Pending",
+    "Color": "#EA580C",
+    "SortOrder": 10,
+    "Active": true
+  },
+  {
+    "Code": "Requested",
+    "Title": "Requested",
+    "Color": "#0284C7",
+    "SortOrder": 20,
+    "Active": true
+  },
+  {
+    "Code": "Uploaded",
+    "Title": "Uploaded",
+    "Color": "#2563EB",
+    "SortOrder": 30,
+    "Active": true
+  },
+  {
+    "Code": "Verified",
+    "Title": "Verified",
+    "Color": "#16A34A",
+    "SortOrder": 40,
+    "Active": true
+  },
+  {
+    "Code": "Rejected",
+    "Title": "Rejected",
+    "Color": "#DC2626",
+    "SortOrder": 50,
+    "Active": true
+  },
+  {
+    "Code": "ReplaceRequired",
+    "Title": "Replace Required",
+    "Color": "#D97706",
+    "SortOrder": 60,
+    "Active": true
+  },
+  {
+    "Code": "Expired",
+    "Title": "Expired",
+    "Color": "#991B1B",
+    "SortOrder": 70,
+    "Active": true
+  },
+  {
+    "Code": "NotRequired",
+    "Title": "Not Required",
+    "Color": "#64748B",
+    "SortOrder": 80,
+    "Active": true
+  }
+]

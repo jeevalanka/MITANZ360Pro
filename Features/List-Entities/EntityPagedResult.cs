@@ -1,4 +1,4 @@
-namespace MITANZ360Pro.Web.Common;
+namespace MITANZ360Pro.Web.Modules.Entities;
 
 /// <summary>
 /// UI-oriented paged result with total count and optional Graph next link.

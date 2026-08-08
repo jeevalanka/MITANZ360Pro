@@ -16,6 +16,13 @@ public static class EntityFields
     public const string Modified = "Modified";
     public const string Author = "Author";
     public const string Editor = "Editor";
+
+    /// <summary>App-login audit keys stored inside MetadataJson (not Office 365 person fields).</summary>
+    public const string AppCreatedByMeta = "__CreatedBy";
+    public const string AppModifiedByMeta = "__ModifiedBy";
+
+    /// <summary>Reserved: one-time token for public student email verification.</summary>
+    public const string EmailVerifyTokenMeta = "__EmailVerifyToken";
 }
 
 public static class EntityStatuses
@@ -89,23 +96,41 @@ public static class EntityMapper
         var entity = new Entity
         {
             Title = GetString(fields, EntityFields.Title),
-            EntityId = GetString(fields, EntityFields.EntityId),
-            EntityType = GetString(fields, EntityFields.EntityType),
-            Status = GetString(fields, EntityFields.Status, EntityStatuses.Draft),
-            IsActive = GetBool(fields, EntityFields.IsActive, true),
+            EntityId = FirstNonEmpty(
+                GetString(fields, EntityFields.EntityId),
+                GetString(fields, "EntityId")),
+            EntityType = FirstNonEmpty(
+                GetString(fields, EntityFields.EntityType),
+                GetString(fields, "EntityType")),
+            Status = FirstNonEmpty(
+                GetString(fields, EntityFields.Status),
+                GetString(fields, "Status"),
+                EntityStatuses.Draft),
+            IsActive = GetBool(fields, EntityFields.IsActive, GetBool(fields, "IsActive", true)),
             Created = GetDate(fields, EntityFields.Created),
             Modified = GetDate(fields, EntityFields.Modified),
-            CreatedBy = GetLookupDisplay(fields, EntityFields.Author),
-            ModifiedBy = GetLookupDisplay(fields, EntityFields.Editor)
+            // Prefer app-login audit values from MetadataJson; fall back to SharePoint Author/Editor.
+            CreatedBy = null,
+            ModifiedBy = null
         };
 
-        if (!string.IsNullOrWhiteSpace(listItemId) && int.TryParse(listItemId, out var id))
+        // Graph returns the SharePoint list item id on ListItem.Id — not reliably in fields.
+        // Prefer listItemId; fall back to common field keys used by Graph/SharePoint.
+        if (!string.IsNullOrWhiteSpace(listItemId) && int.TryParse(listItemId, out var idFromItem))
         {
-            entity.Id = id;
+            entity.Id = idFromItem;
         }
         else
         {
             entity.Id = GetInt(fields, "ID");
+            if (entity.Id <= 0)
+            {
+                entity.Id = GetInt(fields, "Id");
+            }
+            if (entity.Id <= 0)
+            {
+                entity.Id = GetInt(fields, "id");
+            }
         }
 
         var metadataJson = GetString(fields, EntityFields.MetadataJson);
@@ -122,11 +147,35 @@ public static class EntityMapper
             }
         }
 
+        entity.CreatedBy = FirstNonEmpty(
+            GetMetaString(entity.Metadata, EntityFields.AppCreatedByMeta),
+            GetLookupDisplay(fields, EntityFields.Author) ?? string.Empty);
+
+        entity.ModifiedBy = FirstNonEmpty(
+            GetMetaString(entity.Metadata, EntityFields.AppModifiedByMeta),
+            GetLookupDisplay(fields, EntityFields.Editor) ?? string.Empty);
+
         return entity;
     }
 
     public static Dictionary<string, object> ToFieldDictionary(Entity entity)
     {
+        // Persist app-login Created/Modified By inside MetadataJson (SharePoint Author/Editor
+        // are Office 365 person fields controlled by Graph app-only identity).
+        var metadata = entity.Metadata != null
+            ? new Dictionary<string, object?>(entity.Metadata)
+            : new Dictionary<string, object?>();
+
+        if (!string.IsNullOrWhiteSpace(entity.CreatedBy))
+        {
+            metadata[EntityFields.AppCreatedByMeta] = entity.CreatedBy;
+        }
+
+        if (!string.IsNullOrWhiteSpace(entity.ModifiedBy))
+        {
+            metadata[EntityFields.AppModifiedByMeta] = entity.ModifiedBy;
+        }
+
         var fields = new Dictionary<string, object>
         {
             [EntityFields.Title] = entity.Title,
@@ -134,10 +183,48 @@ public static class EntityMapper
             [EntityFields.EntityType] = entity.EntityType,
             [EntityFields.Status] = entity.Status,
             [EntityFields.IsActive] = entity.IsActive,
-            [EntityFields.MetadataJson] = JsonSerializer.Serialize(entity.Metadata, JsonOptions)
+            [EntityFields.MetadataJson] = JsonSerializer.Serialize(metadata, JsonOptions)
         };
 
         return fields;
+    }
+
+    public static Dictionary<string, object?> TemplateMetadataOnly(Dictionary<string, object?> metadata)
+    {
+        return metadata
+            .Where(kv => !IsReservedMetaKey(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+    }
+
+    public static bool IsReservedMetaKey(string key)
+        => key.StartsWith("__", StringComparison.Ordinal)
+           || string.Equals(key, "RequiredDocuments", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetMetaString(Dictionary<string, object?> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var value) || value == null)
+        {
+            return string.Empty;
+        }
+
+        return value switch
+        {
+            JsonElement json when json.ValueKind == JsonValueKind.String => json.GetString() ?? string.Empty,
+            _ => value.ToString() ?? string.Empty
+        };
+    }
+
+    private static string FirstNonEmpty(params string[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return string.Empty;
     }
 
     private static string GetString(IDictionary<string, object> fields, string key, string defaultValue = "")

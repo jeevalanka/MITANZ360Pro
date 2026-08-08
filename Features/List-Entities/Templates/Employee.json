@@ -1,0 +1,18 @@
+{
+  "EntityType": "Employee",
+  "DisplayName": "Employee",
+  "Fields": [
+    { "Name": "FirstName", "Label": "First Name", "Type": "text", "Required": true, "MaxLength": 100 },
+    { "Name": "LastName", "Label": "Last Name", "Type": "text", "Required": true, "MaxLength": 100 },
+    { "Name": "Email", "Label": "Email", "Type": "email", "Required": true, "Pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$" },
+    { "Name": "Phone", "Label": "Phone", "Type": "text", "Required": false, "MaxLength": 30 },
+    { "Name": "Department", "Label": "Department", "Type": "text", "Required": false, "MaxLength": 100 },
+    { "Name": "JobTitle", "Label": "Job Title", "Type": "text", "Required": false, "MaxLength": 100 },
+    { "Name": "NIC", "Label": "NIC", "Type": "text", "Required": false, "MaxLength": 20 }
+  ],
+  "RequiredDocuments": [
+    { "Code": "NIC", "Required": true, "Status": "Requested" },
+    { "Code": "CV", "Required": true, "Status": "Requested" },
+    { "Code": "PHOTO", "Required": false, "Status": "NotRequired" }
+  ]
+}

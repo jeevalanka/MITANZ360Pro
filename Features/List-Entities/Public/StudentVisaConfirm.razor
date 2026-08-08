@@ -1,0 +1,57 @@
+@page "/student-visa/confirm"
+@namespace MITANZ360Pro.Web.Modules.Entities
+@attribute [AllowAnonymous]
+@rendermode InteractiveServer
+@layout MainLayout_No_Left_RightPan
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Confirm Email — MITANZ Student Visa</PageTitle>
+<link href="css/student-visa.css" rel="stylesheet" />
+
+<div class="sv-page">
+    <div class="sv-hero">
+        <div class="sv-hero-inner">
+            <div class="sv-brand">MITANZ360Pro</div>
+            <h1 class="sv-title">Email confirmation</h1>
+            <p class="sv-subtitle">Verify your student registration email address.</p>
+        </div>
+    </div>
+
+    <div class="sv-container">
+        @if (_loading)
+        {
+            <div class="sv-success-card">
+                <div class="spinner-border text-primary" role="status" aria-label="Verifying"></div>
+                <p class="mt-3 mb-0 text-muted">Verifying your email…</p>
+            </div>
+        }
+        else if (_success)
+        {
+            <div class="sv-success-card" role="status">
+                <div class="sv-success-icon" aria-hidden="true">
+                    <i class="bi bi-envelope-check-fill"></i>
+                </div>
+                <h2>Email verified</h2>
+                <p class="sv-success-msg">Your email address has been confirmed successfully.</p>
+                <dl class="sv-success-meta">
+                    <div>
+                        <dt>Student Number</dt>
+                        <dd>@_studentNumber</dd>
+                    </div>
+                    <div>
+                        <dt>Email Verified</dt>
+                        <dd>Yes</dd>
+                    </div>
+                </dl>
+                <a class="sv-btn sv-btn-primary" href="/student-visa">Back to registration</a>
+            </div>
+        }
+        else
+        {
+            <div class="sv-alert sv-alert-error" role="alert">
+                @(_errorMessage ?? "Unable to verify this email link.")
+            </div>
+            <a class="sv-btn sv-btn-primary" href="/student-visa">Go to registration</a>
+        }
+    </div>
+</div>

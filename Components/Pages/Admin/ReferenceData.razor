@@ -1,285 +1,438 @@
-﻿@page "/reference-data/{Module}"
+﻿@page "/reference-data"
+@page "/reference-data/{Module}"
 @layout MainLayout_NoRightPan
 @attribute [Authorize(Roles = "Admin,SysAdmin")]
+@implements IDisposable
 
-@using MITANZ360Pro.Web.Services
+@using System.ComponentModel.DataAnnotations
+@using MITANZ360Pro.Web.Modules.ReferenceData
+@using MITANZ360Pro.Web.Modules.Entities
 @using Radzen
 @using Radzen.Blazor
 
-@inject SharePointService SharePointService
+@inject IReferenceDataService ReferenceDataService
 @inject NotificationService NotificationService
 @inject DialogService DialogService
+@inject ILogger<ReferenceData> Logger
 
 <PageTitle>Reference Data</PageTitle>
 
-<div class="rd-container">
-
-    <!-- HEADER -->
-    <div class="Main-header">
-        <h2>Reference Data • @Module</h2>
-    </div>
-
-    <!-- SEARCH -->
-    <RadzenTextBox @bind-Value="SearchText"
-                   Placeholder="Search Title / Code / Description"
-                   Style="width:100%"
-                   @oninput="OnSearchInput" />
-
-    <div class="rd-grid">
-
-        <!-- LEFT: CATEGORY -->
-        <div class="rd-categories">
-
-            <div class="panel-title">Categories</div>
-
-            @if (IsLoading)
-            {
-                <p>Loading...</p>
-            }
-            else
-            {
-                @foreach (var cat in Categories)
-                {
-                    <div class="cat-item @(cat == SelectedCategory ? "active" : "")"
-                         @onclick="() => SelectCategory(cat)">
-                        @cat
-                    </div>
-                }
-            }
-
+<div class="ms-rd">
+    <div class="ms-rd-header">
+        <div>
+            <h1 class="ms-rd-title">Reference Data</h1>
+            <p class="ms-rd-subtitle">
+                Manage lookup values used across MITANZ360Pro (nationality, country, courses, intakes, and more).
+            </p>
         </div>
 
-        <!-- RIGHT -->
-        <div class="rd-content">
+        <div class="ms-rd-toolbar" role="toolbar" aria-label="Reference data actions">
+            <RadzenButton Text="New"
+                          Icon="add"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Click="@BeginCreate"
+                          Disabled="@IsBusy"
+                          aria-label="Create new reference item" />
+            <RadzenButton Text="Import Defaults"
+                          Icon="download"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Variant="Variant.Outlined"
+                          Click="@ConfirmImportDefaultsAsync"
+                          Disabled="@IsBusy"
+                          aria-label="Import default reference data" />
+            <RadzenButton Text="Refresh"
+                          Icon="refresh"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Variant="Variant.Outlined"
+                          Click="@RefreshAsync"
+                          Disabled="@IsBusy"
+                          aria-label="Refresh list" />
+        </div>
+    </div>
 
-            <!-- ✅ LIST SECTION -->
-            <div class="rd-section">
+    <div class="ms-rd-filters" role="search" aria-label="Reference data filters">
+        <RadzenTextBox Value="@_searchText"
+                       ValueChanged="@OnSearchChanged"
+                       Placeholder="Search Title / Code / Description"
+                       Style="width:100%"
+                       aria-label="Search reference data" />
 
-                <div class="section-header">
-                    Reference Items
-                </div>
+        <RadzenDropDown TValue="string"
+                        Data="@_categories"
+                        @bind-Value="_categoryFilter"
+                        Placeholder="All categories"
+                        AllowClear="true"
+                        Change="@(_ => ReloadGrid())"
+                        Style="width:100%"
+                        aria-label="Filter by category" />
 
-                <div class="rd-list">
+        <RadzenDropDown TValue="bool?"
+                        Data="@_activeOptions"
+                        TextProperty="Text"
+                        ValueProperty="Value"
+                        @bind-Value="_activeFilter"
+                        Placeholder="All active states"
+                        AllowClear="true"
+                        Change="@(_ => ReloadGrid())"
+                        Style="width:100%"
+                        aria-label="Filter by active" />
+    </div>
 
-                    <RadzenDataGrid @ref="grid"
-                                    TItem="ReferenceDataItem"
-                                    Data="@PagedItems"
-                                    Count="@TotalCount"
-                                    LoadData="@LoadPagedData"
-                                    RowSelect="@SelectItem"
-                                    AllowPaging="true"
-                                    PageSize="10"
-                                    AllowSorting="true"
-                                    Style="width:100%; min-height:220px;">
+    @if (_isLoading && !_hasLoadedOnce)
+    {
+        <div class="ms-rd-loading" role="status" aria-live="polite">
+            <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Style="width:100%" />
+            <span>Loading reference data…</span>
+        </div>
+    }
 
-                        <Columns>
+    <div class="ms-rd-grid-wrap @(_isLoading ? "is-loading" : null)">
+        <RadzenDataGrid @ref="_grid"
+                        TItem="ReferenceDataItem"
+                        Data="@_pagedItems"
+                        Count="@_totalCount"
+                        LoadData="@LoadGridData"
+                        IsLoading="@_isLoading"
+                        AllowPaging="true"
+                        PageSize="25"
+                        AllowSorting="true"
+                        Responsive="true"
+                        Density="Density.Compact"
+                        class="ms-rd-grid"
+                        EmptyText="">
 
-                            <RadzenDataGridColumn Property="Title" Title="Title" />
-                            <RadzenDataGridColumn Property="Code" Title="Code" Width="120px" />
-                            <RadzenDataGridColumn Property="Category" Title="Category" Width="150px" />
-
-                            <RadzenDataGridColumn Title="Description">
-                                <Template Context="item">
-                                    @(string.IsNullOrWhiteSpace(item.Description)
-                                        ? ""
-                                        : item.Description.Length > 50
-                                            ? item.Description.Substring(0, 50) + "..."
-                                            : item.Description)
-                                </Template>
-                            </RadzenDataGridColumn>
-
-                            <RadzenDataGridColumn Property="SortOrder" Title="Sort" Width="80px" />
-
-                            <RadzenDataGridColumn Title="Status">
-                                <Template Context="item">
-                                    <span class="status-badge @(item.IsActive ? "active" : "inactive")">
-                                        @(item.IsActive ? "Active" : "Inactive")
-                                    </span>
-                                </Template>
-                            </RadzenDataGridColumn>
-
-                            <RadzenDataGridColumn Title="Default">
-                                <Template Context="item">
-                                    @(item.IsDefault ? "Yes" : "No")
-                                </Template>
-                            </RadzenDataGridColumn>
-
-                        </Columns>
-
-                    </RadzenDataGrid>
-
-                </div>
-
-            </div>
-
-            <!-- ✅ EDITOR SECTION -->
-            <div class="rd-section">
-
-                <div class="section-header">
-                    @(CurrentItem.Id == 0 ? "New Item" : "Edit Item")
-                </div>
-
-                <div class="rd-editor">
-
-                    <div class="form-grid">
-
-                        <!-- ROW 1 -->
-                        <RadzenTextBox @bind-Value="CurrentItem.Title" Placeholder="Title" Style="width:100%" />
-                        <RadzenTextBox @bind-Value="CurrentItem.Code" Placeholder="Code" Style="width:100%" />
-                        <RadzenTextBox @bind-Value="CurrentItem.Category" Placeholder="Category" Style="width:100%" />
-
-                        <!-- ROW 2 FULL -->
-                        <RadzenTextArea @bind-Value="CurrentItem.Description"
-                                        Placeholder="Description"
-                                        Style="width:100%"
-                                        class="full-width" />
-
-                        <!-- ROW 3 -->
-                        <RadzenTextBox @bind-Value="CurrentItem.Icon" Placeholder="Icon" Style="width:100%" />
-                        <RadzenTextBox @bind-Value="CurrentItem.Color" Placeholder="Color" Style="width:100%" />
-                        <RadzenNumeric @bind-Value="CurrentItem.SortOrder" Style="width:100%" />
-
-                        <!-- ROW 4 -->
-                        <div class="checkbox-group full-width">
-                            <label>
-                                <RadzenCheckBox @bind-Value="CurrentItem.IsActive" /> Active
-                            </label>
-                            <label>
-                                <RadzenCheckBox @bind-Value="CurrentItem.IsDefault" /> Default
-                            </label>
+            <Columns>
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Property="Title" Title="Title" MinWidth="140px" />
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Property="Code" Title="Code" Width="110px" />
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Property="Category" Title="Category" Width="160px" />
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Property="Description" Title="Description" MinWidth="160px">
+                    <Template Context="item">
+                        @(Truncate(item.Description, 60))
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Property="Icon" Title="Icon" Width="90px" />
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Property="Color" Title="Color" Width="100px">
+                    <Template Context="item">
+                        @if (!string.IsNullOrWhiteSpace(item.Color))
+                        {
+                            <span class="ms-rd-color-swatch" style="background:@item.Color" title="@item.Color"></span>
+                            <span>@item.Color</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Property="SortOrder" Title="Sort Order" Width="100px" />
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Property="IsActive" Title="Active" Width="90px" Sortable="true">
+                    <Template Context="item">
+                        <span class="ms-status @(item.IsActive ? "ms-status-active" : "ms-status-inactive")">
+                            @(item.IsActive ? "Active" : "Inactive")
+                        </span>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Property="IsDefault" Title="Default" Width="90px">
+                    <Template Context="item">
+                        @(item.IsDefault ? "Yes" : "No")
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ReferenceDataItem" Title="Actions" Sortable="false" Filterable="false" Width="110px" TextAlign="TextAlign.Right">
+                    <Template Context="item">
+                        <div class="ms-row-actions">
+                            <RadzenButton Icon="edit"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Size="ButtonSize.Small"
+                                          title="Edit"
+                                          Click="@(() => BeginEdit(item))"
+                                          aria-label="Edit" />
+                            <RadzenButton Icon="delete"
+                                          ButtonStyle="ButtonStyle.Danger"
+                                          Variant="Variant.Text"
+                                          Size="ButtonSize.Small"
+                                          title="Delete"
+                                          Click="@(() => ConfirmDeleteAsync(item))"
+                                          aria-label="Delete" />
                         </div>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
 
-                    </div>
-
-                    <div class="rd-actions">
-                        <RadzenButton Text="New" Click="NewItem" />
-                        <RadzenButton Text="Save" Click="SaveItem" ButtonStyle="ButtonStyle.Primary" />
-                        <RadzenButton Text="Delete" Click="DeleteItem"
-                                      ButtonStyle="ButtonStyle.Danger"
-                                      Disabled="@(CurrentItem.Id == 0 || CurrentItem.IsActive)" />
-                        <RadzenButton Text="Refresh" Click="LoadData" />
-                    </div>
-
-                </div>
-
+        @if (!_isLoading && _hasLoadedOnce && _totalCount == 0)
+        {
+            <div class="ms-rd-empty" role="status">
+                <p>No reference items found.</p>
+                <RadzenButton Text="Create first item"
+                              Icon="add"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Click="@BeginCreate" />
+                <RadzenButton Text="Import Defaults"
+                              Icon="download"
+                              ButtonStyle="ButtonStyle.Secondary"
+                              Variant="Variant.Outlined"
+                              Class="ms-2"
+                              Click="@ConfirmImportDefaultsAsync" />
             </div>
-        </div>
-        
+        }
     </div>
-
 </div>
 
+@if (_showEditor)
+{
+    <div class="ms-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rd-editor-title">
+        <div class="ms-modal-card ms-rd-editor">
+            <div class="ms-modal-header">
+                <h3 id="rd-editor-title">@(_editor.Id == 0 ? "New reference item" : "Edit reference item")</h3>
+                <RadzenButton Icon="close"
+                              ButtonStyle="ButtonStyle.Light"
+                              Variant="Variant.Text"
+                              class="ms-modal-close"
+                              Click="@CloseEditor"
+                              Disabled="@_isSaving"
+                              aria-label="Close" />
+            </div>
+
+            <div class="ms-modal-body">
+                <EditForm Model="_editor" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+
+                    <div class="ms-section-card">
+                        <h4 class="ms-section-title">Details</h4>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="ms-label" for="rd-title">Title <span class="ms-req">*</span></label>
+                                <RadzenTextBox id="rd-title" @bind-Value="_editor.Title" Style="width:100%" Disabled="@_isSaving" />
+                                <ValidationMessage For="() => _editor.Title" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="ms-label" for="rd-code">Code <span class="ms-req">*</span></label>
+                                <RadzenTextBox id="rd-code" @bind-Value="_editor.Code" Style="width:100%" Disabled="@_isSaving" />
+                                <ValidationMessage For="() => _editor.Code" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="ms-label" for="rd-cat">Category <span class="ms-req">*</span></label>
+                                <RadzenTextBox id="rd-cat" @bind-Value="_editor.Category" Style="width:100%" Disabled="@_isSaving"
+                                               Placeholder="e.g. Nationality" />
+                                <ValidationMessage For="() => _editor.Category" />
+                            </div>
+                            <div class="col-12">
+                                <label class="ms-label" for="rd-desc">Description</label>
+                                <RadzenTextArea id="rd-desc" @bind-Value="_editor.Description" Rows="3" Style="width:100%" Disabled="@_isSaving" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="ms-label" for="rd-icon">Icon</label>
+                                <RadzenTextBox id="rd-icon" @bind-Value="_editor.Icon" Style="width:100%" Disabled="@_isSaving"
+                                               Placeholder="Optional icon name" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="ms-label" for="rd-color">Color</label>
+                                <RadzenTextBox id="rd-color" @bind-Value="_editor.Color" Style="width:100%" Disabled="@_isSaving"
+                                               Placeholder="#0078d4" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="ms-label" for="rd-sort">Sort Order <span class="ms-req">*</span></label>
+                                <RadzenNumeric id="rd-sort" @bind-Value="_editor.SortOrder" Style="width:100%" Disabled="@_isSaving" Min="0" />
+                                <ValidationMessage For="() => _editor.SortOrder" />
+                            </div>
+                            <div class="col-12 d-flex gap-4">
+                                <label class="ms-check">
+                                    <RadzenCheckBox @bind-Value="_editor.IsActive" Disabled="@_isSaving" /> Active
+                                </label>
+                                <label class="ms-check">
+                                    <RadzenCheckBox @bind-Value="_editor.IsDefault" Disabled="@_isSaving" /> Default
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </EditForm>
+
+                @if (!string.IsNullOrWhiteSpace(_editorError))
+                {
+                    <div class="ms-rd-alert" role="alert">@_editorError</div>
+                }
+            </div>
+
+            <div class="ms-modal-footer">
+                <RadzenButton Text="Cancel"
+                              ButtonStyle="ButtonStyle.Secondary"
+                              Variant="Variant.Outlined"
+                              Click="@CloseEditor"
+                              Disabled="@_isSaving" />
+                <RadzenButton Text="@(_isSaving ? "Saving…" : "Save")"
+                              Icon="save"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Click="@SaveAsync"
+                              Disabled="@_isSaving" />
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showImportResult)
+{
+    <div class="ms-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rd-import-title">
+        <div class="ms-modal-card" style="width:min(480px,100%)">
+            <div class="ms-modal-header">
+                <h3 id="rd-import-title">Import complete</h3>
+                <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Text"
+                              class="ms-modal-close" Click="@(() => _showImportResult = false)" aria-label="Close" />
+            </div>
+            <div class="ms-modal-body">
+                <ul class="ms-rd-import-stats">
+                    <li><strong>Imported:</strong> @_importResult?.Imported</li>
+                    <li><strong>Skipped:</strong> @_importResult?.Skipped</li>
+                    <li><strong>Errors:</strong> @_importResult?.Errors</li>
+                </ul>
+                @if (_importResult?.ErrorMessages?.Count > 0)
+                {
+                    <div class="ms-rd-alert">
+                        @foreach (var msg in _importResult.ErrorMessages.Take(8))
+                        {
+                            <div>@msg</div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="ms-modal-footer">
+                <RadzenButton Text="Close" ButtonStyle="ButtonStyle.Primary" Click="@(() => _showImportResult = false)" />
+            </div>
+        </div>
+    </div>
+}
+
 @code {
+    [Parameter] public string? Module { get; set; }
 
-    [Parameter] public string Module { get; set; } = "";
+    private RadzenDataGrid<ReferenceDataItem>? _grid;
+    private IEnumerable<ReferenceDataItem> _pagedItems = [];
+    private int _totalCount;
+    private bool _isLoading;
+    private bool _hasLoadedOnce;
+    private bool _isSaving;
+    private bool _showEditor;
+    private bool _showImportResult;
+    private string? _editorError;
+    private string _searchText = "";
+    private string? _categoryFilter;
+    private bool? _activeFilter;
+    private string? _orderBy;
+    private int _skip;
+    private int _top = 25;
+    private List<string> _categories = [];
+    private ReferenceDataItem _editor = new();
+    private ReferenceDataImportResult? _importResult;
+    private CancellationTokenSource? _searchCts;
 
-    private RadzenDataGrid<ReferenceDataItem>? grid;
+    private readonly List<ActiveOption> _activeOptions =
+    [
+        new("Active", true),
+        new("Inactive", false)
+    ];
 
-    private List<string> Categories = new();
-    private List<ReferenceDataItem> Items = new();
-    private List<ReferenceDataItem> FilteredItems = new();
-
-    private IEnumerable<ReferenceDataItem> PagedItems = new List<ReferenceDataItem>();
-    private int TotalCount;
-
-    private ReferenceDataItem CurrentItem = new();
-
-    private string SelectedCategory = "";
-    private string SearchText = "";
-
-    private bool IsLoading;
+    private bool IsBusy => _isLoading || _isSaving;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        await LoadCategoriesAsync();
     }
 
-    private async Task LoadData()
+    private async Task LoadCategoriesAsync()
     {
         try
         {
-            IsLoading = true;
-
-            Categories = await SharePointService.GetReferenceCategoriesAsync(Module);
-
-            if (Categories.Any())
-            {
-                await SelectCategory(Categories.First());
-            }
-
-            CurrentItem = new ReferenceDataItem();
+            _categories = (await ReferenceDataService.GetCategoriesAsync()).ToList();
         }
         catch (Exception ex)
         {
+            Logger.LogWarning(ex, "Failed loading categories");
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadCategoriesAsync();
+        ReloadGrid();
+    }
+
+    private void ReloadGrid()
+    {
+        if (_grid != null)
+        {
+            _ = _grid.Reload();
+        }
+    }
+
+    private async Task OnSearchChanged(string value)
+    {
+        _searchText = value ?? "";
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(350, token);
+            ReloadGrid();
+        }
+        catch (OperationCanceledException)
+        {
+            // ignored
+        }
+    }
+
+    private async Task LoadGridData(LoadDataArgs args)
+    {
+        _isLoading = true;
+        _skip = args.Skip ?? 0;
+        _top = args.Top ?? 25;
+        _orderBy = args.OrderBy;
+
+        try
+        {
+            var pageNumber = (_top <= 0 ? 1 : (_skip / _top) + 1);
+            var result = await ReferenceDataService.GetPagedAsync(new ReferenceDataFilter
+            {
+                PageNumber = pageNumber,
+                PageSize = _top,
+                SearchText = _searchText,
+                Category = _categoryFilter,
+                IsActive = _activeFilter,
+                OrderBy = _orderBy
+            });
+
+            _pagedItems = result.Items;
+            _totalCount = result.TotalCount;
+            _hasLoadedOnce = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Load reference data failed");
             NotifyError(ex.Message);
+            _pagedItems = [];
+            _totalCount = 0;
+            _hasLoadedOnce = true;
         }
         finally
         {
-            IsLoading = false;
+            _isLoading = false;
         }
     }
 
-    private async Task SelectCategory(string category)
+    private void BeginCreate()
     {
-        SelectedCategory = category;
-
-        Items = await SharePointService
-            .GetReferenceDataByCategoryAsync(Module, category);
-
-        await ApplySearch();
+        _editor = new ReferenceDataItem
+        {
+            Category = _categoryFilter ?? "",
+            IsActive = true,
+            IsDefault = false,
+            SortOrder = 1,
+            Icon = "",
+            Color = ""
+        };
+        _editorError = null;
+        _showEditor = true;
     }
 
-    private async Task ApplySearch()
+    private void BeginEdit(ReferenceDataItem item)
     {
-        if (string.IsNullOrWhiteSpace(SearchText))
-        {
-            FilteredItems = Items.ToList();
-        }
-        else
-        {
-            var search = SearchText.ToLower();
-
-            FilteredItems = Items.Where(x =>
-                (x.Title ?? "").ToLower().Contains(search) ||
-                (x.Code ?? "").ToLower().Contains(search) ||
-                (x.Description ?? "").ToLower().Contains(search)
-            ).ToList();
-        }
-
-        if (grid != null)
-        {
-            await grid.FirstPage(true);
-        }
-    }
-
-    private async void OnSearchInput(ChangeEventArgs e)
-    {
-        SearchText = e.Value?.ToString() ?? "";
-        await ApplySearch();
-    }
-
-    private void LoadPagedData(LoadDataArgs args)
-    {
-        var query = FilteredItems.AsQueryable();
-
-        TotalCount = query.Count();
-
-        if (!string.IsNullOrEmpty(args.OrderBy))
-        {
-            query = query.OrderBy(args.OrderBy);
-        }
-
-        if (args.Skip.HasValue && args.Top.HasValue)
-        {
-            query = query.Skip(args.Skip.Value).Take(args.Top.Value);
-        }
-
-        PagedItems = query.ToList();
-    }
-
-    private void SelectItem(ReferenceDataItem item)
-    {
-        CurrentItem = new ReferenceDataItem
+        _editor = new ReferenceDataItem
         {
             Id = item.Id,
             Title = item.Title,
@@ -292,212 +445,170 @@
             IsActive = item.IsActive,
             IsDefault = item.IsDefault
         };
+        _editorError = null;
+        _showEditor = true;
     }
 
-    private void NewItem()
+    private void CloseEditor()
     {
-        CurrentItem = new ReferenceDataItem
+        if (_isSaving)
         {
-            Category = SelectedCategory,
-            IsActive = true
-        };
-    }
-
-    private async Task SaveItem()
-    {
-        if (string.IsNullOrWhiteSpace(CurrentItem.Title))
-        {
-            NotifyWarning("Title required");
             return;
         }
 
-        if (CurrentItem.Id == 0)
-        {
-            await SharePointService.CreateReferenceDataAsync(Module, CurrentItem);
-            NotifySuccess("Created");
-        }
-        else
-        {
-            await SharePointService.UpdateReferenceDataAsync(Module, CurrentItem);
-            NotifySuccess("Updated");
-        }
-
-        await LoadData();
+        _showEditor = false;
+        _editorError = null;
     }
 
-    private async Task DeleteItem()
+    private async Task SaveAsync()
     {
-        if (CurrentItem.Id == 0) return;
-
-        if (CurrentItem.IsActive)
+        if (_isSaving)
         {
-            NotifyWarning("Deactivate before delete");
             return;
         }
 
-        bool? confirm = await DialogService.Confirm("Delete item?", "Confirm");
+        _isSaving = true;
+        _editorError = null;
 
-        if (confirm != true) return;
+        try
+        {
+            ServiceResult<ReferenceDataItem> result;
+            if (_editor.Id == 0)
+            {
+                result = await ReferenceDataService.CreateAsync(_editor);
+            }
+            else
+            {
+                result = await ReferenceDataService.UpdateAsync(_editor);
+            }
 
-        await SharePointService.DeleteReferenceDataAsync(Module, CurrentItem.Id);
+            if (!result.IsSuccess)
+            {
+                _editorError = result.ErrorMessage;
+                NotifyError(result.ErrorMessage ?? "Save failed.");
+                return;
+            }
 
-        NotifySuccess("Deleted");
+            NotifySuccess(_editor.Id == 0 ? "Reference item created." : "Reference item updated.");
+            _showEditor = false;
+            await LoadCategoriesAsync();
+            ReloadGrid();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Save reference item failed");
+            _editorError = ex.Message;
+            NotifyError(ex.Message);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
 
-        await LoadData();
+    private async Task ConfirmDeleteAsync(ReferenceDataItem item)
+    {
+        var confirm = await DialogService.Confirm(
+            "Are you sure you want to delete this reference item?",
+            "Delete reference item",
+            new ConfirmOptions
+            {
+                OkButtonText = "Delete",
+                CancelButtonText = "Cancel",
+                Width = "420px"
+            });
+
+        if (confirm != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ReferenceDataService.DeleteAsync(item.Id);
+            if (!result.IsSuccess)
+            {
+                NotifyError(result.ErrorMessage ?? "Delete failed.");
+                return;
+            }
+
+            NotifySuccess("Reference item deleted.");
+            await LoadCategoriesAsync();
+            ReloadGrid();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Delete reference item failed");
+            NotifyError(ex.Message);
+        }
+    }
+
+    private async Task ConfirmImportDefaultsAsync()
+    {
+        var confirm = await DialogService.Confirm(
+            "Import default reference records? Existing Category + Code combinations will be skipped (not overwritten).",
+            "Import Defaults",
+            new ConfirmOptions
+            {
+                OkButtonText = "Import",
+                CancelButtonText = "Cancel",
+                Width = "480px"
+            });
+
+        if (confirm != true)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            var result = await ReferenceDataService.ImportDefaultsAsync();
+            if (!result.IsSuccess || result.Data == null)
+            {
+                NotifyError(result.ErrorMessage ?? "Import failed.");
+                return;
+            }
+
+            _importResult = result.Data;
+            _showImportResult = true;
+            NotifySuccess(
+                $"Import finished — Imported {_importResult.Imported}, Skipped {_importResult.Skipped}, Errors {_importResult.Errors}.");
+            await LoadCategoriesAsync();
+            ReloadGrid();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Import defaults failed");
+            NotifyError(ex.Message);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static string Truncate(string? value, int max)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "";
+        }
+
+        return value.Length <= max ? value : value[..max] + "…";
     }
 
     private void NotifySuccess(string msg) =>
-        NotificationService.Notify(NotificationSeverity.Success, "Success", msg);
+        NotificationService.Notify(NotificationSeverity.Success, "Success", msg, 4000);
 
     private void NotifyError(string msg) =>
-        NotificationService.Notify(NotificationSeverity.Error, "Error", msg);
+        NotificationService.Notify(NotificationSeverity.Error, "Error", msg, 6000);
 
-    private void NotifyWarning(string msg) =>
-        NotificationService.Notify(NotificationSeverity.Warning, "Warning", msg);
+    public void Dispose()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+    }
+
+    private sealed record ActiveOption(string Text, bool Value);
 }
-
-<style>
-
-    /* ✅ ROOT CONTAINER */
-    .rd-container {
-        font-family: Segoe UI;
-        padding: 16px;
-        background: #F3F2F1;
-    }
-
-    /* ✅ MAIN GRID (Categories + Content) */
-    .rd-grid {
-        display: grid;
-        grid-template-columns: 300px 1fr;
-        gap: 16px;
-    }
-
-    /* ✅ RIGHT PANEL STACK (Grid + Editor) */
-    .rd-content {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    /* ✅ SECTION PANEL (Grid + Editor shared style) */
-    .rd-section {
-        background: white;
-        border-radius: 10px;
-        padding: 16px;
-        box-shadow: 0 2px 6px rgba(0,0,0,.08);
-    }
-
-    /* ✅ SECTION HEADER */
-    .section-header {
-        font-weight: 600;
-        margin-bottom: 10px;
-        border-bottom: 1px solid #E1DFDD;
-        padding-bottom: 6px;
-        color:orangered;
-    }
-
-    .Main-header {
-        font-weight: 500;
-        margin-bottom: 5px;
-        border-bottom: 1px solid #E1DFDD;
-        padding-bottom: 5px;
-        color:blueviolet;
-    }
-
-    /* ✅ CATEGORY PANEL */
-    .rd-categories {
-        background:ash;
-        padding: 16px;
-        border-radius: 10px;
-        box-shadow: 0 2px 6px rgba(0,0,0,.08);
-    }
-
-    .cat-item {
-        padding: 8px;
-        cursor: pointer;
-        border-radius: 6px;
-        transition: 0.2s;
-    }
-
-        .cat-item:hover {
-            background: #eee;
-        }
-
-        .cat-item.active {
-            background: #0078D4;
-            color: white;
-        }
-
-    /* ✅ GRID CONTAINER FIX */
-    .rd-list {
-        min-height: 220px; /* prevent collapse */
-        width: 100%;
-    }
-
-    /* ✅ STATUS BADGE */
-    .status-badge {
-        padding: 4px 8px;
-        border-radius: 10px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-        .status-badge.active {
-            background: #dff6dd;
-            color: #107c10;
-        }
-
-        .status-badge.inactive {
-            background: #fde7e9;
-            color: #a80000;
-        }
-
-    /* ✅ EDITOR PANEL */
-    .rd-editor {
-        width: 100%;
-    }
-
-    /* ✅ FORM GRID ALIGNMENT (IMPORTANT FIX) */
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-    }
-
-    /* ✅ FULL WIDTH FIELDS */
-    .full-width {
-        grid-column: span 3;
-    }
-
-    /* ✅ CHECKBOX ALIGNMENT */
-    .checkbox-row,
-    .checkbox-group {
-        display: flex;
-        gap: 20px;
-        align-items: center;
-    }
-
-    /* ✅ ACTION BUTTONS */
-    .rd-actions {
-        margin-top: 12px;
-        display: flex;
-        gap: 10px;
-    }
-
-    /* ✅ RESPONSIVE (FIXED SYNTAX) */
-    @@media (max-width: 768px) {
-
-        .rd-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .full-width {
-            grid-column: span 1;
-        }
-    }
-
-</style>

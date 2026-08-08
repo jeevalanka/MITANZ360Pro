@@ -1,58 +1,27 @@
-﻿using Microsoft.Graph.Models;
+﻿using MITANZ360Pro.Web.Modules.ReferenceData;
 
 namespace MITANZ360Pro.Web.Services
 {
-    // =====================================================
-    // ✅ MODEL
-    // =====================================================
-    public class ReferenceDataItem
-    {
-        public int Id { get; set; }
-
-        public string Title { get; set; } = "";
-
-        public string Code { get; set; } = "";
-
-        public string Category { get; set; } = "";
-
-        public string Description { get; set; } = "";
-
-        public string Icon { get; set; } = "";
-
-        public string Color { get; set; } = "";
-
-        public int SortOrder { get; set; }
-
-        public bool IsActive { get; set; }
-
-        public bool IsDefault { get; set; }
-    }
-
+    /// <summary>
+    /// Legacy SharePointService Reference Data API.
+    /// Prefer <see cref="IReferenceDataService"/> for new UI.
+    /// Uses the single SharePoint:Lists:ReferenceData list.
+    /// </summary>
     public partial class SharePointService
     {
-        // =====================================================
-        // ✅ LIST RESOLVER
-        // =====================================================
-        private string GetReferenceListId(string module)
+        private string GetReferenceListId(string? module = null)
         {
-            return module.ToUpper() switch
+            var listId = _configuration["SharePoint:Lists:ReferenceData"];
+            if (string.IsNullOrWhiteSpace(listId))
             {
-                "LMS" => _configuration["SharePoint:Lists:LMS_ReferenceData"] ?? "",
-                "SMS" => _configuration["SharePoint:Lists:SMS_ReferenceData"] ?? "",
-                "HRM" => _configuration["SharePoint:Lists:HRM_ReferenceData"] ?? "",
-                "CRM" => _configuration["SharePoint:Lists:CRM_ReferenceData"] ?? "",
-                "FIN" => _configuration["SharePoint:Lists:FIN_ReferenceData"] ?? "",
+                throw new InvalidOperationException(
+                    "SharePoint Lists:ReferenceData configuration missing.");
+            }
 
-                _ => throw new InvalidOperationException(
-                    $"Unknown Reference Module: {module}")
-            };
+            return listId;
         }
 
-        // =====================================================
-        // ✅ GET ALL
-        // =====================================================
-        public async Task<List<ReferenceDataItem>>
-            GetReferenceDataAsync(string module)
+        public async Task<List<ReferenceDataItem>> GetReferenceDataAsync(string module)
         {
             var listId = GetReferenceListId(module);
 
@@ -63,51 +32,15 @@ namespace MITANZ360Pro.Web.Services
                 .GetAsync(config =>
                 {
                     config.QueryParameters.Top = 500;
-                    config.QueryParameters.Expand =
-                        new[] { "fields" };
+                    config.QueryParameters.Expand = ["fields"];
                 });
 
             var items = new List<ReferenceDataItem>();
 
-            foreach (var item in response?.Value ?? Enumerable.Empty<ListItem>())
+            foreach (var item in response?.Value ?? [])
             {
                 var fields = item.Fields?.AdditionalData;
-
-                items.Add(new ReferenceDataItem
-                {
-                    Id = int.TryParse(item.Id, out var id) ? id : 0,
-
-                    Title = GetField(fields, "Title"),
-
-                    Code = GetField(fields, "field_1"),
-
-                    Category = GetField(fields, "field_2"),
-
-                    Description = GetField(fields, "field_3"),
-
-                    Icon = GetField(fields, "field_4"),
-
-                    Color = GetField(fields, "field_5"),
-
-                    SortOrder =
-                        int.TryParse(
-                            GetField(fields, "field_6"),
-                            out var sort)
-                            ? sort
-                            : 0,
-
-                    IsActive =
-                        bool.TryParse(
-                            GetField(fields, "field_7"),
-                            out var active)
-                            && active,
-
-                    IsDefault =
-                        bool.TryParse(
-                            GetField(fields, "field_8"),
-                            out var def)
-                            && def
-                });
+                items.Add(ReferenceDataMapper.FromDictionary(fields, item.Id));
             }
 
             return items
@@ -117,11 +50,7 @@ namespace MITANZ360Pro.Web.Services
                 .ToList();
         }
 
-        // =====================================================
-        // ✅ GET CATEGORIES
-        // =====================================================
-        public async Task<List<string>>
-            GetReferenceCategoriesAsync(string module)
+        public async Task<List<string>> GetReferenceCategoriesAsync(string module)
         {
             var items = await GetReferenceDataAsync(module);
 
@@ -133,142 +62,64 @@ namespace MITANZ360Pro.Web.Services
                 .ToList();
         }
 
-        // =====================================================
-        // ✅ GET BY CATEGORY
-        // =====================================================
-        public async Task<List<ReferenceDataItem>>
-            GetReferenceDataByCategoryAsync(string module,string category)
-            {
-                var items = await GetReferenceDataAsync(module);
-
-                return items
-                    .Where(x => x.Category.Equals( category, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(x => x.SortOrder)
-                    .ThenBy(x => x.Title)
-                    .ToList();
-            }
-
-        // =====================================================
-        // ✅ GET BY ID
-        // =====================================================
-        public async Task<ReferenceDataItem?>
-            GetReferenceDataAsync(
-                string module,
-                int id)
+        public async Task<List<ReferenceDataItem>> GetReferenceDataByCategoryAsync(
+            string module,
+            string category)
         {
-            var items =
-                await GetReferenceDataAsync(module);
+            var items = await GetReferenceDataAsync(module);
 
             return items
-                .FirstOrDefault(x => x.Id == id);
+                .Where(x => x.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.Title)
+                .ToList();
         }
 
-        // =====================================================
-        // ✅ CREATE
-        // =====================================================
-        public async Task<int>
-            CreateReferenceDataAsync(
-                string module,
-                ReferenceDataItem item)
+        public async Task<ReferenceDataItem?> GetReferenceDataAsync(string module, int id)
         {
-            var listId =
-                GetReferenceListId(module);
-
-            var fields =
-                new Dictionary<string, object>
-                {
-                    { "Title", item.Title },
-
-                    { "field_1", item.Code },
-
-                    { "field_2", item.Category },
-
-                    { "field_3", item.Description },
-
-                    { "field_4", item.Icon },
-
-                    { "field_5", item.Color },
-
-                    { "field_6", item.SortOrder },
-
-                    { "field_7", item.IsActive },
-
-                    { "field_8", item.IsDefault }
-                };
-
-            var result =
-                await _graphClient
-                    .Sites[SiteId]
-                    .Lists[listId]
-                    .Items
-                    .PostAsync(
-                        new ListItem
-                        {
-                            Fields =
-                                new FieldValueSet
-                                {
-                                    AdditionalData = fields
-                                }
-                        });
-
-            return int.TryParse(result?.Id, out var id)
-                ? id
-                : 0;
+            var items = await GetReferenceDataAsync(module);
+            return items.FirstOrDefault(x => x.Id == id);
         }
 
-        // =====================================================
-        // ✅ UPDATE
-        // =====================================================
-        public async Task UpdateReferenceDataAsync(
-            string module,
-            ReferenceDataItem item)
+        public async Task<int> CreateReferenceDataAsync(string module, ReferenceDataItem item)
         {
-            var listId =
-                GetReferenceListId(module);
+            var listId = GetReferenceListId(module);
+            var fields = ReferenceDataMapper.ToFieldDictionary(item);
 
-            var fields =
-                new Dictionary<string, object>
+            var result = await _graphClient
+                .Sites[SiteId]
+                .Lists[listId]
+                .Items
+                .PostAsync(new Microsoft.Graph.Models.ListItem
                 {
-                    { "Title", item.Title },
+                    Fields = new Microsoft.Graph.Models.FieldValueSet
+                    {
+                        AdditionalData = fields
+                    }
+                });
 
-                    { "field_1", item.Code },
+            return int.TryParse(result?.Id, out var id) ? id : 0;
+        }
 
-                    { "field_2", item.Category },
-
-                    { "field_3", item.Description },
-
-                    { "field_4", item.Icon },
-
-                    { "field_5", item.Color },
-
-                    { "field_6", item.SortOrder },
-
-                    { "field_7", item.IsActive },
-
-                    { "field_8", item.IsDefault }
-                };
+        public async Task UpdateReferenceDataAsync(string module, ReferenceDataItem item)
+        {
+            var listId = GetReferenceListId(module);
+            var fields = ReferenceDataMapper.ToFieldDictionary(item);
 
             await _graphClient
                 .Sites[SiteId]
                 .Lists[listId]
                 .Items[item.Id.ToString()]
                 .Fields
-                .PatchAsync(
-                    new FieldValueSet
-                    {
-                        AdditionalData = fields
-                    });
+                .PatchAsync(new Microsoft.Graph.Models.FieldValueSet
+                {
+                    AdditionalData = fields
+                });
         }
 
-        // =====================================================
-        // ✅ DELETE
-        // =====================================================
-        public async Task DeleteReferenceDataAsync(
-            string module,
-            int id)
+        public async Task DeleteReferenceDataAsync(string module, int id)
         {
-            var listId =
-                GetReferenceListId(module);
+            var listId = GetReferenceListId(module);
 
             await _graphClient
                 .Sites[SiteId]
@@ -277,27 +128,16 @@ namespace MITANZ360Pro.Web.Services
                 .DeleteAsync();
         }
 
-        // =====================================================
-        // ✅ EXISTS
-        // Category + Code Unique
-        // =====================================================
-        public async Task<bool>
-            ReferenceDataExistsAsync(
-                string module,
-                string category,
-                string code)
+        public async Task<bool> ReferenceDataExistsAsync(
+            string module,
+            string category,
+            string code)
         {
-            var items =
-                await GetReferenceDataAsync(module);
+            var items = await GetReferenceDataAsync(module);
 
             return items.Any(x =>
-                x.Category.Equals(
-                    category,
-                    StringComparison.OrdinalIgnoreCase)
-                &&
-                x.Code.Equals(
-                    code,
-                    StringComparison.OrdinalIgnoreCase));
+                x.Category.Equals(category, StringComparison.OrdinalIgnoreCase) &&
+                x.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
         }
     }
 }
