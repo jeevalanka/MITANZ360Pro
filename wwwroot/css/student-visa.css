@@ -19,30 +19,43 @@
 }
 
 .sv-hero {
-    background: linear-gradient(135deg, #0b5cab 0%, #0078d4 55%, #2b88d8 100%);
-    color: #fff;
-    padding: 2.75rem 1.25rem 2.5rem;
-    margin-bottom: 1.75rem;
-}
-
-.sv-hero-inner {
-    max-width: 920px;
-    margin: 0 auto;
+    min-height: 70vh;
+    align-items: center;
+    padding: 3rem;
+    background: linear-gradient( 135deg, #F5F7FA, #EEF2F7);
 }
 
 .sv-brand {
-    font-size: 0.85rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    opacity: 0.9;
+    color: #2563EB;
     font-weight: 600;
-    margin-bottom: 0.75rem;
+    font-size: .95rem;
+    letter-spacing: 1px;
 }
 
 .sv-title {
-    font-size: clamp(1.75rem, 3vw, 2.25rem);
-    font-weight: 600;
-    margin: 0 0 0.5rem;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #0F172A;
+    margin-bottom: 1rem;
+}
+
+.sv-subtitle {
+    font-size: 1.15rem;
+    color: #475569;
+}
+
+.sv-description {
+    color: #64748B;
+    max-width: 650px;
+}
+
+.student-profile-image {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    border-radius: 20px;
 }
 
 .sv-subtitle {
